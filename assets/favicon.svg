@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="18" fill="#15181d"/>
+  <path d="M19 30h90v68H19z" fill="none" stroke="#c8ff46" stroke-width="6"/>
+  <text x="28" y="76" font-family="monospace" font-size="46" font-weight="700" fill="#f2efe7">m</text>
+  <text x="70" y="53" font-family="monospace" font-size="18" font-weight="700" fill="#ff6b52">P=</text>
+  <text x="70" y="79" font-family="monospace" font-size="20" font-weight="700" fill="#5d7cff">m·g</text>
+</svg>

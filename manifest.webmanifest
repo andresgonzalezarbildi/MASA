@@ -1,0 +1,17 @@
+{
+  "name": "MASA · objetivos por números",
+  "short_name": "MASA",
+  "description": "Objetivos de peso, calorías y macros calculados con fórmulas transparentes y seguimiento de tendencia.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f2efe7",
+  "theme_color": "#15181d",
+  "icons": [
+    {
+      "src": "assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
