@@ -2,9 +2,6 @@
 
 Aplicación web estática para calcular objetivos corporales, registrar peso y llevar un diario diario de calorías y macronutrientes.
 
-## Publicación
-
-La carpeta puede desplegarse directamente en Netlify. No requiere instalación, dependencias ni comando de compilación.
 
 ## Funciones
 
