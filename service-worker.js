@@ -1,4 +1,4 @@
-const CACHE = "masa-v5";
+const CACHE = "masa-v6";
 const APP_SHELL = [
   "./",
   "./index.html",
