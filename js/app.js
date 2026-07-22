@@ -1,8 +1,8 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "masa-state-v6";
-  const LEGACY_KEYS = ["masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
+  const STORAGE_KEY = "masa-state-v7";
+  const LEGACY_KEYS = ["masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
   const DAY_MS = 86_400_000;
   const KG_KCAL = 7700;
 
@@ -62,6 +62,10 @@
   let fillingProfileForm = false;
   let activeMeal = "breakfast";
   let activeFoodMode = "food";
+  let activeAppView = "today";
+  let activeDiaryView = "record";
+  let calorieRange = 14;
+  let weightEditorForced = false;
 
   const $ = selector => document.querySelector(selector);
   const $$ = selector => Array.from(document.querySelectorAll(selector));
@@ -254,15 +258,22 @@
       diary[iso] = entries.map(normalizeDiaryEntry).filter(Boolean);
     });
 
+    const completedDays = {};
+    Object.entries(input.completedDays || {}).forEach(([date, completed]) => {
+      const iso = normalizeDate(date);
+      if (iso && completed) completedDays[iso] = true;
+    });
+
     const configured = profileIsComplete(profile, sorted);
     return {
-      version: 6,
+      version: 7,
       configured,
       profile,
       weighIns: sorted,
       foods,
       recipes,
       diary,
+      completedDays,
       lastCheckinDate: normalizeDate(input.lastCheckinDate)
     };
   }
@@ -628,7 +639,12 @@
       });
     });
 
-    renderDayProjection(plan, totals);
+    const completed = Boolean(state.completedDays?.[todayISO()]);
+    $("#day-reading").hidden = !completed;
+    $("#finish-day").textContent = completed ? "Día terminado ✓" : "Terminar día";
+    $("#finish-day").classList.toggle("completed", completed);
+    if (completed) renderDayProjection(plan, totals);
+    if (activeDiaryView === "chart") drawCalorieChart(plan);
   }
 
   function setDiaryProgress(key, value, target, unit) {
@@ -652,6 +668,169 @@
     $("#day-projection-text").textContent = `Con ${formatNumber(Math.round(totals.calories))} kcal diarias frente a un mantenimiento estimado de ${formatNumber(Math.round(plan.maintenance))} kcal, la diferencia teórica sería ${dailyDelta > 0 ? "+" : ""}${formatNumber(Math.round(dailyDelta))} kcal por día. La adaptación del cuerpo y el registro incompleto pueden cambiar el resultado.`;
   }
 
+  function finishDay() {
+    state.completedDays = state.completedDays || {};
+    state.completedDays[todayISO()] = true;
+    saveState(state);
+    $("#day-reading").hidden = false;
+    renderDayProjection(calculatePlan(), diaryTotals());
+    $("#day-reading").scrollIntoView({ behavior: "smooth", block: "center" });
+    render();
+  }
+
+  function hideDaySummary() {
+    state.completedDays = state.completedDays || {};
+    delete state.completedDays[todayISO()];
+    saveState(state);
+    render();
+  }
+
+  function switchDiaryView(view) {
+    activeDiaryView = view === "chart" ? "chart" : "record";
+    $$('[data-diary-view]').forEach(button => button.classList.toggle("active", button.dataset.diaryView === activeDiaryView));
+    $("#diary-record-view").hidden = activeDiaryView !== "record";
+    $("#diary-chart-view").hidden = activeDiaryView !== "chart";
+    if (activeDiaryView === "chart") requestAnimationFrame(() => drawCalorieChart(calculatePlan()));
+  }
+
+  function diaryTotalsForDate(date) {
+    return diaryTotals(state.diary[date] || []);
+  }
+
+  function calorieChartDays() {
+    const end = parseDate(todayISO());
+    const days = [];
+    for (let offset = calorieRange - 1; offset >= 0; offset -= 1) {
+      const date = addDays(end, -offset);
+      const iso = toISODate(date);
+      const totals = diaryTotalsForDate(iso);
+      days.push({ date, iso, calories: totals.calories, hasEntries: (state.diary[iso] || []).length > 0 });
+    }
+    return days;
+  }
+
+  function drawCalorieChart(plan = calculatePlan()) {
+    const canvas = $("#calorie-chart");
+    if (!canvas || $("#diary-chart-view").hidden) return;
+    const prepared = prepareCanvas(canvas);
+    if (!prepared) return;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    const days = calorieChartDays();
+    const target = Number.isFinite(plan.targetCalories) ? plan.targetCalories : 0;
+    const maxValue = Math.max(target, ...days.map(day => day.calories), 500) * 1.12;
+    const margin = { left: 48, right: 16, top: 25, bottom: 46 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const slot = plotWidth / Math.max(1, days.length);
+    const barWidth = Math.max(5, Math.min(34, slot * .62));
+    const y = value => margin.top + (maxValue - value) / maxValue * plotHeight;
+
+    ctx.font = "10px ui-monospace, monospace";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i <= 4; i += 1) {
+      const value = maxValue * i / 4;
+      const py = y(value);
+      ctx.strokeStyle = "rgba(23,26,33,.12)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(margin.left, py); ctx.lineTo(width - margin.right, py); ctx.stroke();
+      ctx.fillStyle = "rgba(23,26,33,.55)";
+      ctx.fillText(formatNumber(value, 0), margin.left - 7, py);
+    }
+
+    if (target) {
+      ctx.save();
+      ctx.strokeStyle = "#171a21";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([7,5]);
+      ctx.beginPath(); ctx.moveTo(margin.left, y(target)); ctx.lineTo(width - margin.right, y(target)); ctx.stroke();
+      ctx.restore();
+    }
+
+    days.forEach((day, index) => {
+      const x = margin.left + slot * index + slot / 2;
+      const top = y(day.calories);
+      const bottom = y(0);
+      ctx.fillStyle = day.hasEntries ? "#8d7cff" : "rgba(23,26,33,.08)";
+      ctx.fillRect(x - barWidth / 2, top, barWidth, Math.max(1, bottom - top));
+      if (day.hasEntries) {
+        ctx.fillStyle = "#171a21";
+        ctx.font = "9px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(formatNumber(day.calories, 0), x, Math.max(12, top - 5));
+      }
+      const showLabel = calorieRange <= 14 || index % Math.ceil(calorieRange / 10) === 0 || index === days.length - 1;
+      if (showLabel) {
+        ctx.fillStyle = "rgba(23,26,33,.62)";
+        ctx.textBaseline = "top";
+        ctx.fillText(new Intl.DateTimeFormat("es-UY", { day: "2-digit", month: "2-digit" }).format(day.date), x, height - margin.bottom + 11);
+      }
+    });
+
+    const logged = days.filter(day => day.hasEntries);
+    $("#calorie-chart-empty").hidden = logged.length > 0;
+    if (!logged.length || !target) {
+      $("#calorie-chart-summary").textContent = "Todavía no hay días completos para comparar.";
+      return;
+    }
+    const average = logged.reduce((sum, day) => sum + day.calories, 0) / logged.length;
+    const diff = average - target;
+    $("#calorie-chart-summary").textContent = `Promedio registrado: ${formatNumber(Math.round(average))} kcal · ${formatNumber(Math.abs(Math.round(diff)))} kcal ${diff > 0 ? "por encima" : "por debajo"} del objetivo.`;
+  }
+
+  function switchAppView(view, scroll = true) {
+    activeAppView = view === "progress" ? "progress" : "today";
+    $$('[data-app-view]').forEach(button => button.classList.toggle("active", button.dataset.appView === activeAppView));
+    $("#today-view").hidden = activeAppView !== "today";
+    $("#progress-view").hidden = activeAppView !== "progress";
+    if (activeAppView === "progress" && chartPayload) requestAnimationFrame(() => drawWeightChart($("#weight-chart"), chartPayload));
+    if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openMealPicker() {
+    $("#meal-picker-modal").hidden = false;
+    document.body.classList.add("modal-open");
+  }
+
+  function closeMealPicker() {
+    $("#meal-picker-modal").hidden = true;
+    if ($("#food-modal").hidden && $("#settings-modal").hidden) document.body.classList.remove("modal-open");
+  }
+
+  function pickMeal(meal) {
+    closeMealPicker();
+    openFoodModal(meal);
+  }
+
+  function showWeightEditor(mode = "today") {
+    weightEditorForced = true;
+    $("#quick-weight-form").hidden = false;
+    $("#today-weight-recorded").hidden = true;
+    const isPrevious = mode === "previous";
+    $("#alternate-date-wrap").hidden = !isPrevious;
+    $("#toggle-date").textContent = isPrevious ? "Usar la fecha de hoy" : "El pesaje es de otro día";
+    if (isPrevious) {
+      $("#quick-weight").value = "";
+      $("#quick-date").value = displayDate(toISODate(addDays(parseDate(todayISO()), -1)));
+    } else {
+      const todayEntry = state.weighIns.find(item => item.date === todayISO());
+      $("#quick-weight").value = todayEntry?.weight || "";
+      $("#quick-date").value = displayDate(todayISO());
+    }
+    setTimeout(() => $("#quick-weight").focus(), 50);
+  }
+
+  function updateWeightEntryState() {
+    const todayEntry = state.weighIns.find(item => item.date === todayISO());
+    const recorded = Boolean(todayEntry);
+    $("#today-weight-recorded").hidden = !recorded || weightEditorForced;
+    $("#quick-weight-form").hidden = recorded && !weightEditorForced;
+    $("#toggle-date").hidden = recorded && !weightEditorForced;
+    if (recorded) $("#today-weight-value").textContent = formatKg(todayEntry.weight);
+  }
+
   function escapeHTML(value) {
     return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
   }
@@ -669,7 +848,7 @@
 
   function closeFoodModal() {
     $("#food-modal").hidden = true;
-    if ($("#food-editor-modal").hidden && $("#recipe-modal").hidden && $("#settings-modal").hidden) document.body.classList.remove("modal-open");
+    if ($("#food-editor-modal").hidden && $("#recipe-modal").hidden && $("#settings-modal").hidden && $("#meal-picker-modal").hidden) document.body.classList.remove("modal-open");
   }
 
   function switchFoodMode(mode) {
@@ -927,6 +1106,7 @@
     $("#weight-context").textContent = latest
       ? `Último registro: ${formatDate(latest.date)}. La tendencia actual está en ${formatKg(latestTrend, 2)}.`
       : "El peso diario puede moverse mucho. La línea de tendencia es la que importa.";
+    updateWeightEntryState();
 
     renderDiary(plan);
     renderPlanStrip(profile, plan);
@@ -995,7 +1175,7 @@
     $("#expected-today").textContent = formatKg(expectedToday, 2);
     $("#expected-difference").textContent = formatSignedKg(difference);
 
-    let title = `${namePrefix}todavía falta información para leer el ritmo.`;
+    let title = profile.name ? `${profile.name}, todavía faltan datos.` : "Todavía faltan datos.";
     let text = "Con algunos pesajes más se puede separar una variación puntual de una dirección sostenida.";
     if (Number.isFinite(observedWeekly) && weighIns.length >= 5) {
       const desired = plan.signedWeeklyKg;
@@ -1006,23 +1186,23 @@
 
       if (profile.goalType === "maintain") {
         if (Math.abs(observedWeekly) < 0.15) {
-          title = `${namePrefix}la tendencia está razonablemente estable.`;
+          title = profile.name ? `Estable, ${profile.name}.` : "Tendencia estable.";
           text = `El ritmo reciente es ${observedWeekly > 0 ? "+" : ""}${formatNumber(observedWeekly, 2)} kg por semana, suficientemente cerca de una banda de mantenimiento.`;
         } else {
-          title = `${namePrefix}el promedio se está moviendo fuera del mantenimiento.`;
+          title = profile.name ? `${profile.name}, salís del mantenimiento.` : "Fuera del mantenimiento.";
           text = `La tendencia reciente cambia ${observedWeekly > 0 ? "+" : ""}${formatNumber(observedWeekly, 2)} kg por semana. Conviene observar si se sostiene antes de corregir calorías.`;
         }
       } else if (!correctDirection) {
-        title = `${namePrefix}la tendencia reciente va en sentido contrario al objetivo.`;
+        title = profile.name ? `${profile.name}, el rumbo se invirtió.` : "Rumbo contrario al objetivo.";
         text = `El ritmo observado es ${observedWeekly > 0 ? "+" : ""}${formatNumber(observedWeekly, 2)} kg por semana. Unos días pueden engañar; varias semanas en la misma dirección justifican revisar adherencia o cálculo.`;
       } else if (ratio < 0.65) {
-        title = `${namePrefix}vas hacia el objetivo, pero más lento que el plan.`;
+        title = profile.name ? `${profile.name}, vas más lento que el plan.` : "Más lento que el plan.";
         text = `La tendencia marca ${formatNumber(Math.abs(observedWeekly), 2)} kg por semana frente a ${formatNumber(Math.abs(desired), 2)} kg previstos. Si la diferencia se mantiene, MASA puede recalibrar la estimación.`;
       } else if (ratio > 1.4) {
-        title = `${namePrefix}la tendencia avanza más rápido que la cuenta inicial.`;
+        title = profile.name ? `${profile.name}, vas más rápido que el plan.` : "Más rápido que el plan.";
         text = `El ritmo observado es ${formatNumber(Math.abs(observedWeekly), 2)} kg por semana frente a ${formatNumber(Math.abs(desired), 2)} kg previstos. Revisá energía, rendimiento y sostenibilidad antes de buscar todavía más velocidad.`;
       } else {
-        title = `${namePrefix}la tendencia está bastante alineada con el plan.`;
+        title = profile.name ? `Bien alineado, ${profile.name}.` : "Bien alineado con el plan.";
         text = `El ritmo observado es ${formatNumber(Math.abs(observedWeekly), 2)} kg por semana y el previsto es ${formatNumber(Math.abs(desired), 2)} kg. La diferencia entra dentro del ruido esperable del peso diario.`;
       }
 
@@ -1539,7 +1719,9 @@
     }
     state.weighIns = mergeWeighIns(state.weighIns, [{ date, weight }]);
     saveState(state);
+    weightEditorForced = false;
     $("#quick-weight").value = "";
+    $("#alternate-date-wrap").hidden = true;
     setFeedback($("#weight-feedback"), `Registrado: ${formatKg(weight)} · ${formatDate(date)}.`);
     render();
   }
@@ -1724,7 +1906,8 @@
     $("#begin-setup").addEventListener("click", () => openSettings(true, "profile"));
     $("#welcome-import").addEventListener("click", () => openImport("profile"));
     $("#open-profile").addEventListener("click", () => openSettings(false, "profile"));
-    $("#brand-home").addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+    $("#brand-home").addEventListener("click", () => switchAppView("today"));
+    $$('[data-app-view]').forEach(button => button.addEventListener("click", () => switchAppView(button.dataset.appView)));
     $("#close-settings").addEventListener("click", closeSettings);
     $("#cancel-profile").addEventListener("click", closeSettings);
     $$('[data-close-settings]').forEach(element => element.addEventListener("click", closeSettings));
@@ -1738,6 +1921,8 @@
     $$("[data-native-date]").forEach(picker => picker.addEventListener("change", applyNativeDate));
 
     $("#quick-weight-form").addEventListener("submit", addQuickWeight);
+    $("#edit-today-weight").addEventListener("click", () => showWeightEditor("today"));
+    $("#add-previous-weight").addEventListener("click", () => showWeightEditor("previous"));
     $("#toggle-date").addEventListener("click", () => {
       $("#alternate-date-wrap").hidden = !$("#alternate-date-wrap").hidden;
       $("#toggle-date").textContent = $("#alternate-date-wrap").hidden ? "El pesaje es de otro día" : "Usar la fecha de hoy";
@@ -1763,6 +1948,19 @@
     $("#apply-recalibration").addEventListener("click", applyRecalibration);
 
     $$("[data-add-meal]").forEach(button => button.addEventListener("click", () => openFoodModal(button.dataset.addMeal)));
+    $("#global-add-intake").addEventListener("click", openMealPicker);
+    $("#close-meal-picker").addEventListener("click", closeMealPicker);
+    $$("[data-close-meal-picker]").forEach(element => element.addEventListener("click", closeMealPicker));
+    $$("[data-pick-meal]").forEach(button => button.addEventListener("click", () => pickMeal(button.dataset.pickMeal)));
+    $("#change-active-meal").addEventListener("click", () => { closeFoodModal(); openMealPicker(); });
+    $$("[data-diary-view]").forEach(button => button.addEventListener("click", () => switchDiaryView(button.dataset.diaryView)));
+    $$("[data-calorie-range]").forEach(button => button.addEventListener("click", () => {
+      calorieRange = toNumber(button.dataset.calorieRange, 14);
+      $$("[data-calorie-range]").forEach(item => item.classList.toggle("active", item === button));
+      drawCalorieChart(calculatePlan());
+    }));
+    $("#finish-day").addEventListener("click", finishDay);
+    $("#hide-day-summary").addEventListener("click", hideDaySummary);
     $("#meal-grid").addEventListener("click", removeDiaryEntry);
     $("#close-food").addEventListener("click", closeFoodModal);
     $$("[data-close-food]").forEach(element => element.addEventListener("click", closeFoodModal));
@@ -1795,7 +1993,10 @@
       $$('[data-chart-range]').forEach(item => item.classList.toggle("active", item === button));
       if (chartPayload) drawWeightChart($("#weight-chart"), chartPayload);
     }));
-    window.addEventListener("resize", debounce(() => chartPayload && drawWeightChart($("#weight-chart"), chartPayload), 100));
+    window.addEventListener("resize", debounce(() => {
+      if (chartPayload && activeAppView === "progress") drawWeightChart($("#weight-chart"), chartPayload);
+      if (activeDiaryView === "chart") drawCalorieChart(calculatePlan());
+    }, 100));
   }
 
   function debounce(fn, delay) {
@@ -1810,9 +2011,11 @@
     bindEvents();
     $$(".help-dot[data-tooltip]").forEach(button => { button.title = button.dataset.tooltip; });
     render();
+    switchAppView("today", false);
+    switchDiaryView("record");
     setTimeout(maybeOpenDailyCheckin, 180);
     if (navigator.serviceWorker?.register && location.protocol !== "file:") {
-      navigator.serviceWorker.register("service-worker.js").catch(() => {});
+      navigator.serviceWorker.register("/masa/service-worker.js", { scope: "/masa/" }).catch(() => {});
     }
   }
 
