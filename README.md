@@ -26,8 +26,6 @@ The objective is not to predict body weight perfectly, but to build a model that
 
 Instead of relying on static calorie estimations, the application constantly compares expected and observed results, allowing the underlying model to be recalibrated over time.
 
-Every calculation is deterministic, reproducible and transparent.
-
 ## Design Philosophy
 
 A few principles guide every decision made in the project.
@@ -42,6 +40,8 @@ The goal is to create software that helps users understand their own data rather
 
 ## Optimizations
 
+Next step is to go mobile.
+
 The project intentionally avoids heavyweight frameworks in order to keep the codebase lightweight, understandable and easy to maintain.
 
 Some of the engineering decisions include:
@@ -52,10 +52,6 @@ Some of the engineering decisions include:
 - Modular data model.
 - Progressive enhancement instead of framework dependency.
 - Responsive interface built from a single codebase.
-
-## Lessons Learned
-
-This project gradually became much more than a health application.
 
 It challenged me to think about software architecture, UX design, statistical modelling and long-term maintainability as a single problem instead of isolated components.
 
