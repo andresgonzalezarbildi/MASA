@@ -1,8 +1,8 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "masa-state-v9";
-  const LEGACY_KEYS = ["masa-state-v8", "masa-state-v7", "masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
+  const STORAGE_KEY = "masa-state-v10";
+  const LEGACY_KEYS = ["masa-state-v9", "masa-state-v8", "masa-state-v7", "masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
   const DAY_MS = 86_400_000;
   const KG_KCAL = 7700;
 
@@ -22,7 +22,7 @@
     goalDate: "",
     rateMode: "auto",
     weeklyRatePct: 0.5,
-    macroMode: "auto",
+    macroMode: "athletic",
     proteinPct: "",
     fatPct: "",
     carbPct: "",
@@ -201,7 +201,10 @@
     const oldMacroCalories = oldProtein * 4 + oldFat * 9 + oldCarbs * 4;
     const hasOldMacros = [oldProtein, oldFat, oldCarbs].every(Number.isFinite) && oldMacroCalories > 0;
     const hasPercentMacros = [raw.proteinPct, raw.fatPct, raw.carbPct].every(value => Number.isFinite(toNumber(value, NaN)));
-    const macroMode = raw.macroMode === "manual" && (hasPercentMacros || hasOldMacros) ? "manual" : "auto";
+    const rawMacroMode = raw.macroMode === "manual" ? "custom" : raw.macroMode === "auto" ? "athletic" : raw.macroMode;
+    const macroMode = rawMacroMode === "custom" && (hasPercentMacros || hasOldMacros)
+      ? "custom"
+      : ["balanced", "athletic"].includes(rawMacroMode) ? rawMacroMode : "athletic";
     const migratedProteinPct = hasPercentMacros ? toNumber(raw.proteinPct) : hasOldMacros ? oldProtein * 4 / oldMacroCalories * 100 : "";
     const migratedFatPct = hasPercentMacros ? toNumber(raw.fatPct) : hasOldMacros ? oldFat * 9 / oldMacroCalories * 100 : "";
     const migratedCarbPct = hasPercentMacros ? toNumber(raw.carbPct) : hasOldMacros ? oldCarbs * 4 / oldMacroCalories * 100 : "";
@@ -227,9 +230,9 @@
       rateMode: ["auto", "manual"].includes(raw.rateMode) ? raw.rateMode : "auto",
       weeklyRatePct: clamp(toNumber(raw.weeklyRatePct, raw.goalType === "gain" ? 0.25 : 0.5), 0, 2),
       macroMode,
-      proteinPct: macroMode === "manual" ? clamp(migratedProteinPct, 5, 70) : "",
-      fatPct: macroMode === "manual" ? clamp(migratedFatPct, 10, 70) : "",
-      carbPct: macroMode === "manual" ? clamp(migratedCarbPct, 5, 80) : "",
+      proteinPct: macroMode === "custom" ? clamp(migratedProteinPct, 5, 70) : "",
+      fatPct: macroMode === "custom" ? clamp(migratedFatPct, 10, 70) : "",
+      carbPct: macroMode === "custom" ? clamp(migratedCarbPct, 5, 80) : "",
       trendWindow: clamp(Math.round(toNumber(raw.trendWindow, 7)), 3, 14),
       planStartDate: normalizeDate(raw.planStartDate) || first?.date || "",
       planStartWeight: toNumber(raw.planStartWeight, first?.weight || "")
@@ -268,7 +271,7 @@
 
     const configured = profileIsComplete(profile, sorted);
     return {
-      version: 9,
+      version: 10,
       configured,
       profile,
       weighIns: sorted,
@@ -276,6 +279,7 @@
       recipes,
       diary,
       completedDays,
+      calibrationHistory: Array.isArray(input.calibrationHistory) ? input.calibrationHistory.slice(-20) : [],
       lastCheckinDate: normalizeDate(input.lastCheckinDate)
     };
   }
@@ -413,10 +417,10 @@
     return { value: mifflin(profile.sex, weight, height, age), used: "mifflin", fallback: false };
   }
 
-  function autoMacroRule(goalType) {
-    if (goalType === "loss") return { proteinPerKg: 1.9, fatPercent: 25 };
-    if (goalType === "gain") return { proteinPerKg: 1.7, fatPercent: 25 };
-    return { proteinPerKg: 1.6, fatPercent: 25 };
+  function athleticMacroRule(goalType) {
+    if (goalType === "loss") return { proteinPerKg: 2.2, fatPerKg: 1 };
+    if (goalType === "gain") return { proteinPerKg: 1.8, fatPerKg: 1 };
+    return { proteinPerKg: 1.8, fatPerKg: 1 };
   }
 
   function deriveTargetWeight(profile, currentWeight) {
@@ -504,20 +508,28 @@
     let fatG;
     let carbsG;
     let macroRule;
-    if (profile.macroMode === "manual") {
+    if (profile.macroMode === "custom") {
       const pPct = toNumber(profile.proteinPct, NaN);
       const fPct = toNumber(profile.fatPct, NaN);
       const cPct = toNumber(profile.carbPct, NaN);
       proteinG = Number.isFinite(targetCalories) && Number.isFinite(pPct) ? targetCalories * pPct / 100 / 4 : null;
       fatG = Number.isFinite(targetCalories) && Number.isFinite(fPct) ? targetCalories * fPct / 100 / 9 : null;
       carbsG = Number.isFinite(targetCalories) && Number.isFinite(cPct) ? targetCalories * cPct / 100 / 4 : null;
-      macroRule = { mode: "manual", proteinPerKg: Number.isFinite(proteinG) ? proteinG / weight : null, fatPercent: fPct };
+      macroRule = { mode: "custom", proteinPerKg: Number.isFinite(proteinG) ? proteinG / weight : null, fatPercent: fPct };
+    } else if (profile.macroMode === "balanced") {
+      const distribution = { proteinPct: 20, fatPct: 30, carbPct: 50 };
+      proteinG = Number.isFinite(targetCalories) ? targetCalories * distribution.proteinPct / 100 / 4 : null;
+      fatG = Number.isFinite(targetCalories) ? targetCalories * distribution.fatPct / 100 / 9 : null;
+      carbsG = Number.isFinite(targetCalories) ? targetCalories * distribution.carbPct / 100 / 4 : null;
+      macroRule = { mode: "balanced", ...distribution };
     } else {
-      const auto = autoMacroRule(profile.goalType);
-      proteinG = weight * auto.proteinPerKg;
-      fatG = Number.isFinite(targetCalories) ? targetCalories * auto.fatPercent / 100 / 9 : null;
+      const athletic = athleticMacroRule(profile.goalType);
+      proteinG = weight * athletic.proteinPerKg;
+      const requestedFatG = weight * athletic.fatPerKg;
+      const availableForFat = Number.isFinite(targetCalories) ? Math.max(0, targetCalories - proteinG * 4) : null;
+      fatG = Number.isFinite(availableForFat) ? Math.min(requestedFatG, availableForFat / 9) : null;
       carbsG = Number.isFinite(targetCalories) && Number.isFinite(fatG) ? Math.max(0, (targetCalories - proteinG * 4 - fatG * 9) / 4) : null;
-      macroRule = { mode: "auto", ...auto };
+      macroRule = { mode: "athletic", ...athletic, effectiveFatPerKg: Number.isFinite(fatG) ? fatG / weight : null };
     }
 
     const macroCalories = [proteinG * 4, fatG * 9, carbsG * 4].every(Number.isFinite)
@@ -1126,20 +1138,26 @@
     $("#protein-grams").textContent = Number.isFinite(plan.proteinG) ? `${formatNumber(Math.round(plan.proteinG))} g` : "—";
     $("#fat-grams").textContent = Number.isFinite(plan.fatG) ? `${formatNumber(Math.round(plan.fatG))} g` : "—";
     $("#carb-grams").textContent = Number.isFinite(plan.carbsG) ? `${formatNumber(Math.round(plan.carbsG))} g` : "—";
-    $("#protein-detail").textContent = profile.macroMode === "auto"
+    $("#protein-detail").textContent = profile.macroMode === "athletic"
       ? `${formatNumber(plan.macroRule.proteinPerKg, 1)} g/kg · ${formatNumber(plan.proteinPct, 0)}%`
       : `${formatNumber(plan.proteinPct, 0)}% de las calorías`;
-    $("#fat-detail").textContent = `${formatNumber(plan.fatPct, 0)}% de las calorías`;
-    $("#carb-detail").textContent = `${formatNumber(plan.carbsPct, 0)}% de las calorías`;
+    $("#fat-detail").textContent = profile.macroMode === "athletic"
+      ? `${formatNumber(plan.macroRule.effectiveFatPerKg, 1)} g/kg · ${formatNumber(plan.fatPct, 0)}%`
+      : `${formatNumber(plan.fatPct, 0)}% de las calorías`;
+    $("#carb-detail").textContent = profile.macroMode === "athletic"
+      ? `calorías restantes · ${formatNumber(plan.carbsPct, 0)}%`
+      : `${formatNumber(plan.carbsPct, 0)}% de las calorías`;
     $("#protein-bar").style.setProperty("--macro-width", `${clamp(plan.proteinPct || 0, 0, 100)}%`);
     $("#fat-bar").style.setProperty("--macro-width", `${clamp(plan.fatPct || 0, 0, 100)}%`);
     $("#carb-bar").style.setProperty("--macro-width", `${clamp(plan.carbsPct || 0, 0, 100)}%`);
 
     const macroNote = $("#macro-balance-note");
     macroNote.className = "inline-note";
-    macroNote.textContent = profile.macroMode === "manual"
+    macroNote.textContent = profile.macroMode === "custom"
       ? `Distribución personalizada: ${formatNumber(plan.proteinPct,0)}% proteína, ${formatNumber(plan.fatPct,0)}% grasas y ${formatNumber(plan.carbsPct,0)}% carbohidratos.`
-      : "Distribución automática: proteína según peso, grasas moderadas y carbohidratos con las calorías restantes.";
+      : profile.macroMode === "balanced"
+        ? "Modo balanceado: 20% proteína, 30% grasas y 50% carbohidratos."
+        : "Modo atlético: proteína y grasas según peso; carbohidratos con la energía restante.";
 
     $("#current-weight").textContent = formatKg(latest?.weight);
     $("#trend-weight").textContent = formatKg(latestTrend, 2);
@@ -1153,7 +1171,7 @@
     renderDiary(plan);
     renderRecordWeight();
     renderPlanStrip(profile, plan);
-    renderRecalibration(profile, plan, weighIns, trends);
+    renderRecalibration(profile, plan, weighIns);
     renderCharts(profile, plan, weighIns, trends, observedWeekly);
     renderHistory(trends);
 
@@ -1266,48 +1284,228 @@
       : "Todavía no hay pesajes suficientes.";
   }
 
-  function buildRecalibrationSuggestion(profile, plan, weighIns, trends) {
-    const startDate = parseDate(profile.planStartDate);
-    const startWeight = toNumber(profile.planStartWeight, NaN);
-    const latest = weighIns.at(-1);
-    const latestTrend = trends.at(-1)?.trend;
-    if (!startDate || !latest || !Number.isFinite(startWeight) || !Number.isFinite(latestTrend)) return null;
-    const relevant = weighIns.filter(item => parseDate(item.date) >= startDate);
-    const elapsed = daysBetween(startDate, parseDate(latest.date));
-    if (elapsed < 18 || relevant.length < 8) return null;
-    const expected = projectWeight(profile, startWeight, startDate, plan.targetWeight, plan.rate.selected, parseDate(latest.date));
-    const deviation = latestTrend - expected;
-    const threshold = Math.max(0.7, startWeight * 0.009);
-    if (!Number.isFinite(deviation) || Math.abs(deviation) < threshold) return null;
-    const observedWeekly = regressionRatePerWeek(relevant, 28);
-    if (!Number.isFinite(observedWeekly) || !Number.isFinite(plan.targetCalories) || !Number.isFinite(plan.baseMaintenance)) return null;
-    const estimatedMaintenance = plan.targetCalories - observedWeekly * KG_KCAL / 7;
-    const newOffset = clamp(Math.round(estimatedMaintenance - plan.baseMaintenance), -900, 900);
-    const change = newOffset - toNumber(profile.calibrationOffset, 0);
-    if (Math.abs(change) < 70) return null;
-    return { deviation, expected, latestTrend, observedWeekly, estimatedMaintenance, newOffset, change, latest };
+  function automaticAdjustmentData(profile = state.profile, plan = calculatePlan(profile, state.weighIns), weighIns = state.weighIns) {
+    const allLogged = Object.keys(state.diary || {}).sort().map(iso => {
+      const totals = diaryTotalsForDate(iso);
+      return {
+        iso,
+        date: parseDate(iso),
+        calories: totals.calories,
+        completed: Boolean(state.completedDays?.[iso]),
+        hasEntries: (state.diary[iso] || []).length > 0
+      };
+    }).filter(day => day.date && day.hasEntries && Number.isFinite(day.calories) && day.calories > 0);
+
+    if (!allLogged.length) {
+      return { ready: false, reason: "Todavía no hay ingestas registradas.", intakeDays: 0, weighInCount: weighIns.length };
+    }
+
+    const latestDate = allLogged.at(-1).date;
+    const recentStart = addDays(latestDate, -41);
+    const recentLogged = allLogged.filter(day => day.date >= recentStart && day.date <= latestDate);
+    const recentCompleted = recentLogged.filter(day => day.completed);
+    const used = recentCompleted.length >= 14 ? recentCompleted : recentLogged;
+    const completedOnly = recentCompleted.length >= 14;
+
+    if (used.length < 14) {
+      return {
+        ready: false,
+        reason: `Faltan ${14 - used.length} días de ingestas para una primera estimación.`,
+        intakeDays: used.length,
+        completedDays: recentCompleted.length,
+        weighInCount: weighIns.length
+      };
+    }
+
+    const firstDate = used[0].date;
+    const lastDate = used.at(-1).date;
+    const spanDays = Math.round(daysBetween(firstDate, lastDate)) + 1;
+    if (spanDays < 18) {
+      return {
+        ready: false,
+        reason: `Los registros todavía cubren solo ${spanDays} días. Se necesitan al menos 18 para separar ruido de tendencia.`,
+        intakeDays: used.length,
+        completedDays: recentCompleted.length,
+        weighInCount: weighIns.length,
+        spanDays
+      };
+    }
+
+    const relatedWeighIns = [...weighIns].filter(item => {
+      const date = parseDate(item.date);
+      return date && date >= addDays(firstDate, -3) && date <= addDays(lastDate, 3);
+    }).sort((a, b) => a.date.localeCompare(b.date));
+
+    if (relatedWeighIns.length < 8) {
+      return {
+        ready: false,
+        reason: `Hay ${relatedWeighIns.length} pesajes en el período. Se necesitan al menos 8.`,
+        intakeDays: used.length,
+        completedDays: recentCompleted.length,
+        weighInCount: relatedWeighIns.length,
+        spanDays
+      };
+    }
+
+    const observedWeekly = regressionRatePerWeek(relatedWeighIns, 60);
+    if (!Number.isFinite(observedWeekly) || !Number.isFinite(plan.targetCalories) || !Number.isFinite(plan.dailyAdjustment)) {
+      return {
+        ready: false,
+        reason: "No se pudo calcular una tendencia estable con los datos actuales.",
+        intakeDays: used.length,
+        completedDays: recentCompleted.length,
+        weighInCount: relatedWeighIns.length,
+        spanDays
+      };
+    }
+
+    const averageCalories = used.reduce((sum, day) => sum + day.calories, 0) / used.length;
+    const observedMaintenance = averageCalories - observedWeekly * KG_KCAL / 7;
+    if (!Number.isFinite(observedMaintenance) || observedMaintenance < 1000 || observedMaintenance > 6000) {
+      return {
+        ready: false,
+        reason: "Los datos producen un mantenimiento fuera de un rango plausible. Revisá que los días estén completos y que los pesajes sean correctos.",
+        intakeDays: used.length,
+        completedDays: recentCompleted.length,
+        weighInCount: relatedWeighIns.length,
+        spanDays
+      };
+    }
+    const recommendedTarget = observedMaintenance + plan.dailyAdjustment;
+    const rawChange = recommendedTarget - plan.targetCalories;
+    const limitedChange = clamp(Math.round(rawChange), -250, 250);
+    const currentOffset = toNumber(profile.calibrationOffset, 0);
+    const newOffset = clamp(currentOffset + limitedChange, -900, 900);
+    const appliedChange = newOffset - currentOffset;
+    const trends = rollingTrend(relatedWeighIns, profile.trendWindow);
+    const latestTrend = trends.at(-1)?.trend ?? relatedWeighIns.at(-1)?.weight;
+
+    return {
+      ready: true,
+      intakeDays: used.length,
+      completedDays: recentCompleted.length,
+      completedOnly,
+      weighInCount: relatedWeighIns.length,
+      spanDays,
+      firstDate,
+      lastDate,
+      averageCalories,
+      observedWeekly,
+      observedMaintenance,
+      currentTarget: plan.targetCalories,
+      recommendedTarget,
+      rawChange,
+      appliedChange,
+      newOffset,
+      latest: relatedWeighIns.at(-1),
+      latestTrend,
+      limited: Math.abs(rawChange) > 250
+    };
   }
 
-  function renderRecalibration(profile, plan, weighIns, trends) {
-    recalibrationSuggestion = buildRecalibrationSuggestion(profile, plan, weighIns, trends);
+  function buildRecalibrationSuggestion(profile, plan, weighIns) {
+    const suggestion = automaticAdjustmentData(profile, plan, weighIns);
+    if (!suggestion.ready || Math.abs(suggestion.appliedChange) < 50) return null;
+    return suggestion;
+  }
+
+  function automaticAdjustmentSummary(suggestion) {
+    if (!suggestion?.ready) return suggestion?.reason || "Todavía no hay datos suficientes.";
+    const direction = suggestion.observedWeekly < 0 ? "bajando" : suggestion.observedWeekly > 0 ? "subiendo" : "estable";
+    const changeText = Math.abs(suggestion.appliedChange) < 30
+      ? "El objetivo actual ya está suficientemente cerca de lo observado."
+      : `El objetivo pasaría de ${formatNumber(Math.round(suggestion.currentTarget))} a ${formatNumber(Math.round(suggestion.currentTarget + suggestion.appliedChange))} kcal por día (${suggestion.appliedChange > 0 ? "+" : ""}${formatNumber(suggestion.appliedChange)}).`;
+    const sourceText = suggestion.completedOnly
+      ? `${suggestion.intakeDays} días terminados`
+      : `${suggestion.intakeDays} días con ingestas; completar los días mejora la confianza`;
+    return `Con ${sourceText} y ${suggestion.weighInCount} pesajes, consumiste ${formatNumber(Math.round(suggestion.averageCalories))} kcal en promedio y el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. El mantenimiento observado es de aproximadamente ${formatNumber(Math.round(suggestion.observedMaintenance))} kcal. ${changeText}${suggestion.limited ? " Por seguridad, MASA limita cada ajuste automático a 250 kcal." : ""}`;
+  }
+
+  function renderAutomaticAdjustmentPreview(profile, plan, weighIns = state.weighIns) {
+    const suggestion = automaticAdjustmentData(profile, plan, weighIns);
+    const summary = $("#automatic-adjustment-summary");
+    const facts = $("#automatic-adjustment-facts");
+    const button = $("#run-auto-adjustment");
+    if (!summary || !facts || !button) return;
+    summary.textContent = automaticAdjustmentSummary(suggestion);
+    facts.innerHTML = `<div><span>Ingestas útiles</span><b>${suggestion.intakeDays || 0} días</b></div><div><span>Pesajes útiles</span><b>${suggestion.weighInCount || 0}</b></div><div><span>Período</span><b>${suggestion.spanDays || 0} días</b></div>`;
+    button.disabled = !suggestion.ready || Math.abs(suggestion.appliedChange) < 30;
+    button.textContent = suggestion.ready && Math.abs(suggestion.appliedChange) < 30 ? "Sin ajuste necesario" : "Ajustar automáticamente";
+    return suggestion;
+  }
+
+  function applyAutomaticAdjustment(suggestion, profile = state.profile) {
+    if (!suggestion?.ready || Math.abs(suggestion.appliedChange) < 30) return false;
+    profile.calibrationOffset = suggestion.newOffset;
+    profile.planStartDate = suggestion.latest?.date || todayISO();
+    profile.planStartWeight = Number(toNumber(suggestion.latestTrend, suggestion.latest?.weight).toFixed(2));
+    state.calibrationHistory = [...(state.calibrationHistory || []), {
+      date: todayISO(),
+      intakeDays: suggestion.intakeDays,
+      weighInCount: suggestion.weighInCount,
+      averageCalories: Math.round(suggestion.averageCalories),
+      observedWeekly: Number(suggestion.observedWeekly.toFixed(3)),
+      observedMaintenance: Math.round(suggestion.observedMaintenance),
+      previousTarget: Math.round(suggestion.currentTarget),
+      targetChange: suggestion.appliedChange,
+      newOffset: suggestion.newOffset
+    }].slice(-20);
+    return true;
+  }
+
+  function runAutomaticAdjustment() {
+    const form = $("#profile-form");
+    const currentWeight = toNumber(form.elements.currentWeight.value, NaN);
+    const draft = profileFromForm();
+    const temporaryWeighIns = Number.isFinite(currentWeight)
+      ? mergeWeighIns(state.weighIns, [{ date: todayISO(), weight: currentWeight }])
+      : state.weighIns;
+    const plan = calculatePlan(draft, temporaryWeighIns, currentWeight);
+    const feedback = $("#automatic-adjustment-feedback");
+    const validationError = validateProfile(draft, currentWeight);
+    if (validationError) {
+      setFeedback(feedback, `Antes de ajustar: ${validationError.message}`, true);
+      focusProfileField(validationError.field);
+      return;
+    }
+    const suggestion = automaticAdjustmentData(draft, plan, temporaryWeighIns);
+    if (!suggestion.ready) {
+      setFeedback(feedback, suggestion.reason, true);
+      return;
+    }
+    if (Math.abs(suggestion.appliedChange) < 30) {
+      setFeedback(feedback, "El objetivo actual ya está suficientemente cerca de lo observado.");
+      return;
+    }
+    const nextTarget = Math.round(suggestion.currentTarget + suggestion.appliedChange);
+    const accepted = window.confirm(`MASA propone llevar el objetivo diario a ${formatNumber(nextTarget)} kcal. El cálculo usa ${suggestion.intakeDays} días de ingestas y ${suggestion.weighInCount} pesajes. ¿Aplicar el ajuste?`);
+    if (!accepted) return;
+    state.weighIns = temporaryWeighIns;
+    state.profile = draft;
+    applyAutomaticAdjustment(suggestion, state.profile);
+    state.configured = true;
+    saveState(state);
+    fillProfileForm();
+    updateProfilePreview();
+    setFeedback(feedback, `Ajuste aplicado. Nuevo objetivo aproximado: ${formatNumber(nextTarget)} kcal por día.`);
+    render();
+  }
+
+  function renderRecalibration(profile, plan, weighIns) {
+    recalibrationSuggestion = buildRecalibrationSuggestion(profile, plan, weighIns);
     const panel = $("#recalibration-panel");
     panel.hidden = !recalibrationSuggestion;
     if (!recalibrationSuggestion) return;
-    const suggestion = recalibrationSuggestion;
-    const direction = suggestion.deviation > 0 ? "por encima" : "por debajo";
-    $("#recalibration-title").textContent = `${profile.name ? `${profile.name}, la` : "La"} tendencia ya permite revisar la estimación.`;
-    $("#recalibration-text").textContent = `La tendencia está ${formatNumber(Math.abs(suggestion.deviation), 2)} kg ${direction} del plan. Si tu ingesta estuvo cerca del objetivo, el mantenimiento observado sería aproximadamente ${formatNumber(Math.round(suggestion.estimatedMaintenance))} kcal, un ajuste de ${suggestion.change > 0 ? "+" : ""}${formatNumber(suggestion.change)} kcal sobre la calibración actual.`;
+    $("#recalibration-title").textContent = `${profile.name ? `${profile.name}, tus` : "Tus"} registros permiten recalibrar el objetivo.`;
+    $("#recalibration-text").textContent = automaticAdjustmentSummary(recalibrationSuggestion);
   }
 
   function applyRecalibration() {
     if (!recalibrationSuggestion) return;
-    state.profile.calibrationOffset = recalibrationSuggestion.newOffset;
-    state.profile.planStartDate = recalibrationSuggestion.latest.date;
-    state.profile.planStartWeight = Number(recalibrationSuggestion.latestTrend.toFixed(2));
+    if (!applyAutomaticAdjustment(recalibrationSuggestion, state.profile)) return;
     saveState(state);
     render();
   }
-
 
   function latestChartDate(payload) {
     const dates = [
@@ -1875,11 +2073,11 @@
     form.elements.goalDate.value = displayDate(profile.goalDate);
     form.elements.rateMode.value = profile.rateMode || "auto";
     form.elements.weeklyRatePct.value = profile.weeklyRatePct || 0.5;
-    form.elements.macroMode.value = profile.macroMode || "auto";
+    form.elements.macroMode.value = profile.macroMode || "athletic";
     const currentPlan = calculatePlan(profile, state.weighIns);
-    form.elements.proteinPct.value = profile.macroMode === "manual" ? Math.round(profile.proteinPct) : Math.round(currentPlan.proteinPct || 25);
-    form.elements.fatPct.value = profile.macroMode === "manual" ? Math.round(profile.fatPct) : Math.round(currentPlan.fatPct || 25);
-    form.elements.carbPct.value = profile.macroMode === "manual" ? Math.round(profile.carbPct) : Math.round(currentPlan.carbsPct || 50);
+    form.elements.proteinPct.value = profile.macroMode === "custom" ? Math.round(profile.proteinPct) : 20;
+    form.elements.fatPct.value = profile.macroMode === "custom" ? Math.round(profile.fatPct) : 30;
+    form.elements.carbPct.value = profile.macroMode === "custom" ? Math.round(profile.carbPct) : 50;
     $("#profile-import-callout").hidden = state.configured;
     syncNativeDatePickers();
     setTimeout(() => { fillingProfileForm = false; }, 0);
@@ -1929,16 +2127,20 @@
     form.elements.rateMode.disabled = maintain;
     $("#activity-explanation").textContent = `${ACTIVITY_EXPLANATIONS[form.elements.activityFactor.value] || ""} Elegilo por la rutina completa, no solamente por el entrenamiento.`;
 
+    const customMacros = form.elements.macroMode.value === "custom";
+    $("#custom-macro-fields").hidden = !customMacros;
+    $("#macro-sum-line").hidden = !customMacros;
     const sum = ["proteinPct","fatPct","carbPct"].reduce((total, name) => total + toNumber(form.elements[name].value, 0), 0);
     $("#macro-percent-sum").textContent = `${formatNumber(sum,0)}%`;
-    $("#macro-percent-sum").closest(".macro-sum-line").classList.toggle("invalid", Math.abs(sum - 100) > 0.01);
-    $("#macro-mode-label").textContent = form.elements.macroMode.value === "manual" ? "personalizada" : "automática";
+    $("#macro-percent-sum").closest(".macro-sum-line").classList.toggle("invalid", customMacros && Math.abs(sum - 100) > 0.01);
+    const modeLabels = { balanced: "balanceado", athletic: "atlético", custom: "personalizado" };
+    $("#macro-mode-label").textContent = modeLabels[form.elements.macroMode.value] || "atlético";
   }
 
   function updateProfilePreview(event) {
     const form = $("#profile-form");
     if (!fillingProfileForm && event?.target?.matches('[name="proteinPct"],[name="fatPct"],[name="carbPct"]')) {
-      form.elements.macroMode.value = "manual";
+      form.elements.macroMode.value = "custom";
     }
     updateProfileControls();
     const draft = profileFromForm();
@@ -1955,6 +2157,7 @@
     $("#preview-date").textContent = plan.estimatedDate ? formatDate(plan.estimatedDate) : "—";
     renderGoalExplanation(draft, plan);
     renderMacroExplanation(draft, plan);
+    renderAutomaticAdjustmentPreview(draft, plan, temporaryWeighIns);
   }
 
   function renderGoalExplanation(profile, plan) {
@@ -1996,8 +2199,12 @@
     const box = $("#macro-explanation");
     box.className = "explanation-box";
     const sum = toNumber(profile.proteinPct, 0) + toNumber(profile.fatPct, 0) + toNumber(profile.carbPct, 0);
-    if (profile.macroMode === "auto") {
-      box.textContent = `Automático: ${formatNumber(plan.macroRule.proteinPerKg, 1)} g/kg de proteína, ${formatNumber(plan.macroRule.fatPercent, 0)}% en grasas y el resto en carbohidratos. Modificar un porcentaje lo convierte en personalizado.`;
+    if (profile.macroMode === "balanced") {
+      box.textContent = "Balanceado: 20% de proteína, 30% de grasas y 50% de carbohidratos. Replica una distribución general por porcentajes.";
+      return;
+    }
+    if (profile.macroMode === "athletic") {
+      box.textContent = `Atlético: ${formatNumber(plan.macroRule.proteinPerKg, 1)} g/kg de proteína, ${formatNumber(plan.macroRule.effectiveFatPerKg, 1)} g/kg de grasas y carbohidratos con las calorías restantes.`;
       return;
     }
     if (Math.abs(sum - 100) > 0.01) {
@@ -2023,7 +2230,7 @@
       if (!profile.goalDate) return { message: "Ingresá una fecha objetivo.", field: "goalDate" };
       if (parseDate(profile.goalDate) <= today) return { message: "La fecha objetivo debe ser futura.", field: "goalDate" };
     }
-    if (profile.macroMode === "manual") {
+    if (profile.macroMode === "custom") {
       const values = [profile.proteinPct, profile.fatPct, profile.carbPct].map(value => toNumber(value, NaN));
       if (!values.every(Number.isFinite)) return { message: "Completá los tres porcentajes de macros.", field: "proteinPct" };
       if (Math.abs(values.reduce((a,b) => a+b, 0) - 100) > 0.01) return { message: "Los porcentajes de macros deben sumar 100%.", field: "proteinPct" };
@@ -2445,11 +2652,11 @@
   }
 
   function exportHistory() {
-    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 9 }, null, 2), "application/json");
+    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 10 }, null, 2), "application/json");
   }
 
   function exportBackup() {
-    downloadText(`perfil-completo-masa-${todayISO()}.json`, JSON.stringify({ ...state, version: 9 }, null, 2), "application/json");
+    downloadText(`perfil-completo-masa-${todayISO()}.json`, JSON.stringify({ ...state, version: 10 }, null, 2), "application/json");
   }
 
   function downloadText(filename, content, type) {
@@ -2593,6 +2800,7 @@
     $("#cancel-confirm").addEventListener("click", () => { closeConfirm(); document.body.classList.add("modal-open"); });
     $("#confirm-action").addEventListener("click", resetAll);
     $("#apply-recalibration").addEventListener("click", applyRecalibration);
+    $("#run-auto-adjustment").addEventListener("click", runAutomaticAdjustment);
 
     $$("[data-add-meal]").forEach(button => button.addEventListener("click", () => openFoodModal(button.dataset.addMeal)));
     $("#global-add-intake").addEventListener("click", openMealPicker);

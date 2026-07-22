@@ -1311,3 +1311,40 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .diary-workspace { grid-template-columns: 1fr; }
   .records-sidebar { width: 100%; }
 }
+
+
+/* --- MASA v10: modos de macros y calibración por datos observados --- */
+.macro-mode-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.macro-mode-options .choice-card { align-items: start; }
+.macro-mode-options .choice-card small { min-height: 40px; }
+.automatic-adjustment-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px 24px;
+  align-items: center;
+  padding: 22px;
+  border: 2px solid var(--ink);
+  background: var(--yellow);
+  box-shadow: 7px 7px 0 var(--violet);
+}
+.automatic-adjustment-copy h4 { margin: 5px 0 9px; font-family: var(--font-display); font-size: clamp(25px, 3vw, 38px); line-height: .98; }
+.automatic-adjustment-copy > p:last-child { max-width: 760px; margin: 0; color: var(--ink-2); line-height: 1.5; }
+.automatic-adjustment-facts { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--ink); background: var(--night); color: var(--paper); }
+.automatic-adjustment-facts div { padding: 12px 14px; }
+.automatic-adjustment-facts div + div { border-left: 1px solid rgba(242,239,230,.22); }
+.automatic-adjustment-facts span, .automatic-adjustment-facts b { display: block; }
+.automatic-adjustment-facts span { color: rgba(242,239,230,.55); font-size: 9px; text-transform: uppercase; }
+.automatic-adjustment-facts b { margin-top: 4px; color: var(--acid); font-family: var(--font-mono); }
+.automatic-adjustment-card > small { grid-column: 1 / -1; color: var(--ink-2); line-height: 1.45; }
+.automatic-adjustment-card .feedback { grid-column: 1 / -1; margin: 0; }
+#run-auto-adjustment:disabled { opacity: .48; cursor: not-allowed; box-shadow: none; }
+@media (max-width: 800px) {
+  .macro-mode-options { grid-template-columns: 1fr; }
+  .macro-mode-options .choice-card small { min-height: 0; }
+  .automatic-adjustment-card { grid-template-columns: 1fr; }
+  .automatic-adjustment-card > button { width: 100%; }
+}
+@media (max-width: 590px) {
+  .automatic-adjustment-facts { grid-template-columns: 1fr; }
+  .automatic-adjustment-facts div + div { border-left: 0; border-top: 1px solid rgba(242,239,230,.22); }
+}

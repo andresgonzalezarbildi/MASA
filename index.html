@@ -205,7 +205,7 @@
 <p class="eyebrow">RECALIBRACIÓN SUGERIDA</p>
 <h2 id="recalibration-title">La tendencia se alejó de la proyección.</h2>
 <p id="recalibration-text">—</p>
-<small>Conviene aplicarla solamente si durante estas semanas estuviste razonablemente cerca de las calorías objetivo.</small>
+<small>El cálculo usa el consumo realmente registrado y la tendencia observada del peso; no supone que hayas cumplido el objetivo anterior.</small>
 </div>
 <button class="primary-action" id="apply-recalibration" type="button">Ajustar cálculo</button>
 </section><section class="progress-section">
@@ -334,15 +334,34 @@
 <div class="explanation-box" id="goal-explanation"></div>
 </section>
 <section class="form-block">
-<div class="form-block-title"><span>04</span><div><h3>Macros</h3><p>La app propone una distribución; si cambiás un porcentaje, pasa a ser personalizada automáticamente.</p></div></div>
-<input name="macroMode" type="hidden" value="auto"/>
-<div class="form-grid manual-macro-grid percent-macro-grid">
-<label><span>Proteína <button aria-label="Información sobre proteína personalizada" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de proteína. Cada gramo aporta 4 kcal. Para perder grasa suele priorizarse una cantidad suficiente por kilo." type="button">?</button></span><div class="unit-input"><input inputmode="numeric" max="70" min="5" name="proteinPct" step="1" type="number"/><i>%</i></div></label>
-<label><span>Grasas <button aria-label="Información sobre grasas personalizadas" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de grasas. Cada gramo aporta 9 kcal. Como referencia general, evitá llevarlas demasiado abajo durante períodos largos." type="button">?</button></span><div class="unit-input"><input inputmode="numeric" max="70" min="10" name="fatPct" step="1" type="number"/><i>%</i></div></label>
-<label><span>Carbohidratos <button aria-label="Información sobre carbohidratos personalizados" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de carbohidratos. Cada gramo aporta 4 kcal y suelen completar el resto de la energía." type="button">?</button></span><div class="unit-input"><input inputmode="numeric" max="80" min="5" name="carbPct" step="1" type="number"/><i>%</i></div></label>
+<div class="form-block-title"><span>04</span><div><h3>Macros</h3><p>Elegí una lógica de distribución. El objetivo calórico se calcula por separado.</p></div></div>
+<fieldset class="formula-options macro-mode-options">
+<legend>Modo de macronutrientes</legend>
+<label class="choice-card"><input name="macroMode" type="radio" value="balanced"/><span><b>Balanceado</b><small>20% proteína, 30% grasas y 50% carbohidratos, similar a una configuración general.</small></span></label>
+<label class="choice-card"><input checked="" name="macroMode" type="radio" value="athletic"/><span><b>Atlético</b><small>Proteína y grasas según peso corporal; carbohidratos con la energía restante.</small></span></label>
+<label class="choice-card"><input name="macroMode" type="radio" value="custom"/><span><b>Personalizado</b><small>Definí manualmente el porcentaje de cada macronutriente.</small></span></label>
+</fieldset>
+<div class="form-grid manual-macro-grid percent-macro-grid" hidden="" id="custom-macro-fields">
+<label><span>Proteína <button aria-label="Información sobre proteína personalizada" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de proteína. Cada gramo aporta 4 kcal." type="button">?</button></span><div class="unit-input"><input inputmode="numeric" max="70" min="5" name="proteinPct" step="1" type="number"/><i>%</i></div></label>
+<label><span>Grasas <button aria-label="Información sobre grasas personalizadas" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de grasas. Cada gramo aporta 9 kcal." type="button">?</button></span><div class="unit-input"><input inputmode="numeric" max="70" min="10" name="fatPct" step="1" type="number"/><i>%</i></div></label>
+<label><span>Carbohidratos <button aria-label="Información sobre carbohidratos personalizados" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de carbohidratos. Cada gramo aporta 4 kcal." type="button">?</button></span><div class="unit-input"><input inputmode="numeric" max="80" min="5" name="carbPct" step="1" type="number"/><i>%</i></div></label>
 </div>
-<div class="macro-sum-line"><span>Distribución total</span><b id="macro-percent-sum">100%</b><small id="macro-mode-label">automática</small></div>
+<div class="macro-sum-line" hidden="" id="macro-sum-line"><span>Distribución total</span><b id="macro-percent-sum">100%</b><small id="macro-mode-label">atlético</small></div>
 <div class="explanation-box" id="macro-explanation"></div>
+</section>
+<section class="form-block automatic-adjustment-block">
+<div class="form-block-title"><span>05</span><div><h3>Ajuste automático</h3><p>Recalibra el mantenimiento y el objetivo usando solamente tus ingestas y pesajes registrados.</p></div></div>
+<div class="automatic-adjustment-card">
+<div class="automatic-adjustment-copy">
+<p class="eyebrow">MODELO OBSERVADO</p>
+<h4>Que la fórmula sea el punto de partida, no la última palabra.</h4>
+<p id="automatic-adjustment-summary">MASA necesita varias semanas de datos para proponer un ajuste.</p>
+</div>
+<div class="automatic-adjustment-facts" id="automatic-adjustment-facts"><div><span>Ingestas útiles</span><b>0 días</b></div><div><span>Pesajes útiles</span><b>0</b></div><div><span>Período</span><b>0 días</b></div></div>
+<button class="primary-action" disabled="" id="run-auto-adjustment" type="button">Ajustar automáticamente</button>
+<small>Usa hasta 42 días recientes, prioriza días terminados, requiere al menos 14 días de ingestas y 8 pesajes, y limita cada corrección a 250 kcal.</small>
+<p class="feedback" id="automatic-adjustment-feedback" role="status"></p>
+</div>
 </section>
 <section class="preview-block">
 <div><span>Mantenimiento</span><b id="preview-maintenance">—</b></div>
