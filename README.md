@@ -4,7 +4,7 @@
 
 Rather than building another calorie tracker, MASA treats body weight as a measurable system. Nutrition is only one of the inputs used to model energy balance, predict trends and continuously validate whether the underlying mathematical model still represents reality.
 
-**Live Demo:** https://masaandresgonzalez.netlify.app/
+**Live Demo:** [https://masaandresgonzalez.netlify.app/](https://andresgonzalez.netlify.app/masa)
 
 ![MASA Screenshot](./screenshot.png)
 
