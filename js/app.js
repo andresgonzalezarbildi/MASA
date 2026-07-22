@@ -1,8 +1,8 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "masa-state-v8";
-  const LEGACY_KEYS = ["masa-state-v7", "masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
+  const STORAGE_KEY = "masa-state-v9";
+  const LEGACY_KEYS = ["masa-state-v8", "masa-state-v7", "masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
   const DAY_MS = 86_400_000;
   const KG_KCAL = 7700;
 
@@ -58,6 +58,7 @@
   let importMode = "profile";
   let chartPayload = null;
   let chartRange = "3m";
+  let activeProgressChart = "weight";
   let recalibrationSuggestion = null;
   let fillingProfileForm = false;
   let activeMeal = "breakfast";
@@ -267,7 +268,7 @@
 
     const configured = profileIsComplete(profile, sorted);
     return {
-      version: 7,
+      version: 9,
       configured,
       profile,
       weighIns: sorted,
@@ -605,7 +606,10 @@
     const iso = normalizeDate(value);
     if (!iso) return;
     selectedDiaryDate = iso > todayISO() ? todayISO() : iso;
+    weightEditorForced = false;
     renderDiary(calculatePlan());
+    renderRecordWeight();
+    if (activeDiaryView === "chart") requestAnimationFrame(() => drawCalorieChart(calculatePlan()));
     if (scroll) $("#daily-diary")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -740,7 +744,7 @@
       const date = addDays(end, -offset);
       const iso = toISODate(date);
       const totals = diaryTotalsForDate(iso);
-      days.push({ date, iso, calories: totals.calories, hasEntries: (state.diary[iso] || []).length > 0 });
+      days.push({ date, iso, calories: totals.calories, hasEntries: (state.diary[iso] || []).length > 0, completed: Boolean(state.completedDays?.[iso]) });
     }
     return days;
   }
@@ -807,13 +811,16 @@
 
     const logged = days.filter(day => day.hasEntries);
     $("#calorie-chart-empty").hidden = logged.length > 0;
-    if (!logged.length || !target) {
-      $("#calorie-chart-summary").textContent = "Todavía no hay días completos para comparar.";
+    const analysis = buildCalorieAnalysis(plan, sortedWeighIns(), days);
+    if (!Number.isFinite(analysis.average)) {
+      $("#calorie-chart-summary").textContent = "Todavía no hay días suficientes para comparar.";
       return;
     }
-    const average = logged.reduce((sum, day) => sum + day.calories, 0) / logged.length;
-    const diff = average - target;
-    $("#calorie-chart-summary").textContent = `Promedio registrado: ${formatNumber(Math.round(average))} kcal · ${formatNumber(Math.abs(Math.round(diff)))} kcal ${diff > 0 ? "por encima" : "por debajo"} del objetivo.`;
+    const diff = analysis.difference;
+    const weightText = Number.isFinite(analysis.observedWeekly)
+      ? ` · el peso ${analysis.observedWeekly < -0.05 ? "baja" : analysis.observedWeekly > 0.05 ? "sube" : "se mantiene"} ${Math.abs(analysis.observedWeekly) >= 0.05 ? `${formatNumber(Math.abs(analysis.observedWeekly), 2)} kg/sem` : ""}`
+      : "";
+    $("#calorie-chart-summary").textContent = `Promedio: ${formatNumber(Math.round(analysis.average))} kcal · ${formatNumber(Math.abs(Math.round(diff)))} kcal ${diff > 0 ? "sobre" : "bajo"} el objetivo${weightText}.`;
   }
 
   function switchAppView(view, scroll = true) {
@@ -821,7 +828,7 @@
     $$('[data-app-view]').forEach(button => button.classList.toggle("active", button.dataset.appView === activeAppView));
     $("#today-view").hidden = activeAppView !== "today";
     $("#progress-view").hidden = activeAppView !== "progress";
-    if (activeAppView === "progress" && chartPayload) requestAnimationFrame(() => drawWeightChart($("#weight-chart"), chartPayload));
+    if (activeAppView === "progress" && chartPayload) requestAnimationFrame(renderActiveProgressChart);
     if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -840,31 +847,30 @@
     openFoodModal(meal);
   }
 
-  function showWeightEditor(mode = "today") {
+  function showWeightEditor() {
     weightEditorForced = true;
-    $("#quick-weight-form").hidden = false;
-    $("#today-weight-recorded").hidden = true;
-    const isPrevious = mode === "previous";
-    $("#alternate-date-wrap").hidden = !isPrevious;
-    $("#toggle-date").textContent = isPrevious ? "Usar la fecha de hoy" : "El pesaje es de otro día";
-    if (isPrevious) {
-      $("#quick-weight").value = "";
-      $("#quick-date").value = displayDate(toISODate(addDays(parseDate(todayISO()), -1)));
-    } else {
-      const todayEntry = state.weighIns.find(item => item.date === todayISO());
-      $("#quick-weight").value = todayEntry?.weight || "";
-      $("#quick-date").value = displayDate(todayISO());
-    }
-    setTimeout(() => $("#quick-weight").focus(), 50);
+    const entry = state.weighIns.find(item => item.date === selectedDiaryDate);
+    $("#quick-weight").value = entry?.weight || "";
+    renderRecordWeight();
+    setTimeout(() => $("#quick-weight")?.focus(), 50);
+  }
+
+  function renderRecordWeight() {
+    const entry = state.weighIns.find(item => item.date === selectedDiaryDate);
+    const recorded = Boolean(entry);
+    const selectedLabel = selectedDiaryDate === todayISO() ? "hoy" : `el ${formatDate(selectedDiaryDate)}`;
+    $("#record-weight-title").textContent = recorded ? `Peso de ${selectedLabel}` : `Registrar peso de ${selectedLabel}`;
+    $("#weight-context").textContent = recorded
+      ? `Este dato forma parte de la tendencia y puede editarse sin salir del registro diario.`
+      : "Es opcional. Un dato aislado puede variar mucho; la tendencia necesita varias mediciones.";
+    $("#today-weight-recorded").hidden = !recorded || weightEditorForced;
+    $("#quick-weight-form").hidden = recorded && !weightEditorForced;
+    if (recorded) $("#today-weight-value").textContent = formatKg(entry.weight);
+    if (!weightEditorForced && !recorded) $("#quick-weight").value = "";
   }
 
   function updateWeightEntryState() {
-    const todayEntry = state.weighIns.find(item => item.date === todayISO());
-    const recorded = Boolean(todayEntry);
-    $("#today-weight-recorded").hidden = !recorded || weightEditorForced;
-    $("#quick-weight-form").hidden = recorded && !weightEditorForced;
-    $("#toggle-date").hidden = recorded && !weightEditorForced;
-    if (recorded) $("#today-weight-value").textContent = formatKg(todayEntry.weight);
+    renderRecordWeight();
   }
 
   function escapeHTML(value) {
@@ -1145,8 +1151,8 @@
     updateWeightEntryState();
 
     renderDiary(plan);
+    renderRecordWeight();
     renderPlanStrip(profile, plan);
-    renderInsight(profile, plan, weighIns, trends, observedWeekly);
     renderRecalibration(profile, plan, weighIns, trends);
     renderCharts(profile, plan, weighIns, trends, observedWeekly);
     renderHistory(trends);
@@ -1158,7 +1164,6 @@
     $("#stat-ffmi").textContent = formatNumber(plan.ffmi, 1);
     $("#plan-start").textContent = formatDate(profile.planStartDate || first?.date);
     $("#plan-start-weight").textContent = formatKg(toNumber(profile.planStartWeight, first?.weight));
-    $("#quick-date").value = displayDate(todayISO());
   }
 
   function renderPlanStrip(profile, plan) {
@@ -1201,14 +1206,22 @@
     $("#goal-guidance").textContent = guidance;
   }
 
-  function renderInsight(profile, plan, weighIns, trends, observedWeekly) {
-    const namePrefix = profile.name ? `${profile.name}, ` : "";
+  function setInsightFact(index, label, value) {
+    $(`#insight-fact-label-${index}`).textContent = label;
+    const valueIds = ["expected-today", "expected-difference", "stat-change"];
+    $(`#${valueIds[index - 1]}`).textContent = value;
+  }
+
+  function renderWeightInsight(profile, plan, weighIns, trends, observedWeekly) {
+    $(".progress-model-data").hidden = false;
     const latest = weighIns.at(-1);
+    const first = weighIns[0];
     const latestTrend = trends.at(-1)?.trend;
     const expectedToday = expectedAtDate(profile, plan, parseDate(latest?.date || todayISO()));
     const difference = Number.isFinite(latestTrend) && Number.isFinite(expectedToday) ? latestTrend - expectedToday : null;
-    $("#expected-today").textContent = formatKg(expectedToday, 2);
-    $("#expected-difference").textContent = formatSignedKg(difference);
+    setInsightFact(1, "Esperado hoy", formatKg(expectedToday, 2));
+    setInsightFact(2, "Diferencia", formatSignedKg(difference));
+    setInsightFact(3, "Cambio total", first && latest ? formatSignedKg(latest.weight - first.weight) : "—");
 
     let title = profile.name ? `${profile.name}, todavía faltan datos.` : "Todavía faltan datos.";
     let text = "Con algunos pesajes más se puede separar una variación puntual de una dirección sostenida.";
@@ -1248,7 +1261,9 @@
 
     $("#chart-insight-title").textContent = title;
     $("#chart-insight").textContent = text;
-    $("#chart-insight-meta").textContent = `${weighIns.length} pesajes entre ${formatDate(weighIns[0]?.date)} y ${formatDate(latest?.date)} · tendencia de ${state.profile.trendWindow} pesajes válidos`;
+    $("#chart-insight-meta").textContent = weighIns.length
+      ? `${weighIns.length} pesajes entre ${formatDate(weighIns[0]?.date)} y ${formatDate(latest?.date)} · tendencia de ${state.profile.trendWindow} pesajes válidos`
+      : "Todavía no hay pesajes suficientes.";
   }
 
   function buildRecalibrationSuggestion(profile, plan, weighIns, trends) {
@@ -1294,6 +1309,272 @@
   }
 
 
+  function latestChartDate(payload) {
+    const dates = [
+      ...payload.weighIns.map(item => item.date),
+      ...Object.keys(state.diary || {})
+    ].map(parseDate).filter(Boolean);
+    return dates.length ? new Date(Math.max(...dates.map(date => date.getTime()))) : parseDate(todayISO());
+  }
+
+  function chartBounds(payload, includeFuture = false) {
+    if (chartRange === "all") return { start: null, end: null };
+    const months = { "1m": 1, "3m": 3, "6m": 6 }[chartRange] || 3;
+    const latest = latestChartDate(payload);
+    return {
+      start: addMonths(latest, -months),
+      end: includeFuture ? addMonths(latest, months) : latest
+    };
+  }
+
+  function withinBounds(date, bounds) {
+    return date && (!bounds.start || date >= bounds.start) && (!bounds.end || date <= bounds.end);
+  }
+
+  function calorieDaysForBounds(bounds) {
+    return Object.keys(state.diary || {}).sort().map(iso => {
+      const date = parseDate(iso);
+      const totals = diaryTotalsForDate(iso);
+      return {
+        date,
+        iso,
+        calories: totals.calories,
+        hasEntries: (state.diary[iso] || []).length > 0,
+        completed: Boolean(state.completedDays?.[iso])
+      };
+    }).filter(day => day.hasEntries && withinBounds(day.date, bounds));
+  }
+
+  function buildCalorieAnalysis(plan, weighIns, days) {
+    const logged = (days || []).filter(day => day.hasEntries && Number.isFinite(day.calories));
+    const completed = logged.filter(day => day.completed);
+    const used = completed.length >= 3 ? completed : logged;
+    if (!used.length || !Number.isFinite(plan.targetCalories)) {
+      return { logged, used, completedOnly: false, average: null, difference: null, observedWeekly: null, spanDays: 0, remainingReviewDays: 21 };
+    }
+
+    const average = used.reduce((sum, day) => sum + day.calories, 0) / used.length;
+    const difference = average - plan.targetCalories;
+    const firstDate = used[0].date;
+    const lastDate = used.at(-1).date;
+    const spanDays = Math.max(1, Math.round(daysBetween(firstDate, lastDate)) + 1);
+    const relatedWeighIns = weighIns.filter(item => {
+      const date = parseDate(item.date);
+      return date >= addDays(firstDate, -4) && date <= addDays(lastDate, 4);
+    });
+    const observedWeekly = regressionRatePerWeek(relatedWeighIns, 100);
+    const estimatedMaintenance = Number.isFinite(observedWeekly)
+      ? average - observedWeekly * KG_KCAL / 7
+      : null;
+    const recommendedTarget = Number.isFinite(estimatedMaintenance) && Number.isFinite(plan.dailyAdjustment)
+      ? estimatedMaintenance + plan.dailyAdjustment
+      : null;
+    const targetAdjustment = Number.isFinite(recommendedTarget)
+      ? recommendedTarget - plan.targetCalories
+      : null;
+
+    return {
+      logged,
+      used,
+      completedOnly: completed.length >= 3,
+      average,
+      difference,
+      observedWeekly,
+      estimatedMaintenance,
+      recommendedTarget,
+      targetAdjustment,
+      spanDays,
+      remainingReviewDays: Math.max(0, 21 - spanDays),
+      firstDate,
+      lastDate,
+      weighInCount: relatedWeighIns.length
+    };
+  }
+
+  function relationshipSamples(payload) {
+    const bounds = chartBounds(payload, false);
+    const trends = payload.trends.filter(item => withinBounds(parseDate(item.date), bounds));
+    const samples = [];
+    trends.forEach((current, index) => {
+      if (index === 0) return;
+      const currentDate = parseDate(current.date);
+      let prior = null;
+      for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+        const candidate = trends[cursor];
+        const elapsed = daysBetween(parseDate(candidate.date), currentDate);
+        if (elapsed >= 5) { prior = candidate; break; }
+      }
+      if (!prior) return;
+      const priorDate = parseDate(prior.date);
+      const elapsed = daysBetween(priorDate, currentDate);
+      if (elapsed > 16) return;
+      const diaryDays = calorieDaysForBounds({ start: addDays(priorDate, 1), end: currentDate });
+      if (diaryDays.length < 3 || !Number.isFinite(payload.plan.targetCalories)) return;
+      const averageCalories = diaryDays.reduce((sum, day) => sum + day.calories, 0) / diaryDays.length;
+      const weeklyWeightChange = (current.trend - prior.trend) * 7 / elapsed;
+      if (samples.length && daysBetween(samples.at(-1).date, currentDate) < 5) return;
+      samples.push({
+        date: currentDate,
+        calorieDifference: averageCalories - payload.plan.targetCalories,
+        weeklyWeightChange,
+        loggedDays: diaryDays.length
+      });
+    });
+    return samples;
+  }
+
+  function correlationCoefficient(points) {
+    if (points.length < 3) return null;
+    const meanX = points.reduce((sum, point) => sum + point.calorieDifference, 0) / points.length;
+    const meanY = points.reduce((sum, point) => sum + point.weeklyWeightChange, 0) / points.length;
+    const numerator = points.reduce((sum, point) => sum + (point.calorieDifference - meanX) * (point.weeklyWeightChange - meanY), 0);
+    const denomX = Math.sqrt(points.reduce((sum, point) => sum + (point.calorieDifference - meanX) ** 2, 0));
+    const denomY = Math.sqrt(points.reduce((sum, point) => sum + (point.weeklyWeightChange - meanY) ** 2, 0));
+    return denomX && denomY ? numerator / (denomX * denomY) : null;
+  }
+
+  function configureProgressChart(kind) {
+    const copy = {
+      weight: {
+        eyebrow: "PLAN VS REALIDAD",
+        title: "Tu peso real frente al camino previsto.",
+        description: "La línea sólida muestra la tendencia real. La punteada conserva el plan original.",
+        legend: ["Peso real", "Tendencia", "Plan", "Objetivo"],
+        classes: ["legend-real", "legend-trend", "legend-plan", "legend-goal"]
+      },
+      calories: {
+        eyebrow: "CONSUMO VS OBJETIVO",
+        title: "Las calorías que registrás frente al número del plan.",
+        description: "El promedio se calcula con días terminados cuando hay suficientes; de lo contrario usa todos los días con ingestas.",
+        legend: ["Consumidas", "Objetivo", "", ""],
+        classes: ["legend-trend", "legend-plan", "", ""]
+      },
+      relationship: {
+        eyebrow: "ENERGÍA VS CAMBIO",
+        title: "Cómo se mueve el peso según las calorías registradas.",
+        description: "Cada punto resume un período: calorías sobre o bajo el objetivo y variación de tendencia en kg por semana.",
+        legend: ["Cada punto = un período", "Centro = objetivo", "", ""],
+        classes: ["legend-trend", "legend-goal", "", ""]
+      }
+    }[kind];
+    $("#progress-chart-eyebrow").textContent = copy.eyebrow;
+    $("#progress-chart-title").textContent = copy.title;
+    $("#progress-chart-description").textContent = copy.description;
+    copy.legend.forEach((label, index) => {
+      const element = $(`#progress-legend-${index + 1}`);
+      element.textContent = label;
+      element.hidden = !label;
+      element.className = copy.classes[index] || "";
+    });
+    $$('[data-progress-chart]').forEach(button => button.classList.toggle("active", button.dataset.progressChart === kind));
+  }
+
+  function renderCalorieInsight(payload) {
+    $(".progress-model-data").hidden = true;
+    const days = calorieDaysForBounds(chartBounds(payload, false));
+    const analysis = buildCalorieAnalysis(payload.plan, payload.weighIns, days);
+    if (!Number.isFinite(analysis.average)) {
+      setInsightFact(1, "Promedio", "—");
+      setInsightFact(2, "Diferencia", "—");
+      setInsightFact(3, "Ritmo de peso", "—");
+      $("#chart-insight-title").textContent = "Faltan días comparables.";
+      $("#chart-insight").textContent = "Registrá ingestas en varios días y algunos pesajes dentro del mismo período para comparar consumo, objetivo y cambio de peso.";
+      $("#chart-insight-meta").textContent = "La lectura mejora al terminar los días y registrar el peso con cierta regularidad.";
+      return;
+    }
+
+    const diff = analysis.difference;
+    const weightRate = analysis.observedWeekly;
+    setInsightFact(1, "Promedio", `${formatNumber(Math.round(analysis.average))} kcal`);
+    setInsightFact(2, "Diferencia", `${diff > 0 ? "+" : ""}${formatNumber(Math.round(diff))} kcal`);
+    setInsightFact(3, "Ritmo de peso", Number.isFinite(weightRate) ? `${weightRate > 0 ? "+" : ""}${formatNumber(weightRate, 2)} kg/sem` : "Faltan pesajes");
+
+    const intakePhrase = Math.abs(diff) < 50
+      ? "estás prácticamente en el objetivo"
+      : `consumís en promedio ${formatNumber(Math.abs(Math.round(diff)))} kcal ${diff > 0 ? "más" : "menos"} que el objetivo`;
+    const weightPhrase = !Number.isFinite(weightRate)
+      ? "todavía no hay suficientes pesajes del mismo período"
+      : Math.abs(weightRate) < 0.05
+        ? "el peso se mantiene prácticamente estable"
+        : `el peso ${weightRate < 0 ? "sigue bajando" : "sigue subiendo"} a ${formatNumber(Math.abs(weightRate), 2)} kg por semana`;
+
+    $("#chart-insight-title").textContent = `${intakePhrase.charAt(0).toUpperCase()}${intakePhrase.slice(1)}.`;
+    let text = `${intakePhrase}, y ${weightPhrase}.`;
+    if (Number.isFinite(analysis.targetAdjustment) && analysis.weighInCount >= 3) {
+      const roundedAdjustment = Math.round(analysis.targetAdjustment / 25) * 25;
+      if (Math.abs(roundedAdjustment) < 50) {
+        text += " El objetivo actual está razonablemente alineado con lo observado; no aparece un ajuste relevante por ahora.";
+      } else if (analysis.remainingReviewDays > 0) {
+        text += ` Si este patrón se mantiene unos ${analysis.remainingReviewDays} días más, tendría sentido revisar el objetivo en aproximadamente ${roundedAdjustment > 0 ? "+" : ""}${formatNumber(roundedAdjustment)} kcal por día.`;
+      } else {
+        text += ` El período ya alcanza tres semanas: el modelo sugiere revisar el objetivo en aproximadamente ${roundedAdjustment > 0 ? "+" : ""}${formatNumber(roundedAdjustment)} kcal por día, antes de aplicar cambios automáticamente.`;
+      }
+    } else {
+      const remaining = Math.max(1, analysis.remainingReviewDays);
+      text += ` Mantené registros durante aproximadamente ${remaining} días más junto con pesajes para estimar si el objetivo necesita una corrección.`;
+    }
+    $("#chart-insight").textContent = text;
+    $("#chart-insight-meta").textContent = `${analysis.used.length} días usados · ${analysis.completedOnly ? "solo días terminados" : "días con alguna ingesta"} · período de ${analysis.spanDays} días`;
+  }
+
+  function renderRelationshipInsight(payload) {
+    $(".progress-model-data").hidden = true;
+    const samples = relationshipSamples(payload);
+    const correlation = correlationCoefficient(samples);
+    if (!samples.length) {
+      setInsightFact(1, "Períodos", "0");
+      setInsightFact(2, "Desvío medio", "—");
+      setInsightFact(3, "Cambio medio", "—");
+      $("#chart-insight-title").textContent = "Todavía no se pueden cruzar los datos.";
+      $("#chart-insight").textContent = "Hacen falta varios períodos que contengan tanto ingestas como pesajes. La gráfica usa ventanas de aproximadamente una semana para reducir el ruido diario.";
+      $("#chart-insight-meta").textContent = "Como referencia, tres o cuatro semanas completas empiezan a producir una lectura útil.";
+      return;
+    }
+    const averageDifference = samples.reduce((sum, item) => sum + item.calorieDifference, 0) / samples.length;
+    const averageChange = samples.reduce((sum, item) => sum + item.weeklyWeightChange, 0) / samples.length;
+    setInsightFact(1, "Períodos", String(samples.length));
+    setInsightFact(2, "Desvío medio", `${averageDifference > 0 ? "+" : ""}${formatNumber(Math.round(averageDifference))} kcal`);
+    setInsightFact(3, "Cambio medio", `${averageChange > 0 ? "+" : ""}${formatNumber(averageChange, 2)} kg/sem`);
+
+    if (!Number.isFinite(correlation) || samples.length < 4) {
+      $("#chart-insight-title").textContent = "La relación empieza a aparecer.";
+      $("#chart-insight").textContent = "Ya existen períodos comparables, pero todavía son pocos para describir una relación estable entre el desvío calórico y la variación de peso.";
+    } else {
+      const strength = Math.abs(correlation) < 0.25 ? "débil" : Math.abs(correlation) < 0.55 ? "moderada" : "marcada";
+      const direction = correlation > 0
+        ? "los períodos con más calorías tienden a acompañarse de una variación de peso más alta"
+        : "los períodos con más calorías no se están reflejando todavía en una variación de peso más alta";
+      $("#chart-insight-title").textContent = `Relación ${strength} en tus datos.`;
+      $("#chart-insight").textContent = `En estos períodos, ${direction}. Es una asociación descriptiva y no demuestra causalidad: agua, horarios y días incompletos pueden mover mucho el resultado.`;
+    }
+    $("#chart-insight-meta").textContent = `${samples.length} períodos comparables · cada punto exige al menos 3 días con ingestas entre dos tendencias de peso`;
+  }
+
+  function renderActiveProgressChart() {
+    if (!chartPayload) return;
+    configureProgressChart(activeProgressChart);
+    const canvas = $("#progress-chart");
+    let hasData = false;
+    if (activeProgressChart === "calories") {
+      hasData = drawProgressCalorieChart(canvas, chartPayload);
+      renderCalorieInsight(chartPayload);
+    } else if (activeProgressChart === "relationship") {
+      hasData = drawRelationshipChart(canvas, chartPayload);
+      renderRelationshipInsight(chartPayload);
+    } else {
+      hasData = drawWeightChart(canvas, chartPayload);
+      renderWeightInsight(chartPayload.profile, chartPayload.plan, chartPayload.weighIns, chartPayload.trends, chartPayload.observedWeekly);
+    }
+    $("#progress-chart-empty").hidden = hasData;
+  }
+
+  function changeProgressChart(direction) {
+    const order = ["weight", "calories", "relationship"];
+    const index = order.indexOf(activeProgressChart);
+    activeProgressChart = order[(index + direction + order.length) % order.length];
+    renderActiveProgressChart();
+  }
+
   function renderCharts(profile, plan, weighIns, trends, observedWeekly) {
     const planProjection = [];
     const planStart = parseDate(profile.planStartDate) || parseDate(weighIns[0]?.date);
@@ -1307,35 +1588,24 @@
         if (Number.isFinite(plan.targetWeight) && Math.abs(weight - plan.targetWeight) < 0.03 && date > new Date()) break;
       }
     }
-
-    chartPayload = { profile, plan, weighIns, trends, planProjection };
-    drawWeightChart($("#weight-chart"), chartPayload);
-    $("#weight-chart-empty").hidden = weighIns.length >= 2;
+    chartPayload = { profile, plan, weighIns, trends, planProjection, observedWeekly };
+    renderActiveProgressChart();
   }
 
   function visibleChartPoints(payload) {
-    const latest = parseDate(payload.weighIns.at(-1)?.date) || new Date();
-    let start = null;
-    let end = null;
-    if (chartRange !== "all") {
-      const months = { "1m": 1, "3m": 3, "6m": 6 }[chartRange] || 3;
-      start = addMonths(latest, -months);
-      end = addMonths(latest, months);
-    }
-    const within = item => {
-      const date = parseDate(item.date);
-      return date && (!start || date >= start) && (!end || date <= end);
-    };
+    const bounds = chartBounds(payload, true);
+    const within = item => withinBounds(parseDate(item.date), bounds);
     return {
       weighIns: payload.weighIns.filter(within),
       trends: payload.trends.filter(within),
       planProjection: payload.planProjection.filter(within),
-      start,
-      end
+      start: bounds.start,
+      end: bounds.end
     };
   }
 
   function prepareCanvas(canvas) {
+    if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return null;
     const ratio = Math.min(2, window.devicePixelRatio || 1);
@@ -1348,7 +1618,7 @@
 
   function drawWeightChart(canvas, payload) {
     const prepared = prepareCanvas(canvas);
-    if (!prepared) return;
+    if (!prepared) return payload.weighIns.length >= 2;
     const { ctx, width, height } = prepared;
     ctx.clearRect(0, 0, width, height);
     const visible = visibleChartPoints(payload);
@@ -1356,7 +1626,7 @@
       ...visible.weighIns.map(item => ({ date: parseDate(item.date), value: item.weight })),
       ...visible.planProjection.map(item => ({ date: parseDate(item.date), value: item.weight }))
     ].filter(item => item.date && Number.isFinite(item.value));
-    if (series.length < 2) return;
+    if (series.length < 2) return false;
 
     const margin = { left: 48, right: 18, top: 22, bottom: 36 };
     let minDate = Math.min(...series.map(item => item.date.getTime()));
@@ -1409,6 +1679,113 @@
     drawPoints(ctx, visible.weighIns.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "#f2efe6", 2.4);
     drawLine(ctx, visible.trends.map(item => ({ date: parseDate(item.date), value: item.trend })), x, y, "#c8ff46", 3, false);
     drawLine(ctx, visible.planProjection.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "#ff6b52", 2.3, true);
+    return true;
+  }
+
+  function drawProgressCalorieChart(canvas, payload) {
+    const bounds = chartBounds(payload, false);
+    const days = calorieDaysForBounds(bounds);
+    const prepared = prepareCanvas(canvas);
+    if (!prepared) return days.length > 0;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    if (!days.length || !Number.isFinite(payload.plan.targetCalories)) return false;
+    const target = payload.plan.targetCalories;
+    const maxValue = Math.max(target, ...days.map(day => day.calories), 500) * 1.12;
+    const margin = { left: 52, right: 18, top: 22, bottom: 40 };
+    const minDate = bounds.start?.getTime() ?? days[0].date.getTime();
+    const maxDate = bounds.end?.getTime() ?? days.at(-1).date.getTime();
+    const x = date => margin.left + (date.getTime() - minDate) / Math.max(DAY_MS, maxDate - minDate) * (width - margin.left - margin.right);
+    const y = value => margin.top + (maxValue - value) / maxValue * (height - margin.top - margin.bottom);
+    const available = width - margin.left - margin.right;
+    const barWidth = Math.max(3, Math.min(22, available / Math.max(days.length * 1.7, 12)));
+
+    ctx.font = "10px ui-monospace, monospace";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i <= 4; i += 1) {
+      const value = maxValue * i / 4;
+      const py = y(value);
+      ctx.strokeStyle = "rgba(242,239,230,.12)";
+      ctx.beginPath(); ctx.moveTo(margin.left, py); ctx.lineTo(width - margin.right, py); ctx.stroke();
+      ctx.fillStyle = "rgba(242,239,230,.52)";
+      ctx.fillText(formatNumber(value, 0), margin.left - 7, py);
+    }
+
+    ctx.save();
+    ctx.strokeStyle = "#ff6b52";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 5]);
+    ctx.beginPath(); ctx.moveTo(margin.left, y(target)); ctx.lineTo(width - margin.right, y(target)); ctx.stroke();
+    ctx.restore();
+
+    days.forEach(day => {
+      const px = x(day.date);
+      const top = y(day.calories);
+      ctx.fillStyle = day.completed ? "#c8ff46" : "#8d7cff";
+      ctx.fillRect(px - barWidth / 2, top, barWidth, y(0) - top);
+    });
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    for (let i = 0; i <= 5; i += 1) {
+      const date = new Date(minDate + (maxDate - minDate) * i / 5);
+      ctx.fillStyle = "rgba(242,239,230,.48)";
+      ctx.fillText(new Intl.DateTimeFormat("es-UY", { month: "short", day: chartRange === "1m" ? "2-digit" : undefined }).format(date), x(date), height - margin.bottom + 10);
+    }
+    return true;
+  }
+
+  function drawRelationshipChart(canvas, payload) {
+    const samples = relationshipSamples(payload);
+    const prepared = prepareCanvas(canvas);
+    if (!prepared) return samples.length > 0;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    if (!samples.length) return false;
+    const margin = { left: 58, right: 22, top: 24, bottom: 48 };
+    let minX = Math.min(0, ...samples.map(item => item.calorieDifference));
+    let maxX = Math.max(0, ...samples.map(item => item.calorieDifference));
+    let minY = Math.min(0, ...samples.map(item => item.weeklyWeightChange));
+    let maxY = Math.max(0, ...samples.map(item => item.weeklyWeightChange));
+    const padX = Math.max(100, (maxX - minX) * .15);
+    const padY = Math.max(.12, (maxY - minY) * .18);
+    minX -= padX; maxX += padX; minY -= padY; maxY += padY;
+    const x = value => margin.left + (value - minX) / Math.max(1, maxX - minX) * (width - margin.left - margin.right);
+    const y = value => margin.top + (maxY - value) / Math.max(.01, maxY - minY) * (height - margin.top - margin.bottom);
+
+    ctx.font = "10px ui-monospace, monospace";
+    for (let i = 0; i <= 4; i += 1) {
+      const xv = minX + (maxX - minX) * i / 4;
+      const yv = minY + (maxY - minY) * i / 4;
+      ctx.strokeStyle = "rgba(242,239,230,.1)";
+      ctx.beginPath(); ctx.moveTo(x(xv), margin.top); ctx.lineTo(x(xv), height - margin.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(margin.left, y(yv)); ctx.lineTo(width - margin.right, y(yv)); ctx.stroke();
+      ctx.fillStyle = "rgba(242,239,230,.5)";
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillText(`${xv > 0 ? "+" : ""}${formatNumber(xv, 0)}`, x(xv), height - margin.bottom + 9);
+      ctx.textAlign = "right"; ctx.textBaseline = "middle";
+      ctx.fillText(`${yv > 0 ? "+" : ""}${formatNumber(yv, 2)}`, margin.left - 8, y(yv));
+    }
+    ctx.strokeStyle = "rgba(255,107,82,.82)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x(0), margin.top); ctx.lineTo(x(0), height - margin.bottom); ctx.stroke();
+    ctx.strokeStyle = "rgba(141,124,255,.82)";
+    ctx.beginPath(); ctx.moveTo(margin.left, y(0)); ctx.lineTo(width - margin.right, y(0)); ctx.stroke();
+
+    samples.forEach(point => {
+      ctx.beginPath();
+      ctx.arc(x(point.calorieDifference), y(point.weeklyWeightChange), 5, 0, Math.PI * 2);
+      ctx.fillStyle = point.calorieDifference > 0 ? "#ff6b52" : "#c8ff46";
+      ctx.fill();
+      ctx.strokeStyle = "#10131a";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+    ctx.fillStyle = "rgba(242,239,230,.55)";
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText("kcal/día frente al objetivo", margin.left + (width - margin.left - margin.right) / 2, height - 3);
+    return true;
   }
 
   function drawLine(ctx, points, x, y, color, width, dashed, dashPattern = [8, 7]) {
@@ -1693,17 +2070,14 @@
   function addQuickWeight(event) {
     event.preventDefault();
     const weight = toNumber($("#quick-weight").value, NaN);
-    const alternate = !$("#alternate-date-wrap").hidden;
-    const date = alternate ? normalizeDate($("#quick-date").value) : todayISO();
+    const date = selectedDiaryDate;
     if (!Number.isFinite(weight) || weight <= 0 || !date) {
-      setFeedback($("#weight-feedback"), "Revisá el peso y la fecha.", true);
+      setFeedback($("#weight-feedback"), "Revisá el peso.", true);
       return;
     }
     state.weighIns = mergeWeighIns(state.weighIns, [{ date, weight }]);
     saveState(state);
     weightEditorForced = false;
-    $("#quick-weight").value = "";
-    $("#alternate-date-wrap").hidden = true;
     setFeedback($("#weight-feedback"), `Registrado: ${formatKg(weight)} · ${formatDate(date)}.`);
     render();
   }
@@ -1931,8 +2305,10 @@
 
   function openImport(mode) {
     importMode = mode;
-    $("#import-file").value = "";
-    $("#import-file").click();
+    const input = $("#import-file");
+    input.value = "";
+    input.accept = mode === "profile" ? ".json,application/json" : ".xlsx,.xls,.csv,.tsv,.txt,.json";
+    input.click();
   }
 
   async function handleImport(event) {
@@ -1940,6 +2316,7 @@
     if (!file) return;
     try {
       if (/\.(xlsx|xls)$/i.test(file.name)) {
+        if (importMode === "profile") throw new Error("El perfil completo se importa desde un archivo JSON exportado por MASA.");
         const weights = parseWeightRows(await spreadsheetRows(file, ["Pesajes"]));
         if (!weights.length) throw new Error("No se encontraron columnas de fecha y peso en la planilla.");
         state.weighIns = mergeWeighIns(state.weighIns, weights);
@@ -1961,7 +2338,10 @@
       if (isJson) {
         const parsed = JSON.parse(text);
         const imported = normalizeState(parsed);
-        if (importMode === "profile" && profileIsComplete(imported.profile, imported.weighIns)) {
+        if (importMode === "profile") {
+          if (!profileIsComplete(imported.profile, imported.weighIns)) {
+            throw new Error("El archivo no contiene un perfil completo válido de MASA.");
+          }
           state = saveState({ ...imported, configured: true });
           settingsRequired = false;
           $("#settings-modal").hidden = true;
@@ -1971,7 +2351,6 @@
         }
         if (imported.weighIns.length) {
           state.weighIns = mergeWeighIns(state.weighIns, imported.weighIns);
-          if (importMode === "profile" && parsed.profile) state.profile = normalizeProfile(parsed.profile, state.weighIns);
           state.configured = profileIsComplete(state.profile, state.weighIns);
           saveState(state);
           render();
@@ -1979,7 +2358,7 @@
           else switchSettingsTab("weights");
           return;
         }
-        throw new Error("No se encontraron datos válidos.");
+        throw new Error("No se encontraron pesajes válidos.");
       }
 
       const weights = parseWeightTable(text);
@@ -2040,12 +2419,37 @@
     return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   }
 
+  async function exportWeights() {
+    try {
+      const XLSX = await loadXLSX();
+      const rows = sortedWeighIns().map(item => ({
+        Fecha: parseDate(item.date),
+        "Peso (kg)": toNumber(item.weight, 0)
+      }));
+      const workbook = XLSX.utils.book_new();
+      const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ Fecha: "", "Peso (kg)": "" }], { cellDates: true });
+      sheet["!cols"] = [{ wch: 14 }, { wch: 14 }];
+      sheet["!autofilter"] = { ref: sheet["!ref"] };
+      const range = XLSX.utils.decode_range(sheet["!ref"]);
+      for (let row = 1; row <= range.e.r; row += 1) {
+        const dateCell = sheet[XLSX.utils.encode_cell({ r: row, c: 0 })];
+        if (dateCell) dateCell.z = "dd/mm/yyyy";
+        const weightCell = sheet[XLSX.utils.encode_cell({ r: row, c: 1 })];
+        if (weightCell) weightCell.z = "0.0";
+      }
+      XLSX.utils.book_append_sheet(workbook, sheet, "Pesajes");
+      XLSX.writeFile(workbook, `pesajes-masa-${todayISO()}.xlsx`, { compression: true });
+    } catch (error) {
+      window.alert(error.message || "No se pudieron exportar los pesajes.");
+    }
+  }
+
   function exportHistory() {
-    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 8 }, null, 2), "application/json");
+    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 9 }, null, 2), "application/json");
   }
 
   function exportBackup() {
-    downloadText("perfil-masa.json", JSON.stringify({ ...state, version: 8 }, null, 2), "application/json");
+    downloadText(`perfil-completo-masa-${todayISO()}.json`, JSON.stringify({ ...state, version: 9 }, null, 2), "application/json");
   }
 
   function downloadText(filename, content, type) {
@@ -2164,13 +2568,7 @@
     $("#diary-native-date").addEventListener("change", event => setSelectedDiaryDate(event.target.value));
 
     $("#quick-weight-form").addEventListener("submit", addQuickWeight);
-    $("#edit-today-weight").addEventListener("click", () => showWeightEditor("today"));
-    $("#add-previous-weight").addEventListener("click", () => showWeightEditor("previous"));
-    $("#toggle-date").addEventListener("click", () => {
-      $("#alternate-date-wrap").hidden = !$("#alternate-date-wrap").hidden;
-      $("#toggle-date").textContent = $("#alternate-date-wrap").hidden ? "El pesaje es de otro día" : "Usar la fecha de hoy";
-      if (!$("#alternate-date-wrap").hidden) $("#quick-date").value = displayDate(todayISO());
-    });
+    $("#edit-today-weight").addEventListener("click", showWeightEditor);
 
     $("#toggle-history-manager").addEventListener("click", () => {
       const button = $("#toggle-history-manager");
@@ -2182,9 +2580,11 @@
     $("#history-list").addEventListener("change", updateHistoryRow);
     $("#history-list").addEventListener("click", deleteHistoryRow);
     $("#profile-import").addEventListener("click", () => openImport("profile"));
+    $("#import-full-profile").addEventListener("click", () => openImport("profile"));
+    $("#export-full-profile").addEventListener("click", exportBackup);
     $("#import-history").addEventListener("click", () => openImport("history"));
+    $("#export-weights").addEventListener("click", exportWeights);
     $("#import-file").addEventListener("change", handleImport);
-    $("#export-history").addEventListener("click", exportHistory);
     $("#export-intakes").addEventListener("click", exportIntakes);
     $("#import-intakes").addEventListener("click", () => { $("#intake-import-file").value = ""; $("#intake-import-file").click(); });
     $("#intake-import-file").addEventListener("change", handleIntakeImport);
@@ -2235,13 +2635,19 @@
     $("#daily-checkin-form").addEventListener("submit", submitDailyCheckin);
     $("#skip-daily-weight").addEventListener("click", () => finishDailyCheckin());
 
+    $("#previous-progress-chart").addEventListener("click", () => changeProgressChart(-1));
+    $("#next-progress-chart").addEventListener("click", () => changeProgressChart(1));
+    $$('[data-progress-chart]').forEach(button => button.addEventListener("click", () => {
+      activeProgressChart = button.dataset.progressChart;
+      renderActiveProgressChart();
+    }));
     $$('[data-chart-range]').forEach(button => button.addEventListener("click", () => {
       chartRange = button.dataset.chartRange;
       $$('[data-chart-range]').forEach(item => item.classList.toggle("active", item === button));
-      if (chartPayload) drawWeightChart($("#weight-chart"), chartPayload);
+      if (chartPayload) renderActiveProgressChart();
     }));
     window.addEventListener("resize", debounce(() => {
-      if (chartPayload && activeAppView === "progress") drawWeightChart($("#weight-chart"), chartPayload);
+      if (chartPayload && activeAppView === "progress") renderActiveProgressChart();
       if (activeDiaryView === "chart") drawCalorieChart(calculatePlan());
     }, 100));
   }

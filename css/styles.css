@@ -1153,3 +1153,161 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .progress-model-heading > p:last-child { text-align: left; }
   .insight-panel .model-data-grid.compact { grid-template-columns: 1fr 1fr; }
 }
+
+/* --- MASA v9: peso dentro del registro, plan en progreso y gráficas navegables --- */
+.diary-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+  gap: 24px;
+}
+.records-sidebar { display: block; }
+.records-sidebar .diary-summary { position: sticky; top: 98px; }
+
+.record-weight-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, .72fr);
+  gap: 20px;
+  align-items: center;
+  padding: 18px 20px;
+  border: 2px solid var(--ink);
+  background: var(--acid);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+.record-weight-card .eyebrow { margin-bottom: 4px; }
+.record-weight-card h3 { margin: 0 0 5px; font-size: clamp(27px, 2.3vw, 37px); }
+.record-weight-card p { margin-bottom: 0; }
+.record-weight-copy > p:last-child { max-width: 660px; color: var(--ink-2); font-size: 11px; line-height: 1.45; }
+.record-weight-entry { min-width: 0; }
+.record-weight-card #quick-weight-form { margin-top: 0; }
+.record-weight-card .weight-entry { min-height: 54px; background: rgba(242,239,230,.88); }
+.record-weight-card .weight-entry input { height: 50px; font-size: 23px; }
+.record-weight-card .weight-submit { min-height: 54px; }
+.record-weight-card .today-weight-recorded {
+  margin-top: 0;
+  padding: 13px;
+  border: 1px solid var(--ink);
+  background: rgba(242,239,230,.72);
+}
+.record-weight-card .feedback { margin: 8px 0 0; font-size: 10px; }
+
+.progress-plan-overview { margin: 0 0 42px; }
+.progress-daily-panel { box-shadow: 11px 11px 0 var(--coral); }
+.progress-daily-panel .section-topline h1 { max-width: 900px; font-size: clamp(44px, 5.2vw, 75px); }
+.progress-daily-panel .calorie-core { margin-block: 34px 28px; }
+.progress-daily-panel .macro-board { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.progress-daily-panel .daily-meta,
+.progress-weight-strip { grid-template-columns: repeat(4, minmax(0,1fr)); }
+.progress-weight-strip {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1px;
+  margin-top: 12px;
+  border: 1px solid rgba(242,239,230,.2);
+  background: rgba(242,239,230,.2);
+}
+.progress-weight-strip > div { min-width: 0; padding: 13px; background: var(--night); }
+.progress-weight-strip span,
+.progress-weight-strip b { display: block; }
+.progress-weight-strip span { color: rgba(242,239,230,.48); font-size: 8px; letter-spacing: .08em; text-transform: uppercase; }
+.progress-weight-strip b { margin-top: 6px; color: var(--paper); font-family: var(--font-mono); font-size: 15px; }
+.progress-daily-panel .objective-plan-summary {
+  grid-template-columns: minmax(0,1.25fr) minmax(300px,.75fr);
+  column-gap: 26px;
+  align-items: start;
+}
+.progress-daily-panel .objective-plan-summary .plan-copy { grid-column: 1; }
+.progress-daily-panel .objective-plan-summary .plan-facts { grid-column: 2; grid-row: 1 / span 3; }
+.progress-daily-panel .objective-plan-summary .signal,
+.progress-daily-panel .objective-plan-summary .guidance { grid-column: 1; }
+.progress-daily-panel .objective-plan-summary .plan-copy h2 { font-size: clamp(31px, 3vw, 45px); }
+.progress-daily-panel .objective-plan-summary .plan-facts b { font-size: 13px; }
+
+.progress-chart-title-row { align-items: center; }
+.progress-chart-heading {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr) 42px;
+  gap: 14px;
+  align-items: center;
+  flex: 1;
+}
+.progress-chart-arrow {
+  width: 42px;
+  height: 54px;
+  padding: 0;
+  border: 1px solid rgba(242,239,230,.28);
+  color: var(--paper);
+  background: rgba(242,239,230,.04);
+  font-family: var(--font-display);
+  font-size: 34px;
+}
+.progress-chart-arrow:hover { color: var(--acid); border-color: var(--acid); }
+.progress-chart-heading h2 { margin: 0; }
+#progress-chart { width: 100%; height: 100%; display: block; }
+.progress-chart-index {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 0 3px;
+}
+.progress-chart-index button {
+  width: 27px;
+  height: 27px;
+  min-height: 27px;
+  padding: 0;
+  border: 1px solid rgba(242,239,230,.28);
+  border-radius: 50%;
+  color: rgba(242,239,230,.62);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+.progress-chart-index button.active { color: var(--ink); border-color: var(--acid); background: var(--acid); }
+.progress-model-data[hidden] { display: none !important; }
+
+/* El porcentaje de grasa se muestra como cualquier otro dato, sin código verde. */
+.body-fat-reading,
+.model-data-grid .body-fat-reading,
+.insight-panel .model-data-grid.compact .body-fat-reading {
+  background: inherit !important;
+}
+.body-fat-reading b,
+.model-data-grid .body-fat-reading b,
+.insight-panel .model-data-grid.compact .body-fat-reading b { color: inherit; }
+.insight-panel .model-data-grid.compact .body-fat-reading { background: var(--night) !important; }
+.insight-panel .model-data-grid.compact .body-fat-reading b { color: var(--paper); }
+
+@media (max-width: 1120px) {
+  .records-sidebar .diary-summary { position: static; }
+  .record-weight-card { grid-template-columns: 1fr; }
+  .progress-daily-panel .objective-plan-summary { grid-template-columns: 1fr; }
+  .progress-daily-panel .objective-plan-summary .plan-copy,
+  .progress-daily-panel .objective-plan-summary .plan-facts,
+  .progress-daily-panel .objective-plan-summary .signal,
+  .progress-daily-panel .objective-plan-summary .guidance { grid-column: 1; grid-row: auto; }
+}
+
+@media (max-width: 800px) {
+  .progress-daily-panel .daily-meta,
+  .progress-weight-strip { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .progress-chart-title-row { display: grid; }
+  .progress-chart-heading { grid-template-columns: 38px minmax(0,1fr) 38px; gap: 9px; }
+  .progress-chart-arrow { width: 38px; height: 48px; }
+  #progress-chart-description { max-width: none; }
+}
+
+@media (max-width: 590px) {
+  .record-weight-card { padding: 15px 12px; box-shadow: 4px 4px 0 var(--ink); }
+  .record-weight-card #quick-weight-form { grid-template-columns: 1fr; }
+  .progress-daily-panel { padding-inline: 15px; box-shadow: 6px 6px 0 var(--coral); }
+  .progress-daily-panel .macro-board { grid-template-columns: 1fr; }
+  .progress-daily-panel .macro-card + .macro-card { border-left: 0; border-top: 1px solid rgba(242,239,230,.22); }
+  .progress-chart-heading h2 { font-size: 29px; }
+  .progress-chart-arrow { width: 34px; }
+  .chart-legend { overflow-x: auto; flex-wrap: nowrap; }
+}
+
+@media (max-width: 1120px) {
+  .diary-workspace { grid-template-columns: 1fr; }
+  .records-sidebar { width: 100%; }
+}

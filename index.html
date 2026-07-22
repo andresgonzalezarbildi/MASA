@@ -6,7 +6,7 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/><base href="/masa/"/>
 <meta content="#10131a" name="theme-color"/>
 <meta content="Calorías, macros, objetivos y seguimiento de peso con fórmulas transparentes y calibración por tendencia real." name="description"/>
-<title>MASA · objetivos por números</title>
+<title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
 <link href="css/styles.css" rel="stylesheet"/>
@@ -64,7 +64,24 @@
 </div>
 <div class="diary-view" id="diary-record-view">
 <div class="diary-workspace">
-<div class="meal-ledger" id="meal-grid">
+<div class="meal-ledger" id="meal-grid"><article class="record-weight-card" id="record-weight-card">
+<div class="record-weight-copy">
+<p class="eyebrow">PESO DEL DÍA</p>
+<h3 id="record-weight-title">Registrar peso</h3>
+<p id="weight-context">El peso diario puede moverse mucho. La tendencia es la que importa.</p>
+</div>
+<div class="record-weight-entry">
+<div class="today-weight-recorded" hidden="" id="today-weight-recorded">
+<div><span>Peso registrado</span><strong id="today-weight-value">—</strong></div>
+<div class="recorded-weight-actions"><button id="edit-today-weight" type="button">Editar</button></div>
+</div>
+<form id="quick-weight-form">
+<label class="weight-entry"><input id="quick-weight" inputmode="decimal" max="400" min="20" name="weight" placeholder="73,8" required="" step="0.1" type="number"/><span>kg</span></label>
+<button class="weight-submit" type="submit">Guardar peso</button>
+</form>
+<p class="feedback" id="weight-feedback" role="status"></p>
+</div>
+</article>
 <article class="meal-card" data-meal="breakfast">
 <div class="meal-card-head"><div><span>01</span><h3>Desayuno</h3></div><div><b data-meal-total="breakfast">0 kcal</b><button aria-label="Agregar al desayuno" data-add-meal="breakfast" type="button">＋</button></div></div>
 <div class="meal-items" data-meal-items="breakfast"></div>
@@ -100,7 +117,30 @@
 </div>
 <button class="finish-day-button" id="finish-day" type="button">Terminar día</button>
 <p class="finish-day-note">El cierre y la lectura teórica quedan asociados a la fecha seleccionada.</p>
-</aside><article class="daily-panel">
+</aside></div></div>
+</div>
+<div class="diary-view" hidden="" id="diary-chart-view">
+<div class="calorie-chart-toolbar">
+<div><p class="eyebrow">BALANCE DIARIO</p><h3>Lo consumido frente al objetivo.</h3></div>
+<div aria-label="Rango de la gráfica de calorías" class="calorie-range">
+<button data-calorie-range="7" type="button">7 días</button>
+<button class="active" data-calorie-range="14" type="button">14 días</button>
+<button data-calorie-range="30" type="button">30 días</button>
+</div>
+</div>
+<div class="calorie-chart-wrap"><canvas aria-label="Calorías consumidas y objetivo por día" id="calorie-chart"></canvas><p class="chart-empty" hidden="" id="calorie-chart-empty">Registrá comidas en distintos días para comparar el balance.</p></div>
+<div class="calorie-chart-key"><span><i></i>Consumidas</span><span><i></i>Objetivo</span><span id="calorie-chart-summary">—</span></div>
+</div>
+<div class="day-reading" hidden="" id="day-reading">
+<div>
+<p class="eyebrow inverted">SI TODOS LOS DÍAS FUERAN COMO HOY</p>
+<h3 id="day-projection-title">Completá el día para ver una proyección.</h3>
+<p id="day-projection-text">La cuenta compara las calorías registradas con tu mantenimiento estimado. Es orientativa y no reemplaza la tendencia de pesajes.</p>
+</div>
+<div class="day-reading-controls"><label><span>Proyectar a</span><select id="day-projection-weeks"><option value="4">4 semanas</option><option selected="" value="6">6 semanas</option><option value="8">8 semanas</option><option value="12">12 semanas</option></select></label><button id="hide-day-summary" type="button">Ocultar cierre</button></div>
+</div>
+</section></section>
+<section class="app-view" hidden="" id="progress-view"><section class="progress-plan-overview"><article class="daily-panel progress-daily-panel">
 <div class="section-topline">
 <div>
 <p class="eyebrow" id="daily-eyebrow">OBJETIVOS DIARIOS</p>
@@ -138,6 +178,11 @@
 <div><span>Ajuste del objetivo</span><b id="calorie-adjustment">—</b></div>
 <div><span>Fórmula</span><b id="formula-name">—</b></div>
 <div><span>Actividad</span><b id="activity-name">—</b></div>
+</div><div aria-label="Resumen de peso actual" class="progress-weight-strip">
+<div><span>Último peso</span><b id="current-weight">—</b></div>
+<div><span>Tendencia</span><b id="trend-weight">—</b></div>
+<div><span>Ritmo observado</span><b id="observed-rate">—</b></div>
+<div><span>Grasa actual</span><b id="current-body-fat">—</b></div>
 </div>
 <p class="inline-note" id="macro-balance-note"></p>
 <section class="objective-plan-summary">
@@ -154,61 +199,7 @@
 </div>
 <span class="signal" id="goal-status">—</span>
 <p class="guidance" id="goal-guidance"></p>
-</section></article></div></div>
-</div>
-<div class="diary-view" hidden="" id="diary-chart-view">
-<div class="calorie-chart-toolbar">
-<div><p class="eyebrow">BALANCE DIARIO</p><h3>Lo consumido frente al objetivo.</h3></div>
-<div aria-label="Rango de la gráfica de calorías" class="calorie-range">
-<button data-calorie-range="7" type="button">7 días</button>
-<button class="active" data-calorie-range="14" type="button">14 días</button>
-<button data-calorie-range="30" type="button">30 días</button>
-</div>
-</div>
-<div class="calorie-chart-wrap"><canvas aria-label="Calorías consumidas y objetivo por día" id="calorie-chart"></canvas><p class="chart-empty" hidden="" id="calorie-chart-empty">Registrá comidas en distintos días para comparar el balance.</p></div>
-<div class="calorie-chart-key"><span><i></i>Consumidas</span><span><i></i>Objetivo</span><span id="calorie-chart-summary">—</span></div>
-</div>
-<div class="day-reading" hidden="" id="day-reading">
-<div>
-<p class="eyebrow inverted">SI TODOS LOS DÍAS FUERAN COMO HOY</p>
-<h3 id="day-projection-title">Completá el día para ver una proyección.</h3>
-<p id="day-projection-text">La cuenta compara las calorías registradas con tu mantenimiento estimado. Es orientativa y no reemplaza la tendencia de pesajes.</p>
-</div>
-<div class="day-reading-controls"><label><span>Proyectar a</span><select id="day-projection-weeks"><option value="4">4 semanas</option><option selected="" value="6">6 semanas</option><option value="8">8 semanas</option><option value="12">12 semanas</option></select></label><button id="hide-day-summary" type="button">Ocultar cierre</button></div>
-</div>
-</section></section>
-<section class="app-view" hidden="" id="progress-view"><section class="progress-overview"><article class="weigh-in-panel">
-<div>
-<p class="eyebrow dark-ink">PESO DE HOY</p>
-<h2>Un dato rápido, una tendencia más clara.</h2>
-<p id="weight-context">El peso diario puede moverse mucho. La línea de tendencia es la que importa.</p><div class="today-weight-recorded" hidden="" id="today-weight-recorded">
-<div><span>Peso registrado hoy</span><strong id="today-weight-value">—</strong></div>
-<div class="recorded-weight-actions">
-<button id="edit-today-weight" type="button">Editar</button>
-<button id="add-previous-weight" type="button">Agregar entrada anterior</button>
-</div>
-</div>
-</div>
-<form id="quick-weight-form">
-<label class="weight-entry">
-<input id="quick-weight" inputmode="decimal" max="400" min="20" name="weight" placeholder="73,8" required="" step="0.1" type="number"/>
-<span>kg</span>
-</label>
-<button class="weight-submit" type="submit">Registrar</button>
-</form>
-<button class="date-toggle" id="toggle-date" type="button">El pesaje es de otro día</button>
-<label class="alternate-date" hidden="" id="alternate-date-wrap">
-<span>Fecha</span>
-<input autocomplete="off" class="date-input" id="quick-date" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" type="text"/>
-</label>
-<p class="feedback" id="weight-feedback" role="status"></p>
-<div class="weight-snapshot">
-<div><span>Último peso</span><b id="current-weight">—</b></div>
-<div><span>Tendencia</span><b id="trend-weight">—</b></div>
-<div><span>Ritmo observado</span><b id="observed-rate">—</b></div>
-<div><span>Grasa actual</span><b id="current-body-fat">—</b></div>
-</div>
-</article></section><section class="recalibration-panel" hidden="" id="recalibration-panel">
+</section></article></section><section class="recalibration-panel" hidden="" id="recalibration-panel">
 <div aria-hidden="true" class="recalibration-symbol">Δ</div>
 <div>
 <p class="eyebrow">RECALIBRACIÓN SUGERIDA</p>
@@ -219,13 +210,18 @@
 <button class="primary-action" id="apply-recalibration" type="button">Ajustar cálculo</button>
 </section><section class="progress-section">
 <article class="chart-module">
-<div class="chart-title-row"><div><p class="eyebrow inverted">PLAN VS REALIDAD</p><h2>Tu peso real frente al camino previsto.</h2></div><p>La línea sólida muestra tu tendencia. La línea punteada es el plan.</p></div><div class="chart-toolbar">
-<div class="chart-legend">
-<span class="legend-real">Peso real</span>
-<span class="legend-trend">Tendencia</span>
-<span class="legend-plan">Plan</span>
-<span class="legend-goal">Objetivo</span>
+<div class="chart-title-row progress-chart-title-row">
+<div class="progress-chart-heading">
+<button aria-label="Ver gráfica anterior" class="progress-chart-arrow" id="previous-progress-chart" type="button">‹</button>
+<div>
+<p class="eyebrow inverted" id="progress-chart-eyebrow">PLAN VS REALIDAD</p>
+<h2 id="progress-chart-title">Tu peso real frente al camino previsto.</h2>
 </div>
+<button aria-label="Ver gráfica siguiente" class="progress-chart-arrow" id="next-progress-chart" type="button">›</button>
+</div>
+<p id="progress-chart-description">La línea sólida muestra tu tendencia. La línea punteada es el plan.</p>
+</div><div class="chart-toolbar">
+<div class="chart-legend"><span class="legend-real" id="progress-legend-1">Peso real</span><span class="legend-trend" id="progress-legend-2">Tendencia</span><span class="legend-plan" id="progress-legend-3">Plan</span><span class="legend-goal" id="progress-legend-4">Objetivo</span></div>
 <div aria-label="Rango visible de la gráfica" class="chart-range">
 <button data-chart-range="1m" type="button">1 mes</button>
 <button class="active" data-chart-range="3m" type="button">3 meses</button>
@@ -233,9 +229,10 @@
 <button data-chart-range="all" type="button">Todo</button>
 </div>
 </div>
-<div class="chart-canvas-wrap">
-<canvas aria-label="Gráfica de peso, tendencia y plan" id="weight-chart"></canvas>
-<p class="chart-empty" hidden="" id="weight-chart-empty">Agregá al menos dos pesajes para ver la evolución.</p>
+<div class="chart-canvas-wrap"><canvas aria-label="Gráfica de progreso" id="progress-chart"></canvas><p class="chart-empty" hidden="" id="progress-chart-empty">Todavía faltan datos para construir esta gráfica.</p></div><div aria-label="Elegir gráfica" class="progress-chart-index">
+<button aria-label="Peso frente al plan" class="active" data-progress-chart="weight" type="button">1</button>
+<button aria-label="Calorías consumidas" data-progress-chart="calories" type="button">2</button>
+<button aria-label="Variación de peso frente a calorías" data-progress-chart="relationship" type="button">3</button>
 </div>
 </article>
 <aside class="insight-panel">
@@ -243,12 +240,12 @@
 <h2 id="chart-insight-title">La dirección importa más que un día aislado.</h2>
 <p id="chart-insight">—</p>
 <div class="insight-facts">
-<div><span>Esperado hoy</span><b id="expected-today">—</b></div>
-<div><span>Diferencia</span><b id="expected-difference">—</b></div>
-<div><span>Cambio total</span><b id="stat-change">—</b></div>
+<div><span id="insight-fact-label-1">Esperado hoy</span><b id="expected-today">—</b></div>
+<div><span id="insight-fact-label-2">Diferencia</span><b id="expected-difference">—</b></div>
+<div><span id="insight-fact-label-3">Cambio total</span><b id="stat-change">—</b></div>
 </div>
 <small id="chart-insight-meta">—</small>
-<section class="progress-model-data" aria-label="Datos del modelo">
+<section aria-label="Datos del modelo" class="progress-model-data">
 <div class="progress-model-heading">
 <p class="eyebrow inverted">DATOS DEL MODELO</p>
 <p>Referencias auxiliares para interpretar el plan.</p>
@@ -365,13 +362,19 @@
 <section class="settings-view" hidden="" id="settings-weights">
 <div class="data-tools-grid">
 <article class="data-tool">
-<span>01</span><h3>Importar pesajes</h3><p>Cargá una planilla Excel, CSV, TSV, TXT o una copia JSON. Los días repetidos se actualizan.</p>
-<button class="secondary-action" id="import-history" type="button">Elegir archivo</button>
+<span>01</span><h3>Pesajes</h3><p>Importá o exportá tu historial en Excel. Los días repetidos se actualizan y la plantilla usa fechas reales.</p>
+<div class="data-tool-actions">
+<button class="secondary-action" id="import-history" type="button">Importar Excel</button>
+<button class="secondary-action" id="export-weights" type="button">Exportar Excel</button>
+</div>
 <a class="text-link" download="" href="plantilla-pesajes.xlsx">Descargar plantilla Excel</a>
 </article>
 <article class="data-tool">
-<span>02</span><h3>Copia completa</h3><p>Descargá un JSON con perfil, objetivo, pesajes, alimentos propios y registros diarios.</p>
-<button class="secondary-action" id="export-history" type="button">Descargar copia</button>
+<span>02</span><h3>Perfil completo</h3><p>Importá o exportá un JSON con perfil, objetivo, pesajes, alimentos propios y registros diarios.</p>
+<div class="data-tool-actions">
+<button class="secondary-action" id="import-full-profile" type="button">Importar perfil</button>
+<button class="secondary-action" id="export-full-profile" type="button">Exportar perfil</button>
+</div>
 </article>
 <article class="data-tool intake-data-tool">
 <span>03</span>
@@ -496,7 +499,7 @@
 <div class="confirm-card">
 <p class="eyebrow">CONFIRMAR</p>
 <h2 id="confirm-title">Empezar de nuevo</h2>
-<p>Esto elimina el perfil, el objetivo y todos los pesajes de esta instalación.</p>
+<p>Esto elimina el perfil, el objetivo, los pesajes y todos los registros diarios de esta instalación.</p>
 <div><button class="secondary-action" id="cancel-confirm" type="button">Cancelar</button><button class="danger-action" id="confirm-action" type="button">Borrar y reiniciar</button></div>
 </div>
 </div>
