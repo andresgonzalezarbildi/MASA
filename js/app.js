@@ -1,8 +1,8 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "masa-state-v7";
-  const LEGACY_KEYS = ["masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
+  const STORAGE_KEY = "masa-state-v8";
+  const LEGACY_KEYS = ["masa-state-v7", "masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
   const DAY_MS = 86_400_000;
   const KG_KCAL = 7700;
 
@@ -66,6 +66,7 @@
   let activeDiaryView = "record";
   let calorieRange = 14;
   let weightEditorForced = false;
+  let selectedDiaryDate = todayISO();
 
   const $ = selector => document.querySelector(selector);
   const $$ = selector => Array.from(document.querySelectorAll(selector));
@@ -590,7 +591,35 @@
   }
 
   function todayDiary() {
-    return state.diary[todayISO()] || [];
+    return state.diary[selectedDiaryDate] || [];
+  }
+
+  function diaryDateStatus(date = selectedDiaryDate) {
+    if (date === todayISO()) return "Hoy";
+    const yesterday = toISODate(addDays(parseDate(todayISO()), -1));
+    if (date === yesterday) return "Ayer";
+    return formatDate(date);
+  }
+
+  function setSelectedDiaryDate(value, scroll = false) {
+    const iso = normalizeDate(value);
+    if (!iso) return;
+    selectedDiaryDate = iso > todayISO() ? todayISO() : iso;
+    renderDiary(calculatePlan());
+    if (scroll) $("#daily-diary")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function changeDiaryDay(delta) {
+    const current = parseDate(selectedDiaryDate) || new Date();
+    setSelectedDiaryDate(toISODate(addDays(current, delta)));
+  }
+
+  function openDiaryCalendar() {
+    const picker = $("#diary-native-date");
+    picker.max = todayISO();
+    picker.value = selectedDiaryDate;
+    if (typeof picker.showPicker === "function") picker.showPicker();
+    else picker.click();
   }
 
   function diaryTotals(entries = todayDiary()) {
@@ -611,7 +640,14 @@
     const entries = todayDiary();
     const totals = diaryTotals(entries);
     const target = Number.isFinite(plan.targetCalories) ? plan.targetCalories : 0;
-    $("#diary-date-label").textContent = new Intl.DateTimeFormat("es-UY", { weekday: "long", day: "2-digit", month: "long" }).format(new Date());
+    const selected = parseDate(selectedDiaryDate) || new Date();
+    $("#diary-date-label").textContent = new Intl.DateTimeFormat("es-UY", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(selected);
+    $("#diary-date-status").textContent = diaryDateStatus();
+    $("#diary-native-date").value = selectedDiaryDate;
+    $("#diary-native-date").max = todayISO();
+    $("#diary-next-day").disabled = selectedDiaryDate >= todayISO();
+    $("#diary-today-button").hidden = selectedDiaryDate === todayISO();
+
     $("#diary-calories").textContent = formatNumber(Math.round(totals.calories));
     const remaining = target - totals.calories;
     $("#diary-remaining").textContent = target ? `${formatNumber(Math.abs(Math.round(remaining)))} kcal ${remaining >= 0 ? "disponibles" : "por encima"}` : "Sin objetivo calculado";
@@ -639,9 +675,9 @@
       });
     });
 
-    const completed = Boolean(state.completedDays?.[todayISO()]);
+    const completed = Boolean(state.completedDays?.[selectedDiaryDate]);
     $("#day-reading").hidden = !completed;
-    $("#finish-day").textContent = completed ? "Día terminado ✓" : "Terminar día";
+    $("#finish-day").textContent = completed ? "Día terminado ✓" : selectedDiaryDate === todayISO() ? "Terminar día" : "Terminar este día";
     $("#finish-day").classList.toggle("completed", completed);
     if (completed) renderDayProjection(plan, totals);
     if (activeDiaryView === "chart") drawCalorieChart(plan);
@@ -670,7 +706,7 @@
 
   function finishDay() {
     state.completedDays = state.completedDays || {};
-    state.completedDays[todayISO()] = true;
+    state.completedDays[selectedDiaryDate] = true;
     saveState(state);
     $("#day-reading").hidden = false;
     renderDayProjection(calculatePlan(), diaryTotals());
@@ -680,7 +716,7 @@
 
   function hideDaySummary() {
     state.completedDays = state.completedDays || {};
-    delete state.completedDays[todayISO()];
+    delete state.completedDays[selectedDiaryDate];
     saveState(state);
     render();
   }
@@ -698,7 +734,7 @@
   }
 
   function calorieChartDays() {
-    const end = parseDate(todayISO());
+    const end = parseDate(selectedDiaryDate);
     const days = [];
     for (let offset = calorieRange - 1; offset >= 0; offset -= 1) {
       const date = addDays(end, -offset);
@@ -838,7 +874,7 @@
   function openFoodModal(meal) {
     activeMeal = meal;
     activeFoodMode = "food";
-    $("#food-meal-label").textContent = `Agregar en ${mealLabel(meal)}`;
+    $("#food-meal-label").textContent = `Agregar en ${mealLabel(meal)} · ${formatDate(selectedDiaryDate)}`;
     $("#food-modal").hidden = false;
     document.body.classList.add("modal-open");
     switchFoodMode("food");
@@ -908,9 +944,9 @@
     const item = collection.find(entry => entry.id === id) || libraryFoods().find(entry => entry.id === id);
     if (!item) return;
     const entry = normalizeDiaryEntry({ ...item, id: createId(), sourceId: item.id, meal: activeMeal });
-    state.diary[todayISO()] = [...todayDiary(), entry];
+    state.diary[selectedDiaryDate] = [...todayDiary(), entry];
     item.uses = toNumber(item.uses,0) + 1;
-    item.lastUsed = todayISO();
+    item.lastUsed = selectedDiaryDate;
     saveState(state);
     closeFoodModal();
     render();
@@ -928,7 +964,7 @@
       meal: activeMeal
     });
     if (!item) return;
-    state.diary[todayISO()] = [...todayDiary(), item];
+    state.diary[selectedDiaryDate] = [...todayDiary(), item];
     saveState(state);
     form.reset();
     closeFoodModal();
@@ -992,7 +1028,7 @@
   function removeDiaryEntry(event) {
     const button = event.target.closest("[data-remove-diary]");
     if (!button) return;
-    state.diary[todayISO()] = todayDiary().filter(item => item.id !== button.dataset.removeDiary);
+    state.diary[selectedDiaryDate] = todayDiary().filter(item => item.id !== button.dataset.removeDiary);
     saveState(state);
     render();
   }
@@ -1074,7 +1110,7 @@
     const hasMaintenance = Number.isFinite(plan.maintenance);
 
     $("#daily-eyebrow").textContent = person ? `OBJETIVOS DIARIOS DE ${person.toUpperCase()}` : "OBJETIVOS DIARIOS";
-    $("#daily-title").textContent = person ? `${person}, estos son tus objetivos de hoy.` : "Tus números de hoy.";
+    $("#daily-title").textContent = person ? `${person}, este es tu plan diario.` : "Tu plan diario.";
     $("#target-calories").textContent = hasCalories ? formatNumber(Math.round(plan.targetCalories)) : "—";
     $("#maintenance-calories").textContent = hasMaintenance ? `${formatNumber(Math.round(plan.maintenance))} kcal` : "—";
     $("#calorie-adjustment").textContent = Number.isFinite(plan.dailyAdjustment) ? `${plan.dailyAdjustment > 0 ? "+" : ""}${formatNumber(Math.round(plan.dailyAdjustment))} kcal` : "—";
@@ -1112,7 +1148,6 @@
     renderPlanStrip(profile, plan);
     renderInsight(profile, plan, weighIns, trends, observedWeekly);
     renderRecalibration(profile, plan, weighIns, trends);
-    renderProjection(profile, plan, trends, observedWeekly);
     renderCharts(profile, plan, weighIns, trends, observedWeekly);
     renderHistory(trends);
 
@@ -1258,50 +1293,9 @@
     render();
   }
 
-  function renderProjection(profile, plan, trends, observedWeekly) {
-    const tbody = $("#projection-body");
-    tbody.innerHTML = "";
-    const today = parseDate(todayISO());
-    const planStart = parseDate(profile.planStartDate) || parseDate(sortedWeighIns()[0]?.date) || today;
-    const startWeight = toNumber(profile.planStartWeight, sortedWeighIns()[0]?.weight || plan.weight);
-    const latest = latestWeighIn();
-    const latestTrend = trends.at(-1)?.trend;
-    const requestedEnd = parseDate(profile.goalDate);
-    const estimatedEnd = plan.estimatedDate;
-    let endDate = requestedEnd && estimatedEnd ? (requestedEnd > estimatedEnd ? requestedEnd : estimatedEnd) : requestedEnd || estimatedEnd || addMonths(today, 8);
-    if (endDate < today) endDate = today;
-    const maxEnd = addMonths(today, 36);
-    if (endDate > maxEnd) endDate = maxEnd;
-    $("#projection-until").textContent = `La tabla llega hasta ${formatDate(endDate)}, tomando la fecha objetivo o la fecha estimada más lejana.`;
-
-    let cursor = endOfMonth(new Date(planStart.getFullYear(), planStart.getMonth(), 1));
-    const endMonth = endOfMonth(endDate);
-    let rows = 0;
-    while (cursor <= endMonth && rows < 40) {
-      const planned = projectWeight(profile, startWeight, planStart, plan.targetWeight, plan.rate.selected, cursor);
-      const isCurrentMonth = cursor.getMonth() === today.getMonth() && cursor.getFullYear() === today.getFullYear();
-      const actual = cursor <= today ? trendAtDate(cursor, trends) : (isCurrentMonth ? latestTrend : null);
-      let currentPath = null;
-      if (Number.isFinite(observedWeekly) && Number.isFinite(latestTrend) && latest) {
-        const weeks = daysBetween(parseDate(latest.date), cursor) / 7;
-        currentPath = latestTrend + observedWeekly * weeks;
-      }
-      const tr = document.createElement("tr");
-      if (isCurrentMonth) tr.classList.add("current-month");
-      tr.innerHTML = `
-        <td>${formatMonth(cursor)}</td>
-        <td>${formatKg(planned, 1)}</td>
-        <td>${Number.isFinite(actual) ? formatKg(actual, 1) : "—"}</td>
-        <td>${Number.isFinite(currentPath) ? formatKg(currentPath, 1) : "—"}</td>`;
-      tbody.appendChild(tr);
-      cursor = endOfMonth(addMonths(cursor, 1));
-      rows += 1;
-    }
-  }
 
   function renderCharts(profile, plan, weighIns, trends, observedWeekly) {
     const planProjection = [];
-    const currentProjection = [];
     const planStart = parseDate(profile.planStartDate) || parseDate(weighIns[0]?.date);
     const planStartWeight = toNumber(profile.planStartWeight, weighIns[0]?.weight);
     if (planStart && Number.isFinite(planStartWeight)) {
@@ -1314,16 +1308,7 @@
       }
     }
 
-    const latest = latestWeighIn(weighIns);
-    const latestTrend = trends.at(-1)?.trend;
-    if (latest && Number.isFinite(latestTrend) && Number.isFinite(observedWeekly)) {
-      for (let week = 0; week <= 52; week += 1) {
-        const date = addDays(parseDate(latest.date), week * 7);
-        currentProjection.push({ date: toISODate(date), weight: clamp(latestTrend + observedWeekly * week, 20, 400) });
-      }
-    }
-
-    chartPayload = { profile, plan, weighIns, trends, planProjection, currentProjection };
+    chartPayload = { profile, plan, weighIns, trends, planProjection };
     drawWeightChart($("#weight-chart"), chartPayload);
     $("#weight-chart-empty").hidden = weighIns.length >= 2;
   }
@@ -1345,7 +1330,6 @@
       weighIns: payload.weighIns.filter(within),
       trends: payload.trends.filter(within),
       planProjection: payload.planProjection.filter(within),
-      currentProjection: payload.currentProjection.filter(within),
       start,
       end
     };
@@ -1370,8 +1354,7 @@
     const visible = visibleChartPoints(payload);
     const series = [
       ...visible.weighIns.map(item => ({ date: parseDate(item.date), value: item.weight })),
-      ...visible.planProjection.map(item => ({ date: parseDate(item.date), value: item.weight })),
-      ...visible.currentProjection.map(item => ({ date: parseDate(item.date), value: item.weight }))
+      ...visible.planProjection.map(item => ({ date: parseDate(item.date), value: item.weight }))
     ].filter(item => item.date && Number.isFinite(item.value));
     if (series.length < 2) return;
 
@@ -1426,7 +1409,6 @@
     drawPoints(ctx, visible.weighIns.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "#f2efe6", 2.4);
     drawLine(ctx, visible.trends.map(item => ({ date: parseDate(item.date), value: item.trend })), x, y, "#c8ff46", 3, false);
     drawLine(ctx, visible.planProjection.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "#ff6b52", 2.3, true);
-    drawLine(ctx, visible.currentProjection.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "#64d8e7", 2.3, true, [3, 6]);
   }
 
   function drawLine(ctx, points, x, y, color, width, dashed, dashPattern = [8, 7]) {
@@ -1750,6 +1732,203 @@
     if (!state.configured) openSettings(true, "profile");
   }
 
+  let xlsxLoader = null;
+
+  async function loadXLSX() {
+    if (globalThis.XLSX) return globalThis.XLSX;
+    if (!xlsxLoader) {
+      xlsxLoader = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+        script.async = true;
+        script.onload = () => globalThis.XLSX ? resolve(globalThis.XLSX) : reject(new Error("El módulo de Excel no quedó disponible."));
+        script.onerror = () => reject(new Error("No se pudo cargar el módulo de Excel. Revisá la conexión y volvé a intentarlo."));
+        document.head.appendChild(script);
+      }).catch(error => {
+        xlsxLoader = null;
+        throw error;
+      });
+    }
+    return xlsxLoader;
+  }
+
+  function spreadsheetDate(value) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return toISODate(value);
+    if (typeof value === "number" && globalThis.XLSX?.SSF?.parse_date_code) {
+      const parsed = globalThis.XLSX.SSF.parse_date_code(value);
+      if (parsed) return normalizeDate(`${parsed.d}/${parsed.m}/${parsed.y}`);
+    }
+    return normalizeDate(value);
+  }
+
+  async function spreadsheetRows(file, preferredNames = []) {
+    const XLSX = await loadXLSX();
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+    const sheetName = preferredNames.find(name => workbook.SheetNames.includes(name)) || workbook.SheetNames[0];
+    if (!sheetName) return [];
+    return XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: true });
+  }
+
+  function findColumn(row, aliases) {
+    const entries = Object.keys(row || {}).map(key => [key, normalizeHeader(key)]);
+    return entries.find(([, normalized]) => aliases.some(alias => normalized === alias || (alias.length >= 4 && normalized.includes(alias))))?.[0] || null;
+  }
+
+  function parseWeightRows(rows) {
+    if (!Array.isArray(rows) || !rows.length) return [];
+    const sample = rows.find(row => row && Object.keys(row).length) || {};
+    const dateKey = findColumn(sample, ["fecha", "date", "dia"]);
+    const weightKey = findColumn(sample, ["pesokg", "peso", "weight", "kg"]);
+    if (!dateKey || !weightKey) return [];
+    return rows.map(row => ({ date: spreadsheetDate(row[dateKey]), weight: toNumber(row[weightKey], NaN) }))
+      .filter(item => item.date && Number.isFinite(item.weight) && item.weight > 0);
+  }
+
+  function mealFromValue(value) {
+    const normalized = normalizeHeader(value);
+    if (["desayuno", "breakfast"].includes(normalized)) return "breakfast";
+    if (["almuerzo", "lunch"].includes(normalized)) return "lunch";
+    if (["merienda", "snack", "afternoonsnack"].includes(normalized)) return "snack";
+    if (["cena", "dinner"].includes(normalized)) return "dinner";
+    return "extras";
+  }
+
+  function spreadsheetBoolean(value) {
+    const normalized = normalizeHeader(value);
+    return value === true || value === 1 || ["si", "yes", "true", "terminado", "completo"].includes(normalized);
+  }
+
+  function parseIntakeRows(rows) {
+    if (!Array.isArray(rows) || !rows.length) return [];
+    const sample = rows.find(row => row && Object.keys(row).length) || {};
+    const keys = {
+      id: findColumn(sample, ["id"]),
+      date: findColumn(sample, ["fecha", "date", "dia"]),
+      meal: findColumn(sample, ["comida", "meal"]),
+      name: findColumn(sample, ["descripcion", "alimento", "nombre", "food"]),
+      serving: findColumn(sample, ["porcion", "serving"]),
+      calories: findColumn(sample, ["calorias", "calories", "kcal"]),
+      protein: findColumn(sample, ["proteinag", "proteina", "protein"]),
+      fat: findColumn(sample, ["grasasg", "grasa", "grasas", "fat"]),
+      carbs: findColumn(sample, ["carbohidratosg", "carbohidratos", "carbs"]),
+      completed: findColumn(sample, ["diaterminado", "terminado", "completed"])
+    };
+    if (!keys.date || !keys.name || !keys.calories) return [];
+    return rows.map(row => {
+      const entry = normalizeDiaryEntry({
+        id: String(keys.id ? row[keys.id] : "").trim() || createId(),
+        name: row[keys.name],
+        calories: row[keys.calories],
+        protein: keys.protein ? row[keys.protein] : 0,
+        fat: keys.fat ? row[keys.fat] : 0,
+        carbs: keys.carbs ? row[keys.carbs] : 0,
+        serving: keys.serving ? row[keys.serving] : "1 porción",
+        meal: mealFromValue(keys.meal ? row[keys.meal] : "")
+      });
+      return entry ? { date: spreadsheetDate(row[keys.date]), entry, completed: keys.completed ? spreadsheetBoolean(row[keys.completed]) : false } : null;
+    }).filter(item => item?.date);
+  }
+
+  function replaceDiaryEntry(date, entry) {
+    Object.keys(state.diary).forEach(key => {
+      state.diary[key] = (state.diary[key] || []).filter(item => item.id !== entry.id);
+      if (!state.diary[key].length) delete state.diary[key];
+    });
+    state.diary[date] = [...(state.diary[date] || []), entry];
+  }
+
+  async function exportIntakes() {
+    try {
+      const XLSX = await loadXLSX();
+      const rows = [];
+      Object.keys(state.diary).sort().forEach(date => {
+        (state.diary[date] || []).forEach(item => rows.push({
+          ID: item.id,
+          Fecha: parseDate(date),
+          Comida: mealLabel(item.meal),
+          "Descripción": item.name,
+          "Porción": item.serving || "1 porción",
+          "Calorías": toNumber(item.calories, 0),
+          "Proteína (g)": toNumber(item.protein, 0),
+          "Grasas (g)": toNumber(item.fat, 0),
+          "Carbohidratos (g)": toNumber(item.carbs, 0),
+          "Día terminado": state.completedDays?.[date] ? "Sí" : "No"
+        }));
+      });
+      const allDates = [...new Set([...Object.keys(state.diary), ...Object.keys(state.completedDays || {})])].sort();
+      const summary = allDates.map(date => {
+        const totals = diaryTotalsForDate(date);
+        return {
+          Fecha: parseDate(date),
+          Calorías: Math.round(totals.calories),
+          "Proteína (g)": Number(totals.protein.toFixed(1)),
+          "Grasas (g)": Number(totals.fat.toFixed(1)),
+          "Carbohidratos (g)": Number(totals.carbs.toFixed(1)),
+          "Día terminado": state.completedDays?.[date] ? "Sí" : "No"
+        };
+      });
+      const workbook = XLSX.utils.book_new();
+      const recordsSheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ ID: "", Fecha: "", Comida: "", "Descripción": "", "Porción": "", "Calorías": "", "Proteína (g)": "", "Grasas (g)": "", "Carbohidratos (g)": "", "Día terminado": "" }], { cellDates: true });
+      recordsSheet["!cols"] = [{wch:38},{wch:13},{wch:14},{wch:34},{wch:18},{wch:11},{wch:14},{wch:12},{wch:18},{wch:16}];
+      recordsSheet["!autofilter"] = { ref: recordsSheet["!ref"] };
+      const recordsRange = XLSX.utils.decode_range(recordsSheet["!ref"]);
+      for (let row = 1; row <= recordsRange.e.r; row += 1) {
+        const cell = recordsSheet[XLSX.utils.encode_cell({ r: row, c: 1 })];
+        if (cell) cell.z = "dd/mm/yyyy";
+      }
+      const summarySheet = XLSX.utils.json_to_sheet(summary.length ? summary : [{ Fecha: "", Calorías: "", "Proteína (g)": "", "Grasas (g)": "", "Carbohidratos (g)": "", "Día terminado": "" }], { cellDates: true });
+      summarySheet["!cols"] = [{wch:13},{wch:12},{wch:14},{wch:12},{wch:18},{wch:16}];
+      summarySheet["!autofilter"] = { ref: summarySheet["!ref"] };
+      const summaryRange = XLSX.utils.decode_range(summarySheet["!ref"]);
+      for (let row = 1; row <= summaryRange.e.r; row += 1) {
+        const cell = summarySheet[XLSX.utils.encode_cell({ r: row, c: 0 })];
+        if (cell) cell.z = "dd/mm/yyyy";
+      }
+      XLSX.utils.book_append_sheet(workbook, recordsSheet, "Registros");
+      XLSX.utils.book_append_sheet(workbook, summarySheet, "Resumen diario");
+      XLSX.writeFile(workbook, `consumo-masa-${todayISO()}.xlsx`, { compression: true });
+    } catch (error) {
+      window.alert(error.message || "No se pudo exportar el consumo.");
+    }
+  }
+
+  async function handleIntakeImport(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      let rows;
+      if (/\.(xlsx|xls)$/i.test(file.name)) rows = await spreadsheetRows(file, ["Registros"]);
+      else rows = parseDelimitedObjects(await file.text());
+      const imported = parseIntakeRows(rows);
+      if (!imported.length) throw new Error("No se encontraron filas válidas de ingestas.");
+      imported.forEach(({ date, entry, completed }) => {
+        replaceDiaryEntry(date, entry);
+        if (completed) state.completedDays[date] = true;
+      });
+      saveState(state);
+      setSelectedDiaryDate(imported.at(-1).date);
+      switchAppView("today");
+      window.alert(`Se importaron ${imported.length} ingestas.`);
+    } catch (error) {
+      window.alert(error.message || "No se pudo importar el consumo.");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function parseDelimitedObjects(text) {
+    const clean = String(text || "").replace(/^\uFEFF/, "").trim();
+    if (!clean) return [];
+    const lines = clean.split(/\r?\n/).filter(line => line.trim());
+    if (lines.length < 2) return [];
+    const delimiter = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
+    const headers = splitDelimited(lines[0], delimiter);
+    return lines.slice(1).map(line => {
+      const values = splitDelimited(line, delimiter);
+      return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
+    });
+  }
+
   function openImport(mode) {
     importMode = mode;
     $("#import-file").value = "";
@@ -1760,6 +1939,23 @@
     const file = event.target.files?.[0];
     if (!file) return;
     try {
+      if (/\.(xlsx|xls)$/i.test(file.name)) {
+        const weights = parseWeightRows(await spreadsheetRows(file, ["Pesajes"]));
+        if (!weights.length) throw new Error("No se encontraron columnas de fecha y peso en la planilla.");
+        state.weighIns = mergeWeighIns(state.weighIns, weights);
+        if (!state.profile.planStartDate) {
+          const first = sortedWeighIns(state.weighIns)[0];
+          state.profile.planStartDate = first.date;
+          state.profile.planStartWeight = first.weight;
+        }
+        state.configured = profileIsComplete(state.profile, state.weighIns);
+        saveState(state);
+        render();
+        if (!state.configured) openSettings(true, "profile");
+        else switchSettingsTab("weights");
+        return;
+      }
+
       const text = await file.text();
       const isJson = file.name.toLowerCase().endsWith(".json") || text.trim().startsWith("{") || text.trim().startsWith("[");
       if (isJson) {
@@ -1801,6 +1997,8 @@
       else switchSettingsTab("weights");
     } catch (error) {
       window.alert(error.message || "No se pudo importar el archivo.");
+    } finally {
+      event.target.value = "";
     }
   }
 
@@ -1843,11 +2041,11 @@
   }
 
   function exportHistory() {
-    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 6 }, null, 2), "application/json");
+    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 8 }, null, 2), "application/json");
   }
 
   function exportBackup() {
-    downloadText("perfil-masa.json", JSON.stringify({ ...state, version: 6 }, null, 2), "application/json");
+    downloadText("perfil-masa.json", JSON.stringify({ ...state, version: 8 }, null, 2), "application/json");
   }
 
   function downloadText(filename, content, type) {
@@ -1902,6 +2100,45 @@
     if (iso) input.value = displayDate(iso);
   }
 
+  function showHelpTooltip(button) {
+    const tooltip = $("#floating-tooltip");
+    if (!tooltip || !button?.dataset.tooltip) return;
+    tooltip.textContent = button.dataset.tooltip;
+    tooltip.hidden = false;
+    const rect = button.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const margin = 10;
+    let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+    left = clamp(left, margin, window.innerWidth - tooltipRect.width - margin);
+    let top = rect.top - tooltipRect.height - 10;
+    if (top < margin) top = rect.bottom + 10;
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.dataset.owner = button.id || button.getAttribute("aria-label") || "help";
+  }
+
+  function hideHelpTooltip() {
+    const tooltip = $("#floating-tooltip");
+    if (tooltip) tooltip.hidden = true;
+  }
+
+  function bindHelpTooltips() {
+    $$(".help-dot[data-tooltip]").forEach(button => {
+      button.addEventListener("mouseenter", () => showHelpTooltip(button));
+      button.addEventListener("focus", () => showHelpTooltip(button));
+      button.addEventListener("mouseleave", hideHelpTooltip);
+      button.addEventListener("blur", hideHelpTooltip);
+      button.addEventListener("click", event => {
+        event.stopPropagation();
+        const tooltip = $("#floating-tooltip");
+        if (!tooltip.hidden && tooltip.dataset.owner === (button.id || button.getAttribute("aria-label") || "help")) hideHelpTooltip();
+        else showHelpTooltip(button);
+      });
+    });
+    document.addEventListener("click", hideHelpTooltip);
+    window.addEventListener("scroll", hideHelpTooltip, { passive: true });
+  }
+
   function bindEvents() {
     $("#begin-setup").addEventListener("click", () => openSettings(true, "profile"));
     $("#welcome-import").addEventListener("click", () => openImport("profile"));
@@ -1919,6 +2156,12 @@
     document.addEventListener("blur", normalizeDateField, true);
     $$("[data-calendar-for]").forEach(button => button.addEventListener("click", () => openCalendar(button.dataset.calendarFor)));
     $$("[data-native-date]").forEach(picker => picker.addEventListener("change", applyNativeDate));
+
+    $("#diary-prev-day").addEventListener("click", () => changeDiaryDay(-1));
+    $("#diary-next-day").addEventListener("click", () => changeDiaryDay(1));
+    $("#diary-today-button").addEventListener("click", () => setSelectedDiaryDate(todayISO()));
+    $("#diary-date-button").addEventListener("click", openDiaryCalendar);
+    $("#diary-native-date").addEventListener("change", event => setSelectedDiaryDate(event.target.value));
 
     $("#quick-weight-form").addEventListener("submit", addQuickWeight);
     $("#edit-today-weight").addEventListener("click", () => showWeightEditor("today"));
@@ -1942,6 +2185,10 @@
     $("#import-history").addEventListener("click", () => openImport("history"));
     $("#import-file").addEventListener("change", handleImport);
     $("#export-history").addEventListener("click", exportHistory);
+    $("#export-intakes").addEventListener("click", exportIntakes);
+    $("#import-intakes").addEventListener("click", () => { $("#intake-import-file").value = ""; $("#intake-import-file").click(); });
+    $("#intake-import-file").addEventListener("change", handleIntakeImport);
+
     $("#start-over").addEventListener("click", openConfirm);
     $("#cancel-confirm").addEventListener("click", () => { closeConfirm(); document.body.classList.add("modal-open"); });
     $("#confirm-action").addEventListener("click", resetAll);
@@ -2010,6 +2257,7 @@
   function init() {
     bindEvents();
     $$(".help-dot[data-tooltip]").forEach(button => { button.title = button.dataset.tooltip; });
+    bindHelpTooltips();
     render();
     switchAppView("today", false);
     switchDiaryView("record");

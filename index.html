@@ -22,7 +22,7 @@
 <span class="brand-name"><b>MASA</b><small>objetivos por números</small></span>
 </button>
 <nav aria-label="Secciones principales" class="app-nav">
-<button class="active" data-app-view="today" type="button">Hoy</button>
+<button class="active" data-app-view="today" type="button">Registros</button>
 <button data-app-view="progress" type="button">Progreso</button>
 </nav><button aria-label="Abrir configuración" class="settings-trigger" id="open-profile" type="button">
 <span aria-hidden="true">⌁</span><b>Configuración</b>
@@ -39,8 +39,68 @@
 <button class="secondary-action" id="begin-setup" type="button">Crear perfil nuevo</button>
 </div>
 </section>
-<section hidden="" id="dashboard"><section class="app-view" id="today-view"><section class="today-stage">
-<article class="daily-panel">
+<section hidden="" id="dashboard"><section class="app-view" id="today-view"><section class="diary-section" id="daily-diary">
+<div class="diary-heading">
+<div>
+<p class="eyebrow">REGISTRO DIARIO</p>
+<h2>Registro de comidas.</h2>
+<div class="diary-date-nav" id="diary-date-nav">
+<button aria-label="Ver día anterior" class="diary-day-step" id="diary-prev-day" type="button">‹</button>
+<button aria-label="Elegir fecha del registro" class="diary-date-button" id="diary-date-button" type="button">
+<span id="diary-date-label">—</span>
+<small id="diary-date-status">Hoy</small>
+</button>
+<button aria-label="Ver día siguiente" class="diary-day-step" id="diary-next-day" type="button">›</button>
+<button class="diary-today-button" id="diary-today-button" type="button">Hoy</button>
+<input aria-hidden="true" class="native-diary-date" id="diary-native-date" tabindex="-1" type="date"/>
+</div></div>
+<div class="diary-heading-actions">
+<div aria-label="Cambiar vista del registro" class="diary-view-switch">
+<button class="active" data-diary-view="record" type="button">Registro</button>
+<button data-diary-view="chart" type="button">Gráfica</button>
+</div>
+<button class="add-intake-button" id="global-add-intake" type="button"><span>＋</span> Agregar ingesta</button>
+</div>
+</div>
+<div class="diary-view" id="diary-record-view">
+<div class="diary-workspace">
+<div class="meal-ledger" id="meal-grid">
+<article class="meal-card" data-meal="breakfast">
+<div class="meal-card-head"><div><span>01</span><h3>Desayuno</h3></div><div><b data-meal-total="breakfast">0 kcal</b><button aria-label="Agregar al desayuno" data-add-meal="breakfast" type="button">＋</button></div></div>
+<div class="meal-items" data-meal-items="breakfast"></div>
+</article>
+<article class="meal-card" data-meal="lunch">
+<div class="meal-card-head"><div><span>02</span><h3>Almuerzo</h3></div><div><b data-meal-total="lunch">0 kcal</b><button aria-label="Agregar al almuerzo" data-add-meal="lunch" type="button">＋</button></div></div>
+<div class="meal-items" data-meal-items="lunch"></div>
+</article>
+<article class="meal-card" data-meal="snack">
+<div class="meal-card-head"><div><span>03</span><h3>Merienda</h3></div><div><b data-meal-total="snack">0 kcal</b><button aria-label="Agregar a la merienda" data-add-meal="snack" type="button">＋</button></div></div>
+<div class="meal-items" data-meal-items="snack"></div>
+</article>
+<article class="meal-card" data-meal="dinner">
+<div class="meal-card-head"><div><span>04</span><h3>Cena</h3></div><div><b data-meal-total="dinner">0 kcal</b><button aria-label="Agregar a la cena" data-add-meal="dinner" type="button">＋</button></div></div>
+<div class="meal-items" data-meal-items="dinner"></div>
+</article>
+<article class="meal-card compact-meal" data-meal="extras">
+<div class="meal-card-head"><div><span>05</span><h3>Snacks</h3></div><div><b data-meal-total="extras">0 kcal</b><button aria-label="Agregar snack" data-add-meal="extras" type="button">＋</button></div></div>
+<div class="meal-items" data-meal-items="extras"></div>
+</article>
+</div>
+<div class="records-sidebar"><aside class="diary-summary">
+<div class="diary-total">
+<span>Consumidas</span>
+<strong id="diary-calories">0</strong>
+<small id="diary-remaining">— kcal disponibles</small>
+</div>
+<div aria-label="Progreso diario de calorías y macros" class="diary-progress">
+<div><span>Calorías</span><b id="diary-calorie-progress">0 / —</b><i><em id="diary-calorie-bar"></em></i></div>
+<div><span>Proteína</span><b id="diary-protein-progress">0 / — g</b><i><em id="diary-protein-bar"></em></i></div>
+<div><span>Grasas</span><b id="diary-fat-progress">0 / — g</b><i><em id="diary-fat-bar"></em></i></div>
+<div><span>Carbohidratos</span><b id="diary-carb-progress">0 / — g</b><i><em id="diary-carb-bar"></em></i></div>
+</div>
+<button class="finish-day-button" id="finish-day" type="button">Terminar día</button>
+<p class="finish-day-note">El cierre y la lectura teórica quedan asociados a la fecha seleccionada.</p>
+</aside><article class="daily-panel">
 <div class="section-topline">
 <div>
 <p class="eyebrow" id="daily-eyebrow">OBJETIVOS DIARIOS</p>
@@ -80,8 +140,44 @@
 <div><span>Actividad</span><b id="activity-name">—</b></div>
 </div>
 <p class="inline-note" id="macro-balance-note"></p>
-</article>
-<article class="weigh-in-panel">
+<section class="objective-plan-summary">
+<div class="plan-copy">
+<p class="eyebrow" id="plan-kicker">PLAN ACTUAL</p>
+<h2 id="plan-title">—</h2>
+<p id="plan-description">—</p>
+</div>
+<div class="plan-facts">
+<div><span>Objetivo</span><b id="target-weight">—</b></div>
+<div><span>Fecha pedida</span><b id="target-date">—</b></div>
+<div><span>Fecha estimada</span><b id="estimated-date">—</b></div>
+<div><span>Ritmo usado</span><b id="required-rate">—</b></div>
+</div>
+<span class="signal" id="goal-status">—</span>
+<p class="guidance" id="goal-guidance"></p>
+</section></article></div></div>
+</div>
+<div class="diary-view" hidden="" id="diary-chart-view">
+<div class="calorie-chart-toolbar">
+<div><p class="eyebrow">BALANCE DIARIO</p><h3>Lo consumido frente al objetivo.</h3></div>
+<div aria-label="Rango de la gráfica de calorías" class="calorie-range">
+<button data-calorie-range="7" type="button">7 días</button>
+<button class="active" data-calorie-range="14" type="button">14 días</button>
+<button data-calorie-range="30" type="button">30 días</button>
+</div>
+</div>
+<div class="calorie-chart-wrap"><canvas aria-label="Calorías consumidas y objetivo por día" id="calorie-chart"></canvas><p class="chart-empty" hidden="" id="calorie-chart-empty">Registrá comidas en distintos días para comparar el balance.</p></div>
+<div class="calorie-chart-key"><span><i></i>Consumidas</span><span><i></i>Objetivo</span><span id="calorie-chart-summary">—</span></div>
+</div>
+<div class="day-reading" hidden="" id="day-reading">
+<div>
+<p class="eyebrow inverted">SI TODOS LOS DÍAS FUERAN COMO HOY</p>
+<h3 id="day-projection-title">Completá el día para ver una proyección.</h3>
+<p id="day-projection-text">La cuenta compara las calorías registradas con tu mantenimiento estimado. Es orientativa y no reemplaza la tendencia de pesajes.</p>
+</div>
+<div class="day-reading-controls"><label><span>Proyectar a</span><select id="day-projection-weeks"><option value="4">4 semanas</option><option selected="" value="6">6 semanas</option><option value="8">8 semanas</option><option value="12">12 semanas</option></select></label><button id="hide-day-summary" type="button">Ocultar cierre</button></div>
+</div>
+</section></section>
+<section class="app-view" hidden="" id="progress-view"><section class="progress-overview"><article class="weigh-in-panel">
 <div>
 <p class="eyebrow dark-ink">PESO DE HOY</p>
 <h2>Un dato rápido, una tendencia más clara.</h2>
@@ -112,106 +208,7 @@
 <div><span>Ritmo observado</span><b id="observed-rate">—</b></div>
 <div><span>Grasa actual</span><b id="current-body-fat">—</b></div>
 </div>
-</article>
-</section><section class="diary-section" id="daily-diary">
-<div class="diary-heading">
-<div>
-<p class="eyebrow">HOY</p>
-<h2>Registro de comidas.</h2>
-<p id="diary-date-label">—</p>
-</div>
-<div class="diary-heading-actions">
-<div aria-label="Cambiar vista del registro" class="diary-view-switch">
-<button class="active" data-diary-view="record" type="button">Registro</button>
-<button data-diary-view="chart" type="button">Gráfica</button>
-</div>
-<button class="add-intake-button" id="global-add-intake" type="button"><span>＋</span> Agregar ingesta</button>
-</div>
-</div>
-<div class="diary-view" id="diary-record-view">
-<div class="diary-workspace">
-<div class="meal-ledger" id="meal-grid">
-<article class="meal-card" data-meal="breakfast">
-<div class="meal-card-head"><div><span>01</span><h3>Desayuno</h3></div><div><b data-meal-total="breakfast">0 kcal</b><button aria-label="Agregar al desayuno" data-add-meal="breakfast" type="button">＋</button></div></div>
-<div class="meal-items" data-meal-items="breakfast"></div>
-</article>
-<article class="meal-card" data-meal="lunch">
-<div class="meal-card-head"><div><span>02</span><h3>Almuerzo</h3></div><div><b data-meal-total="lunch">0 kcal</b><button aria-label="Agregar al almuerzo" data-add-meal="lunch" type="button">＋</button></div></div>
-<div class="meal-items" data-meal-items="lunch"></div>
-</article>
-<article class="meal-card" data-meal="snack">
-<div class="meal-card-head"><div><span>03</span><h3>Merienda</h3></div><div><b data-meal-total="snack">0 kcal</b><button aria-label="Agregar a la merienda" data-add-meal="snack" type="button">＋</button></div></div>
-<div class="meal-items" data-meal-items="snack"></div>
-</article>
-<article class="meal-card" data-meal="dinner">
-<div class="meal-card-head"><div><span>04</span><h3>Cena</h3></div><div><b data-meal-total="dinner">0 kcal</b><button aria-label="Agregar a la cena" data-add-meal="dinner" type="button">＋</button></div></div>
-<div class="meal-items" data-meal-items="dinner"></div>
-</article>
-<article class="meal-card compact-meal" data-meal="extras">
-<div class="meal-card-head"><div><span>05</span><h3>Snacks</h3></div><div><b data-meal-total="extras">0 kcal</b><button aria-label="Agregar snack" data-add-meal="extras" type="button">＋</button></div></div>
-<div class="meal-items" data-meal-items="extras"></div>
-</article>
-</div>
-<aside class="diary-summary">
-<div class="diary-total">
-<span>Consumidas hoy</span>
-<strong id="diary-calories">0</strong>
-<small id="diary-remaining">— kcal disponibles</small>
-</div>
-<div aria-label="Progreso diario de calorías y macros" class="diary-progress">
-<div><span>Calorías</span><b id="diary-calorie-progress">0 / —</b><i><em id="diary-calorie-bar"></em></i></div>
-<div><span>Proteína</span><b id="diary-protein-progress">0 / — g</b><i><em id="diary-protein-bar"></em></i></div>
-<div><span>Grasas</span><b id="diary-fat-progress">0 / — g</b><i><em id="diary-fat-bar"></em></i></div>
-<div><span>Carbohidratos</span><b id="diary-carb-progress">0 / — g</b><i><em id="diary-carb-bar"></em></i></div>
-</div>
-<button class="finish-day-button" id="finish-day" type="button">Terminar día</button>
-<p class="finish-day-note">El resumen y la proyección aparecen solo cuando cerrás el día.</p>
-</aside>
-</div>
-</div>
-<div class="diary-view" hidden="" id="diary-chart-view">
-<div class="calorie-chart-toolbar">
-<div><p class="eyebrow">BALANCE DIARIO</p><h3>Lo consumido frente al objetivo.</h3></div>
-<div aria-label="Rango de la gráfica de calorías" class="calorie-range">
-<button data-calorie-range="7" type="button">7 días</button>
-<button class="active" data-calorie-range="14" type="button">14 días</button>
-<button data-calorie-range="30" type="button">30 días</button>
-</div>
-</div>
-<div class="calorie-chart-wrap"><canvas aria-label="Calorías consumidas y objetivo por día" id="calorie-chart"></canvas><p class="chart-empty" hidden="" id="calorie-chart-empty">Registrá comidas en distintos días para comparar el balance.</p></div>
-<div class="calorie-chart-key"><span><i></i>Consumidas</span><span><i></i>Objetivo</span><span id="calorie-chart-summary">—</span></div>
-</div>
-<div class="day-reading" hidden="" id="day-reading">
-<div>
-<p class="eyebrow inverted">SI TODOS LOS DÍAS FUERAN COMO HOY</p>
-<h3 id="day-projection-title">Completá el día para ver una proyección.</h3>
-<p id="day-projection-text">La cuenta compara las calorías registradas con tu mantenimiento estimado. Es orientativa y no reemplaza la tendencia de pesajes.</p>
-</div>
-<div class="day-reading-controls"><label><span>Proyectar a</span><select id="day-projection-weeks"><option value="4">4 semanas</option><option selected="" value="6">6 semanas</option><option value="8">8 semanas</option><option value="12">12 semanas</option></select></label><button id="hide-day-summary" type="button">Ocultar cierre</button></div>
-</div>
-</section></section>
-
-
-
-
-
-
-
-<section class="app-view" hidden="" id="progress-view"><section class="plan-strip">
-<div class="plan-copy">
-<p class="eyebrow" id="plan-kicker">PLAN ACTUAL</p>
-<h2 id="plan-title">—</h2>
-<p id="plan-description">—</p>
-</div>
-<div class="plan-facts">
-<div><span>Objetivo</span><b id="target-weight">—</b></div>
-<div><span>Fecha pedida</span><b id="target-date">—</b></div>
-<div><span>Fecha estimada</span><b id="estimated-date">—</b></div>
-<div><span>Ritmo usado</span><b id="required-rate">—</b></div>
-</div>
-<span class="signal" id="goal-status">—</span>
-<p class="guidance" id="goal-guidance"></p>
-</section><section class="recalibration-panel" hidden="" id="recalibration-panel">
+</article></section><section class="recalibration-panel" hidden="" id="recalibration-panel">
 <div aria-hidden="true" class="recalibration-symbol">Δ</div>
 <div>
 <p class="eyebrow">RECALIBRACIÓN SUGERIDA</p>
@@ -228,7 +225,6 @@
 <span class="legend-trend">Tendencia</span>
 <span class="legend-plan">Plan</span>
 <span class="legend-goal">Objetivo</span>
-<span class="legend-current">Tendencia proyectada</span>
 </div>
 <div aria-label="Rango visible de la gráfica" class="chart-range">
 <button data-chart-range="1m" type="button">1 mes</button>
@@ -238,7 +234,7 @@
 </div>
 </div>
 <div class="chart-canvas-wrap">
-<canvas aria-label="Gráfica de peso, tendencia y proyecciones" id="weight-chart"></canvas>
+<canvas aria-label="Gráfica de peso, tendencia y plan" id="weight-chart"></canvas>
 <p class="chart-empty" hidden="" id="weight-chart-empty">Agregá al menos dos pesajes para ver la evolución.</p>
 </div>
 </article>
@@ -252,32 +248,24 @@
 <div><span>Cambio total</span><b id="stat-change">—</b></div>
 </div>
 <small id="chart-insight-meta">—</small>
-</aside>
-</section><section class="projection-section">
-<div class="projection-heading">
-<div>
-<p class="eyebrow">PROYECCIÓN POR MES</p>
-<h2>Plan, realidad y dirección actual.</h2>
-<p id="projection-until">La tabla llega hasta la fecha objetivo o la fecha estimada por el plan.</p>
+<section class="progress-model-data" aria-label="Datos del modelo">
+<div class="progress-model-heading">
+<p class="eyebrow inverted">DATOS DEL MODELO</p>
+<p>Referencias auxiliares para interpretar el plan.</p>
 </div>
-<div class="projection-key"><span>PLAN</span><span>REAL</span><span>RUMBO ACTUAL</span></div>
-</div>
-<div class="projection-wrap">
-<table class="projection-table">
-<thead><tr><th>Mes</th><th>Plan</th><th>Tendencia real</th><th>Rumbo actual</th></tr></thead>
-<tbody id="projection-body"></tbody>
-</table>
-</div>
-</section><section class="secondary-reading">
+<div class="model-data-grid compact">
 <div><span>IMC orientativo</span><b id="stat-bmi">—</b><small id="stat-bmi-note">—</small></div>
 <div class="body-fat-reading"><span>Grasa corporal actual</span><b id="stat-body-fat">—</b><small id="stat-body-fat-note">dato manual; no se estima solo</small></div>
 <div><span>FFMI</span><b id="stat-ffmi">—</b><small>requiere un % de grasa razonable</small></div>
 <div><span>Inicio del plan</span><b id="plan-start">—</b><small id="plan-start-weight">—</small></div>
+</div>
+</section>
+</aside>
 </section></section></section>
 </main>
 <footer class="site-footer">
 <span>MASA</span>
-<p>Una herramienta de cálculo y seguimiento. No reemplaza una evaluación clínica individual.</p>
+<p>Una herramienta para entender las cuentas detrás del peso. No reemplaza una evaluación clínica individual.</p>
 <a href="https://andresgonzalez.netlify.app/" rel="noopener" target="_blank">Más de mis herramientas ↗</a>
 </footer>
 <div aria-labelledby="settings-title" aria-modal="true" class="modal" hidden="" id="settings-modal" role="dialog">
@@ -377,16 +365,25 @@
 <section class="settings-view" hidden="" id="settings-weights">
 <div class="data-tools-grid">
 <article class="data-tool">
-<span>01</span><h3>Importar pesajes</h3><p>Cargá un CSV, TSV, TXT o una copia JSON. Los días repetidos se actualizan.</p>
+<span>01</span><h3>Importar pesajes</h3><p>Cargá una planilla Excel, CSV, TSV, TXT o una copia JSON. Los días repetidos se actualizan.</p>
 <button class="secondary-action" id="import-history" type="button">Elegir archivo</button>
-<a class="text-link" download="" href="plantilla-pesajes.csv">Descargar plantilla esperada</a>
+<a class="text-link" download="" href="plantilla-pesajes.xlsx">Descargar plantilla Excel</a>
 </article>
 <article class="data-tool">
-<span>02</span><h3>Exportar datos</h3><p>Descargá una copia JSON con perfil, objetivo, pesajes, recetas y registros diarios.</p>
-<button class="secondary-action" id="export-history" type="button">Descargar datos</button>
+<span>02</span><h3>Copia completa</h3><p>Descargá un JSON con perfil, objetivo, pesajes, alimentos propios y registros diarios.</p>
+<button class="secondary-action" id="export-history" type="button">Descargar copia</button>
 </article>
-<article class="data-tool danger-tool">
-<span>03</span><h3>Empezar de nuevo</h3><p>Elimina perfil, objetivo y pesajes de esta instalación.</p>
+<article class="data-tool intake-data-tool">
+<span>03</span>
+<h3>Consumo de calorías</h3>
+<p>Exportá o importá el diario en Excel. Incluye una hoja con cada ingesta y otra con el resumen por día.</p>
+<div class="data-tool-actions">
+<button class="secondary-action" id="export-intakes" type="button">Exportar Excel</button>
+<button class="secondary-action" id="import-intakes" type="button">Importar Excel</button>
+</div>
+<a class="text-link" download="" href="plantilla-ingestas.xlsx">Descargar plantilla de ingestas</a>
+</article><article class="data-tool danger-tool">
+<span>04</span><h3>Empezar de nuevo</h3><p>Elimina perfil, objetivo, pesajes, alimentos propios y todos los registros diarios de esta instalación.</p>
 <button class="danger-action" id="start-over" type="button">Borrar todo</button>
 </article>
 </div>
@@ -407,7 +404,7 @@
 <div aria-labelledby="meal-picker-title" aria-modal="true" class="modal compact-modal" hidden="" id="meal-picker-modal" role="dialog">
 <div class="modal-backdrop" data-close-meal-picker=""></div>
 <div class="meal-picker-card">
-<div class="settings-header"><div><p class="eyebrow">NUEVA INGESTA</p><h2 id="meal-picker-title">¿A qué comida pertenece?</h2><p>Después elegís alimento, receta o una carga libre de calorías.</p></div><button aria-label="Cerrar" class="close-button" id="close-meal-picker" type="button">×</button></div>
+<div class="settings-header"><div><p class="eyebrow">NUEVA INGESTA</p><h2 id="meal-picker-title">¿A qué comida pertenece?</h2><p>Elegí la comida. La ingesta se guarda en la fecha que estás viendo.</p></div><button aria-label="Cerrar" class="close-button" id="close-meal-picker" type="button">×</button></div>
 <div class="meal-picker-grid">
 <button data-pick-meal="breakfast" type="button"><span>01</span><b>Desayuno</b></button>
 <button data-pick-meal="lunch" type="button"><span>02</span><b>Almuerzo</b></button>
@@ -503,7 +500,7 @@
 <div><button class="secondary-action" id="cancel-confirm" type="button">Cancelar</button><button class="danger-action" id="confirm-action" type="button">Borrar y reiniciar</button></div>
 </div>
 </div>
-<input accept=".json,.csv,.tsv,.txt" hidden="" id="import-file" type="file"/>
+<input accept=".json,.csv,.tsv,.txt,.xlsx,.xls" hidden="" id="import-file" type="file"/><input accept=".xlsx,.xls,.csv,.tsv,.txt" hidden="" id="intake-import-file" type="file"/>
 <noscript>Esta aplicación necesita JavaScript para funcionar.</noscript>
-</body>
+<div class="floating-tooltip" hidden="" id="floating-tooltip" role="tooltip"></div></body>
 </html>

@@ -1,4 +1,4 @@
-const CACHE = "masa-v7";
+const CACHE = "masa-v8";
 const APP_SHELL = [
   "/masa/",
   "/masa/index.html",
@@ -6,7 +6,8 @@ const APP_SHELL = [
   "/masa/js/app.js",
   "/masa/assets/favicon.svg",
   "/masa/manifest.webmanifest",
-  "/masa/plantilla-pesajes.csv"
+  "/masa/plantilla-pesajes.xlsx",
+  "/masa/plantilla-ingestas.xlsx"
 ];
 
 self.addEventListener("install", event => {
