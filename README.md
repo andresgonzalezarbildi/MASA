@@ -1,28 +1,62 @@
 # MASA
 
-Aplicación web estática para calcular objetivos corporales, registrar peso y llevar un diario diario de calorías y macronutrientes.
+> **An engineering-inspired platform that treats body weight as a measurable system rather than a nutrition problem.**
 
+Rather than building another calorie tracker, MASA treats body weight as a measurable system. Nutrition is only one of the inputs used to model energy balance, predict trends and continuously validate whether the underlying mathematical model still represents reality.
 
-## Funciones
+**Live Demo:** https://masaandresgonzalez.netlify.app/
 
-- Importación de un perfil anterior desde la primera pantalla.
-- Fórmulas Mifflin–St Jeor, Harris–Benedict revisada y Cunningham.
-- Objetivo por peso o porcentaje de grasa con fecha obligatoria para subir o bajar.
-- Ritmo automático o manual y señalización de objetivos exigentes.
-- Distribución automática de macros, editable como porcentajes que deben sumar 100%.
-- Registro diario de peso con recordatorio salteable al comenzar el día.
-- Fechas visibles en formato `dd/mm/aaaa`, año automático y selector de calendario.
-- Diario de calorías por desayuno, almuerzo, merienda, cena y snacks.
-- Carga libre de calorías, alimentos propios, recientes, frecuentes y recetas personales.
-- Resumen de calorías y macros restantes.
-- Proyección orientativa de peso si todos los días fueran como el día registrado.
-- Gráfica con peso real, tendencia, plan, objetivo y proyección de la tendencia observada.
-- Vista de uno, tres o seis meses, además del historial completo.
-- Proyección mensual hasta la fecha objetivo o la fecha estimada del plan.
-- Sugerencia de recalibración cuando la tendencia se aleja de forma sostenida.
-- Gestión plegable de pesajes, importación, plantilla, exportación completa y reinicio dentro de Configuración.
-- Funcionamiento como PWA y almacenamiento en el navegador.
+![MASA Screenshot](./screenshot.png)
 
-## Pendiente para una siguiente etapa
+## How It's Made
 
-La búsqueda de alimentos utiliza por ahora la biblioteca personal del usuario. La integración con OpenNutrition u otra base externa queda preparada como siguiente capa del buscador.
+**Tech used:** HTML, CSS, Vanilla JavaScript, Canvas API, LocalStorage
+
+The project was intentionally built without frontend frameworks. My goal was to understand every layer of the application instead of relying on abstractions, while keeping the final bundle lightweight and easy to deploy.
+
+The architecture follows a local-first philosophy. All calculations and user data remain on the device, eliminating the need for authentication, cloud infrastructure or backend services. Besides improving privacy, this forces the application to be deterministic, resilient and fully functional offline.
+
+From the beginning I tried to separate the project into independent pieces: user data, calculation engine and presentation layer. This makes it possible to evolve the mathematical model without constantly rewriting the interface.
+
+Artificial intelligence is also part of the development workflow. Rather than generating application logic, I use LLMs to discuss software architecture, iterate on UX decisions, validate algorithms and challenge design assumptions. The final implementation and every numerical calculation remain deterministic and fully explainable.
+
+## Engineering Approach
+
+The objective is not to predict body weight perfectly, but to build a model that continuously improves as new measurements become available.
+
+Instead of relying on static calorie estimations, the application constantly compares expected and observed results, allowing the underlying model to be recalibrated over time.
+
+Every calculation is deterministic, reproducible and transparent.
+
+## Design Philosophy
+
+A few principles guide every decision made in the project.
+
+- User data belongs to the user.
+- Calculations should always be explainable.
+- Offline functionality is a feature, not a fallback.
+- The interface should reduce friction instead of exposing unnecessary complexity.
+- The mathematical model should evolve with new measurements instead of remaining static.
+
+The goal is to create software that helps users understand their own data rather than simply collect it.
+
+## Optimizations
+
+The project intentionally avoids heavyweight frameworks in order to keep the codebase lightweight, understandable and easy to maintain.
+
+Some of the engineering decisions include:
+
+- Local-first architecture.
+- Zero backend infrastructure.
+- Deterministic calculation engine.
+- Modular data model.
+- Progressive enhancement instead of framework dependency.
+- Responsive interface built from a single codebase.
+
+## Lessons Learned
+
+This project gradually became much more than a health application.
+
+It challenged me to think about software architecture, UX design, statistical modelling and long-term maintainability as a single problem instead of isolated components.
+
+One of the biggest lessons has been learning when AI genuinely improves the development process and when deterministic algorithms are the better solution. Finding that balance has influenced nearly every technical decision made throughout the project.
