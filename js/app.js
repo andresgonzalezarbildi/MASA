@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "masa-state-v10";
+  const ABOUT_SEEN_KEY = "masa-about-seen-v1";
   const LEGACY_KEYS = ["masa-state-v9", "masa-state-v8", "masa-state-v7", "masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
   const DAY_MS = 86_400_000;
   const KG_KCAL = 7700;
@@ -25,6 +26,7 @@
   let foodEditorReturnTarget = "";
   let recipeEditorReturnTarget = "";
   let libraryReturnTarget = "";
+  let aboutOpenedAsIntro = false;
 
   const DEFAULT_PROFILE = {
     name: "",
@@ -332,7 +334,7 @@
 
     const configured = profileIsComplete(profile, sorted);
     return {
-      version: 13,
+      version: 14,
       configured,
       profile,
       weighIns: sorted,
@@ -354,6 +356,14 @@
     const ingredients = kind === "recipe" && Array.isArray(item.ingredients)
       ? item.ingredients.map(normalizeRecipeIngredient).filter(Boolean)
       : [];
+    const rawServing = String(item.serving || "1 porción").trim() || "1 porción";
+    const parsedServing = parseServingDefinition(rawServing);
+    const servingAmount = Math.max(0.01, toNumber(item.servingAmount ?? item.recipeServingAmount, parsedServing.baseAmount) || parsedServing.baseAmount);
+    const storedUnit = String(item.servingUnit || item.recipeYieldUnit || parsedServing.unitKey || "serving").trim();
+    const servingUnit = ["g", "kg", "ml", "l", "unit", "serving", "cup", "tablespoon", "teaspoon", "plate", "slice", "package", "custom"].includes(storedUnit)
+      ? storedUnit
+      : canonicalEditableUnit(storedUnit);
+    const servingUnitCustom = String(item.servingUnitCustom || item.recipeYieldUnitCustom || parsedServing.customUnit || "").trim();
     return {
       id: item.id || createId(),
       name,
@@ -361,10 +371,16 @@
       protein: Math.max(0, toNumber(item.protein, 0)),
       fat: Math.max(0, toNumber(item.fat, 0)),
       carbs: Math.max(0, toNumber(item.carbs, 0)),
-      serving: String(item.serving || "1 porción").trim() || "1 porción",
+      serving: rawServing,
+      servingAmount,
+      servingUnit,
+      servingUnitCustom,
       kind,
       ingredients,
-      recipeYield: kind === "recipe" ? Math.max(0.1, toNumber(item.recipeYield, 1) || 1) : 1,
+      recipeYield: kind === "recipe" ? Math.max(0.01, toNumber(item.recipeYield, 1) || 1) : 1,
+      recipeYieldUnit: kind === "recipe" ? servingUnit : "",
+      recipeYieldUnitCustom: kind === "recipe" ? servingUnitCustom : "",
+      recipeServingAmount: kind === "recipe" ? servingAmount : 0,
       uses: Math.max(0, Math.round(toNumber(item.uses, 0))),
       lastUsed: normalizeDate(item.lastUsed),
       lastUsedAt: normalizeTimestamp(item.lastUsedAt || item.lastUsed)
@@ -1070,7 +1086,7 @@
   function updateModalBodyState() {
     const modalIds = [
       "food-modal", "food-editor-modal", "recipe-modal", "library-modal",
-      "settings-modal", "meal-picker-modal", "daily-checkin-modal", "confirm-modal"
+      "settings-modal", "meal-picker-modal", "daily-checkin-modal", "confirm-modal", "about-modal"
     ];
     document.body.classList.toggle("modal-open", modalIds.some(modalIsOpen));
   }
@@ -1300,7 +1316,10 @@
     container: ["recipiente", "recipientes"],
     empanada: ["empanada", "empanadas"],
     pieces: ["unidad", "unidades"],
+    g: ["g", "g"],
+    kg: ["kg", "kg"],
     ml: ["ml", "ml"],
+    l: ["l", "l"],
     fl_oz: ["oz líquida", "oz líquidas"],
     tablespoon: ["cucharada", "cucharadas"],
     tbsp: ["cucharada", "cucharadas"],
@@ -1314,6 +1333,56 @@
     oz: ["oz", "oz"]
   };
 
+  function canonicalEditableUnit(rawUnit) {
+    const normalized = normalizeHeader(rawUnit).replace(/\s+/g, "_");
+    if (/^(g|gr|gramo|gramos|gram)$/.test(normalized)) return "g";
+    if (/^(kg|kilo|kilos|kilogramo|kilogramos)$/.test(normalized)) return "kg";
+    if (/^(ml|mililitro|mililitros)$/.test(normalized)) return "ml";
+    if (/^(l|litro|litros)$/.test(normalized)) return "l";
+    if (/^(unidad|unidades|u|unit|units|piece|pieces)$/.test(normalized)) return "unit";
+    if (/^(porcion|porciones|serving|servings|portion|portions)$/.test(normalized)) return "serving";
+    if (/^(taza|tazas|cup|cups)$/.test(normalized)) return "cup";
+    if (/^(cucharada|cucharadas|tablespoon|tablespoons|tbsp)$/.test(normalized)) return "tablespoon";
+    if (/^(cucharadita|cucharaditas|teaspoon|teaspoons|tsp)$/.test(normalized)) return "teaspoon";
+    if (/^(plato|platos|plate|plates)$/.test(normalized)) return "plate";
+    if (/^(feta|fetas|rebanada|rebanadas|slice|slices)$/.test(normalized)) return "slice";
+    if (/^(paquete|paquetes|package|packages|packet|packets)$/.test(normalized)) return "package";
+    return "custom";
+  }
+
+  function editableUnitNames(unit, customUnit = "") {
+    if (unit === "custom") {
+      const label = String(customUnit || "unidad").trim() || "unidad";
+      return [label, label];
+    }
+    return unitNames(unit);
+  }
+
+  function servingLabel(amount, unit, customUnit = "") {
+    const [singular, plural] = editableUnitNames(unit, customUnit);
+    const label = Math.abs(toNumber(amount, 0) - 1) < 0.0001 ? singular : plural;
+    return `${formatQuantityAmount(amount)} ${label}`;
+  }
+
+  function setEditableUnitFields(select, customInput, unit, customUnit = "") {
+    const optionExists = [...select.options].some(option => option.value === unit);
+    select.value = optionExists ? unit : "custom";
+    if (select.value === "custom") customInput.value = customUnit || (unit !== "custom" ? unit : "");
+    const field = customInput.closest("label");
+    field.hidden = select.value !== "custom";
+    customInput.required = select.value === "custom";
+  }
+
+  function editableUnitFromForm(select, customInput) {
+    const unit = select.value || "serving";
+    const customUnit = unit === "custom" ? String(customInput.value || "").trim() : "";
+    return { unit, customUnit };
+  }
+
+  function defaultServingAmountForUnit(unit) {
+    return ["g", "ml"].includes(unit) ? 100 : 1;
+  }
+
   function unitNames(rawUnit) {
     const normalized = normalizeHeader(rawUnit).replace(/\s+/g, "_");
     return COMMON_UNIT_NAMES[normalized]
@@ -1325,22 +1394,10 @@
     const match = raw.match(/^([0-9]+(?:[.,][0-9]+)?)\s*(.*)$/);
     const baseAmount = Math.max(0.01, toNumber(match?.[1], 1) || 1);
     const rawUnit = String(match?.[2] || "porción").trim() || "porción";
-    const normalizedUnit = normalizeHeader(rawUnit);
-
-    if (/^(g|gr|gramo|gramos)$/.test(normalizedUnit)) {
-      return { value: "serving", baseAmount, singular: "g", plural: "g" };
-    }
-    if (/^(kg|kilo|kilos|kilogramo|kilogramos)$/.test(normalizedUnit)) {
-      return { value: "serving", baseAmount, singular: "kg", plural: "kg" };
-    }
-    if (/^(unidad|unidades|u)$/.test(normalizedUnit)) {
-      return { value: "serving", baseAmount, singular: "unidad", plural: "unidades" };
-    }
-    if (/^(porcion|porciones)$/.test(normalizedUnit)) {
-      return { value: "serving", baseAmount, singular: "porción", plural: "porciones" };
-    }
-
-    return { value: "serving", baseAmount, singular: rawUnit, plural: rawUnit };
+    const unitKey = canonicalEditableUnit(rawUnit);
+    const customUnit = unitKey === "custom" ? rawUnit : "";
+    const [singular, plural] = editableUnitNames(unitKey, customUnit);
+    return { value: "serving", baseAmount, singular, plural, unitKey, customUnit };
   }
 
   function foodQuantityOptions(item) {
@@ -1706,14 +1763,23 @@
     $("#save-food-editor").textContent = item ? "Guardar cambios" : "Guardar alimento";
 
     if (item) {
+      const parsed = parseServingDefinition(item.serving);
       form.elements.name.value = item.name;
       form.elements.calories.value = item.calories;
-      form.elements.serving.value = item.serving;
+      form.elements.servingAmount.value = item.servingAmount || parsed.baseAmount;
+      setEditableUnitFields(
+        form.elements.servingUnit,
+        form.elements.servingUnitCustom,
+        item.servingUnit || parsed.unitKey,
+        item.servingUnitCustom || parsed.customUnit
+      );
       form.elements.protein.value = item.protein;
       form.elements.fat.value = item.fat;
       form.elements.carbs.value = item.carbs;
-    } else if (options.prefillName) {
-      form.elements.name.value = options.prefillName;
+    } else {
+      form.elements.servingAmount.value = 100;
+      setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, "g");
+      if (options.prefillName) form.elements.name.value = options.prefillName;
     }
 
     if (foodEditorReturnTarget === "library") $("#library-modal").hidden = true;
@@ -1752,11 +1818,13 @@
   function recalculateRecipe(recipe) {
     if (!recipe?.ingredients?.length) return recipe;
     const totals = recipeTotals(recipe.ingredients);
-    const yieldCount = Math.max(0.1, toNumber(recipe.recipeYield, 1) || 1);
-    recipe.calories = totals.calories / yieldCount;
-    recipe.protein = totals.protein / yieldCount;
-    recipe.fat = totals.fat / yieldCount;
-    recipe.carbs = totals.carbs / yieldCount;
+    const yieldCount = Math.max(0.01, toNumber(recipe.recipeYield, 1) || 1);
+    const servingAmount = Math.max(0.01, toNumber(recipe.recipeServingAmount, parseServingDefinition(recipe.serving).baseAmount) || 1);
+    const factor = servingAmount / yieldCount;
+    recipe.calories = totals.calories * factor;
+    recipe.protein = totals.protein * factor;
+    recipe.fat = totals.fat * factor;
+    recipe.carbs = totals.carbs * factor;
     return recipe;
   }
 
@@ -1792,12 +1860,21 @@
     event.preventDefault();
     const form = event.currentTarget;
     const previous = editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
+    const unitData = editableUnitFromForm(form.elements.servingUnit, form.elements.servingUnitCustom);
+    if (unitData.unit === "custom" && !unitData.customUnit) {
+      form.elements.servingUnitCustom.focus();
+      return;
+    }
+    const servingAmount = Math.max(0.01, toNumber(form.elements.servingAmount.value, 1) || 1);
     const item = normalizeFood({
       id: previous?.id || createId(),
       kind: "food",
       name: form.elements.name.value,
       calories: form.elements.calories.value,
-      serving: form.elements.serving.value,
+      serving: servingLabel(servingAmount, unitData.unit, unitData.customUnit),
+      servingAmount,
+      servingUnit: unitData.unit,
+      servingUnitCustom: unitData.customUnit,
       protein: form.elements.protein.value,
       fat: form.elements.fat.value,
       carbs: form.elements.carbs.value,
@@ -1854,9 +1931,17 @@
       ? "Modificá ingredientes, cantidades o porciones; los valores se recalculan automáticamente."
       : "Buscá cada ingrediente en la base, indicá su cantidad y agregalo a la receta.";
     $("#save-recipe").textContent = recipe ? "Guardar cambios" : "Guardar receta";
+    const parsedServing = parseServingDefinition(recipe?.serving || "1 porción");
     form.elements.name.value = recipe?.name || "";
     form.elements.yield.value = recipe?.recipeYield || 1;
-    form.elements.serving.value = recipe?.serving || "1 porción";
+    form.elements.servingAmount.value = recipe?.recipeServingAmount || recipe?.servingAmount || parsedServing.baseAmount || 1;
+    setEditableUnitFields(
+      form.elements.yieldUnit,
+      form.elements.yieldUnitCustom,
+      recipe?.recipeYieldUnit || recipe?.servingUnit || parsedServing.unitKey || "serving",
+      recipe?.recipeYieldUnitCustom || recipe?.servingUnitCustom || parsedServing.customUnit
+    );
+    form.elements.yieldUnit.dataset.currentUnit = form.elements.yieldUnit.value;
     $("#recipe-ingredient-search").value = "";
     $("#recipe-error").hidden = true;
 
@@ -2154,25 +2239,34 @@
   }
 
   function renderRecipeTotals() {
-    const yieldCount = Math.max(0.1, toNumber($("#recipe-form")?.elements.yield.value, 1) || 1);
+    const form = $("#recipe-form");
+    const yieldCount = Math.max(0.01, toNumber(form?.elements.yield.value, 1) || 1);
+    const servingAmount = Math.max(0.01, toNumber(form?.elements.servingAmount.value, 1) || 1);
     let totals = recipeTotals();
     if (!recipeDraftIngredients.length && editingRecipeId) {
       const legacy = state.recipes.find(recipe => recipe.id === editingRecipeId);
-      if (legacy) totals = {
-        calories: legacy.calories * yieldCount,
-        protein: legacy.protein * yieldCount,
-        fat: legacy.fat * yieldCount,
-        carbs: legacy.carbs * yieldCount
-      };
+      if (legacy) {
+        const legacyServingAmount = Math.max(0.01, toNumber(legacy.recipeServingAmount, parseServingDefinition(legacy.serving).baseAmount) || 1);
+        const completeFactor = yieldCount / legacyServingAmount;
+        totals = {
+          calories: legacy.calories * completeFactor,
+          protein: legacy.protein * completeFactor,
+          fat: legacy.fat * completeFactor,
+          carbs: legacy.carbs * completeFactor
+        };
+      }
     }
+    const factor = servingAmount / yieldCount;
     const serving = {
-      calories: totals.calories / yieldCount,
-      protein: totals.protein / yieldCount,
-      fat: totals.fat / yieldCount,
-      carbs: totals.carbs / yieldCount
+      calories: totals.calories * factor,
+      protein: totals.protein * factor,
+      fat: totals.fat * factor,
+      carbs: totals.carbs * factor
     };
+    const unitData = editableUnitFromForm(form.elements.yieldUnit, form.elements.yieldUnitCustom);
     $("#recipe-total-calories").textContent = `${formatNumber(Math.round(totals.calories))} kcal`;
     $("#recipe-total-macros").textContent = `P ${formatNumber(totals.protein,1)} · G ${formatNumber(totals.fat,1)} · C ${formatNumber(totals.carbs,1)}`;
+    $("#recipe-serving-label").textContent = `Por ${servingLabel(servingAmount, unitData.unit, unitData.customUnit)}`;
     $("#recipe-serving-calories").textContent = `${formatNumber(Math.round(serving.calories))} kcal`;
     $("#recipe-serving-macros").textContent = `P ${formatNumber(serving.protein,1)} · G ${formatNumber(serving.fat,1)} · C ${formatNumber(serving.carbs,1)}`;
   }
@@ -2188,19 +2282,32 @@
       return;
     }
 
-    const yieldCount = Math.max(0.1, toNumber(form.elements.yield.value, 1) || 1);
+    const yieldCount = Math.max(0.01, toNumber(form.elements.yield.value, 1) || 1);
+    const servingAmount = Math.max(0.01, toNumber(form.elements.servingAmount.value, 1) || 1);
+    const unitData = editableUnitFromForm(form.elements.yieldUnit, form.elements.yieldUnitCustom);
+    if (unitData.unit === "custom" && !unitData.customUnit) {
+      form.elements.yieldUnitCustom.focus();
+      return;
+    }
     const totals = recipeDraftIngredients.length ? recipeTotals() : null;
+    const factor = servingAmount / yieldCount;
     const item = normalizeFood({
       id: previous?.id || createId(),
       kind: "recipe",
       name: form.elements.name.value,
-      serving: form.elements.serving.value || "1 porción",
+      serving: servingLabel(servingAmount, unitData.unit, unitData.customUnit),
+      servingAmount,
+      servingUnit: unitData.unit,
+      servingUnitCustom: unitData.customUnit,
       recipeYield: yieldCount,
+      recipeYieldUnit: unitData.unit,
+      recipeYieldUnitCustom: unitData.customUnit,
+      recipeServingAmount: servingAmount,
       ingredients: clone(recipeDraftIngredients),
-      calories: totals ? totals.calories / yieldCount : previous.calories,
-      protein: totals ? totals.protein / yieldCount : previous.protein,
-      fat: totals ? totals.fat / yieldCount : previous.fat,
-      carbs: totals ? totals.carbs / yieldCount : previous.carbs,
+      calories: totals ? totals.calories * factor : previous.calories,
+      protein: totals ? totals.protein * factor : previous.protein,
+      fat: totals ? totals.fat * factor : previous.fat,
+      carbs: totals ? totals.carbs * factor : previous.carbs,
       uses: previous?.uses || 0,
       lastUsed: previous?.lastUsed || "",
       lastUsedAt: previous?.lastUsedAt || ""
@@ -3841,11 +3948,11 @@
   }
 
   function exportHistory() {
-    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 10 }, null, 2), "application/json");
+    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 14 }, null, 2), "application/json");
   }
 
   function exportBackup() {
-    downloadText(`perfil-completo-masa-${todayISO()}.json`, JSON.stringify({ ...state, version: 10 }, null, 2), "application/json");
+    downloadText(`perfil-completo-masa-${todayISO()}.json`, JSON.stringify({ ...state, version: 14 }, null, 2), "application/json");
   }
 
   function downloadText(filename, content, type) {
@@ -3939,7 +4046,51 @@
     window.addEventListener("scroll", hideHelpTooltip, { passive: true });
   }
 
+  function handleFoodEditorUnitChange() {
+    const form = $("#food-editor-form");
+    setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, form.elements.servingUnit.value);
+  }
+
+  function handleRecipeYieldUnitChange() {
+    const form = $("#recipe-form");
+    const select = form.elements.yieldUnit;
+    const previousUnit = select.dataset.currentUnit || "serving";
+    const previousDefault = defaultServingAmountForUnit(previousUnit);
+    const currentAmount = toNumber(form.elements.servingAmount.value, previousDefault);
+    setEditableUnitFields(select, form.elements.yieldUnitCustom, select.value);
+    const nextDefault = defaultServingAmountForUnit(select.value);
+    if (Math.abs(currentAmount - previousDefault) < 0.0001) form.elements.servingAmount.value = nextDefault;
+    select.dataset.currentUnit = select.value;
+    renderRecipeTotals();
+  }
+
+  function openAboutModal(asIntro = false) {
+    aboutOpenedAsIntro = Boolean(asIntro);
+    $("#about-modal").hidden = false;
+    document.body.classList.add("modal-open");
+  }
+
+  function closeAboutModal() {
+    try { localStorage.setItem(ABOUT_SEEN_KEY, "1"); } catch (_) {}
+    $("#about-modal").hidden = true;
+    const shouldCheckIn = aboutOpenedAsIntro;
+    aboutOpenedAsIntro = false;
+    updateModalBodyState();
+    if (shouldCheckIn) setTimeout(maybeOpenDailyCheckin, 120);
+  }
+
+  function maybeOpenAboutIntro() {
+    let seen = false;
+    try { seen = localStorage.getItem(ABOUT_SEEN_KEY) === "1"; } catch (_) {}
+    if (seen) return false;
+    openAboutModal(true);
+    return true;
+  }
+
   function bindEvents() {
+    $("#open-about").addEventListener("click", () => openAboutModal(false));
+    $("#accept-about").addEventListener("click", closeAboutModal);
+    $$('[data-close-about]').forEach(element => element.addEventListener("click", closeAboutModal));
     $("#begin-setup").addEventListener("click", () => openSettings(true, "profile"));
     $("#welcome-import").addEventListener("click", () => openImport("profile"));
     $("#open-profile").addEventListener("click", () => openSettings(false, "profile"));
@@ -4030,10 +4181,14 @@
     $("#close-food-editor").addEventListener("click", closeFoodEditor);
     $$('[data-close-food-editor]').forEach(element => element.addEventListener("click", closeFoodEditor));
     $("#food-editor-form").addEventListener("submit", saveCustomFood);
+    $("#food-editor-form").elements.servingUnit.addEventListener("change", handleFoodEditorUnitChange);
     $("#close-recipe").addEventListener("click", closeRecipeEditor);
     $$('[data-close-recipe]').forEach(element => element.addEventListener("click", closeRecipeEditor));
     $("#recipe-form").addEventListener("submit", saveRecipe);
     $("#recipe-form").elements.yield.addEventListener("input", renderRecipeTotals);
+    $("#recipe-form").elements.servingAmount.addEventListener("input", renderRecipeTotals);
+    $("#recipe-form").elements.yieldUnit.addEventListener("change", handleRecipeYieldUnitChange);
+    $("#recipe-form").elements.yieldUnitCustom.addEventListener("input", renderRecipeTotals);
     $("#recipe-ingredient-search").addEventListener("input", queueRecipeIngredientSearch);
     $("#recipe-ingredient-results").addEventListener("click", handleRecipeIngredientSearchClick);
     $("#recipe-ingredient-results").addEventListener("input", handleRecipeIngredientSearchInput);
@@ -4100,7 +4255,8 @@
     render();
     switchAppView("today", false);
     switchDiaryView("record");
-    setTimeout(maybeOpenDailyCheckin, 180);
+    const introOpened = maybeOpenAboutIntro();
+    if (!introOpened) setTimeout(maybeOpenDailyCheckin, 180);
     registerServiceWorker();
   }
 

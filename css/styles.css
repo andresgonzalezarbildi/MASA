@@ -1427,3 +1427,71 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .library-item { grid-template-columns: 1fr; }
   .library-item-actions { justify-content: flex-end; }
 }
+
+/* --- MASA v14: unidades configurables y presentación --- */
+.field-note {
+  margin: -3px 0 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.custom-unit-field[hidden], .custom-recipe-unit-field[hidden] { display: none; }
+.about-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  margin-top: 38px;
+  padding: clamp(24px, 4vw, 42px);
+  border: 2px solid var(--ink);
+  background: var(--yellow);
+  box-shadow: 8px 8px 0 var(--violet);
+}
+.about-summary h2 {
+  max-width: 720px;
+  margin: 6px 0 12px;
+  font-family: var(--font-display);
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: .98;
+}
+.about-summary div > p:last-child {
+  max-width: 850px;
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+.about-summary > button { white-space: nowrap; }
+.about-sheet {
+  width: min(780px, calc(100% - 26px));
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  padding: clamp(22px, 4vw, 38px);
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 10px 10px 0 var(--violet);
+}
+.about-copy {
+  display: grid;
+  gap: 15px;
+  margin-top: 20px;
+  color: var(--ink-2);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.about-copy > p { margin: 0; }
+.about-copy strong { color: var(--ink); }
+.about-mission {
+  margin-top: 4px;
+  padding: 18px;
+  color: var(--paper);
+  background: var(--night);
+  border-left: 6px solid var(--acid);
+}
+.about-mission p { margin: 0; }
+.about-mission p:last-child { margin-top: 8px; }
+.about-actions { justify-content: flex-end; margin-top: 20px; }
+@media (max-width: 760px) {
+  .about-summary { grid-template-columns: 1fr; }
+  .about-summary > button { width: 100%; white-space: normal; }
+  .about-sheet { padding: 20px 17px; }
+}
