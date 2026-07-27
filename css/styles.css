@@ -1565,3 +1565,92 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .site-footer { display: grid; }
   .footer-actions { flex-wrap: wrap; gap: 10px 15px; }
 }
+
+
+/* --- MASA v16: búsqueda permanente, modales estables y receta sin recortes --- */
+#food-modal .food-sheet {
+  width: min(820px, calc(100% - 26px));
+  height: min(780px, calc(100dvh - 30px));
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+#food-modal .settings-header { flex: 0 0 auto; }
+.food-search-always { flex: 0 0 auto; margin-top: 16px; }
+.food-global-actions { flex: 0 0 auto; margin: 9px 0 5px; }
+.food-search-results-panel,
+.food-browse-area { min-width: 0; min-height: 0; flex: 1 1 auto; }
+.food-search-results-panel:not([hidden]),
+.food-browse-area:not([hidden]) { display: flex; flex-direction: column; }
+.food-search-results-panel .mode-help { flex: 0 0 auto; margin-top: 8px; }
+.food-search-results-panel > .food-results,
+.food-mode:not([hidden]) > .food-results { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 5px; }
+.food-browse-area .food-mode-tabs { flex: 0 0 auto; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 12px 0; }
+.food-mode:not([hidden]) { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow: hidden; }
+.food-mode .mode-help,
+.food-mode > .food-library-actions,
+.food-mode > .compact-form { flex: 0 0 auto; }
+.food-result-card,
+.food-result,
+.food-inline-add,
+.food-inline-add > * { min-width: 0; max-width: 100%; }
+
+#recipe-modal .recipe-sheet {
+  width: min(1180px, calc(100% - 24px));
+  height: min(860px, calc(100dvh - 24px));
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+#recipe-modal .settings-header { flex: 0 0 auto; padding-bottom: 14px; }
+#recipe-modal #recipe-form { display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; }
+#recipe-modal .recipe-meta-grid { flex: 0 0 auto; gap: 9px 12px; }
+#recipe-modal .recipe-builder { flex: 1 1 auto; min-width: 0; min-height: 0; margin-top: 12px; overflow: hidden; }
+#recipe-modal .recipe-search-panel,
+#recipe-modal .recipe-selected-panel { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; }
+#recipe-modal .recipe-search-actions,
+#recipe-modal .recipe-section-head,
+#recipe-modal .recipe-totals,
+#recipe-modal .recipe-save-actions { flex: 0 0 auto; }
+#recipe-modal .recipe-ingredient-results,
+#recipe-modal .recipe-ingredient-list { flex: 1 1 auto; min-width: 0; min-height: 0; max-height: none; overflow-y: auto; overflow-x: hidden; }
+#recipe-modal .recipe-ingredient-row,
+#recipe-modal .food-result-card,
+#recipe-modal .food-result,
+#recipe-modal input,
+#recipe-modal select { min-width: 0; max-width: 100%; box-sizing: border-box; }
+#recipe-modal .recipe-save-actions { margin-top: 10px; }
+
+@media (min-width: 721px) {
+  #recipe-modal .recipe-builder { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); }
+}
+
+@media (max-width: 720px) {
+  #food-modal .food-sheet { height: calc(100dvh - 14px); width: calc(100% - 14px); }
+  .food-global-actions { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .food-browse-area .food-mode-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #recipe-modal .recipe-sheet {
+    width: calc(100% - 12px);
+    height: calc(100dvh - 12px);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  #recipe-modal #recipe-form { overflow: visible; }
+  #recipe-modal .recipe-builder { display: grid; flex: none; grid-template-columns: 1fr; overflow: visible; }
+  #recipe-modal .recipe-search-panel,
+  #recipe-modal .recipe-selected-panel { min-height: 360px; }
+  #recipe-modal .recipe-ingredient-results,
+  #recipe-modal .recipe-ingredient-list { max-height: 260px; }
+}
+
+@media (max-width: 470px) {
+  .food-global-actions { grid-template-columns: 1fr; }
+  #food-modal .settings-header h2 { font-size: 31px; }
+}
+@media (min-width: 721px) and (max-width: 900px) {
+  #recipe-modal .recipe-meta-grid { grid-template-columns: minmax(220px, 1fr) 150px 210px; }
+}

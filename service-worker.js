@@ -1,9 +1,9 @@
-const CACHE = "masa-v15";
+const CACHE = "masa-v16";
 const APP_SHELL = [
   "/masa/",
   "/masa/index.html",
-  "/masa/css/styles.css?v=15",
-  "/masa/js/app.js?v=15",
+  "/masa/css/styles.css?v=16",
+  "/masa/js/app.js?v=16",
   "/masa/assets/favicon.svg",
   "/masa/manifest.webmanifest",
   "/masa/plantilla-pesajes.xlsx",

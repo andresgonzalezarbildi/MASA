@@ -9,8 +9,8 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=15" rel="stylesheet"/>
-<script defer="" src="./js/app.js?v=15"></script>
+<link href="./css/styles.css?v=16" rel="stylesheet"/>
+<script defer="" src="./js/app.js?v=16"></script>
 </head>
 <body>
 <div aria-hidden="true" class="ambient ambient-a"></div>
@@ -232,7 +232,7 @@
 <div class="chart-canvas-wrap"><canvas aria-label="Gráfica de progreso" id="progress-chart"></canvas><p class="chart-empty" hidden="" id="progress-chart-empty">Todavía faltan datos para construir esta gráfica.</p></div><div aria-label="Elegir gráfica" class="progress-chart-index">
 <button aria-label="Peso frente al plan" class="active" data-progress-chart="weight" type="button">1</button>
 <button aria-label="Calorías consumidas" data-progress-chart="calories" type="button">2</button>
-<button aria-label="Variación de peso frente a calorías" data-progress-chart="relationship" type="button">3</button>
+<button aria-label="Promedio semanal de calorías" data-progress-chart="weekly" type="button">3</button>
 </div>
 </article>
 <aside class="insight-panel">
@@ -261,7 +261,8 @@
 </section>
 <section class="data-quality-panel" id="data-quality-tips">
 <div class="data-quality-heading">
-<div><p class="eyebrow">DATOS ÚTILES, RESULTADOS ÚTILES</p><h2>La estimación mejora cuando registrás lo que realmente pasó.</h2></div>
+<p class="eyebrow">DATOS ÚTILES, RESULTADOS ÚTILES</p>
+<h2>La estimación mejora cuando registrás lo que realmente pasó.</h2>
 <p>M.A.S.A. puede ajustar sus cálculos, pero no puede corregir datos incompletos o cantidades aproximadas sistemáticamente.</p>
 </div>
 <div class="data-quality-grid">
@@ -491,19 +492,20 @@
 <button aria-label="Cerrar" class="close-button" id="close-food" type="button">×</button>
 </div>
 <p class="food-add-feedback" hidden id="food-add-feedback" role="status"></p>
+<label class="food-search food-search-always"><span>Buscar alimentos o recetas</span><input autocomplete="off" id="food-search-input" placeholder="Ej.: arroz, huevo, café..." type="search"/></label>
+<div class="food-library-actions food-global-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button><button class="secondary-action" data-open-library type="button">Editar biblioteca</button></div>
+<section class="food-search-results-panel" hidden id="food-search-panel">
+<p class="mode-help">Resultados de búsqueda. Al borrar el texto volvés automáticamente a Recientes.</p>
+<div class="food-results" id="food-results"></div>
+</section>
+<div class="food-browse-area" id="food-browse-area">
 <div class="food-mode-tabs">
-<button class="active" data-food-mode="food" type="button">Buscar</button>
-<button data-food-mode="recent" type="button">Recientes</button>
+<button class="active" data-food-mode="recent" type="button">Recientes</button>
 <button data-food-mode="frequent" type="button">Frecuentes</button>
 <button data-food-mode="recipe" type="button">Recetas</button>
 <button data-food-mode="quick" type="button">Solo calorías</button>
 </div>
-<section class="food-mode" id="food-mode-food">
-<label class="food-search"><span>Buscar en alimentos propios y catálogo</span><input id="food-search-input" placeholder="Ej.: arroz, café, pollo..." type="search"/></label>
-<div class="food-library-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento propio</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button><button class="secondary-action" data-open-library type="button">Editar biblioteca</button></div>
-<div class="food-results" id="food-results"></div>
-</section>
-<section class="food-mode" hidden="" id="food-mode-recent">
+<section class="food-mode" id="food-mode-recent">
 <p class="mode-help">Los últimos alimentos agregados al registro, ordenados desde el más reciente.</p>
 <div class="food-results" id="recent-food-results"></div>
 </section>
@@ -522,6 +524,7 @@
 <button class="primary-action" type="submit">Agregar y seguir</button>
 </form>
 </section>
+</div>
 </div>
 </div>
 <div aria-labelledby="food-editor-title" aria-modal="true" class="modal compact-modal" hidden="" id="food-editor-modal" role="dialog">

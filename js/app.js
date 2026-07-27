@@ -83,7 +83,7 @@
   let recalibrationSuggestion = null;
   let fillingProfileForm = false;
   let activeMeal = "breakfast";
-  let activeFoodMode = "food";
+  let activeFoodMode = "recent";
   let activeAppView = "today";
   let activeDiaryView = "record";
   let calorieRange = 14;
@@ -1067,17 +1067,18 @@
 
   function openFoodModal(meal) {
     activeMeal = meal;
-    activeFoodMode = "food";
+    activeFoodMode = "recent";
     activeFoodSelection = null;
     $("#food-meal-label").textContent = `Agregar en ${mealLabel(meal)} · ${formatDate(selectedDiaryDate)}`;
     $("#food-modal").hidden = false;
     const feedback = $("#food-add-feedback");
     feedback.hidden = true;
     feedback.textContent = "";
-    document.body.classList.add("modal-open");
-    switchFoodMode("food");
     $("#food-search-input").value = "";
-    renderFoodResults();
+    document.body.classList.add("modal-open");
+    switchFoodMode("recent", false);
+    updateFoodSearchDisplay();
+    requestAnimationFrame(() => $("#food-search-input")?.focus());
   }
 
   function modalIsOpen(id) {
@@ -1099,17 +1100,32 @@
     updateModalBodyState();
   }
 
-  function switchFoodMode(mode) {
-    const modes = ["food", "recent", "frequent", "recipe", "quick"];
-    activeFoodMode = modes.includes(mode) ? mode : "food";
+  function hasActiveFoodSearch() {
+    return Boolean(String($("#food-search-input")?.value || "").trim());
+  }
+
+  function updateFoodSearchDisplay() {
+    const searching = hasActiveFoodSearch();
+    $("#food-search-panel").hidden = !searching;
+    $("#food-browse-area").hidden = searching;
     activeFoodSelection = null;
+    if (searching) renderFoodResults();
+    else renderActiveFoodMode();
+  }
+
+  function switchFoodMode(mode, clearSearch = true) {
+    const modes = ["recent", "frequent", "recipe", "quick"];
+    activeFoodMode = modes.includes(mode) ? mode : "recent";
+    activeFoodSelection = null;
+    if (clearSearch && $("#food-search-input")) $("#food-search-input").value = "";
     $$('[data-food-mode]').forEach(button => button.classList.toggle("active", button.dataset.foodMode === activeFoodMode));
     modes.forEach(name => { $(`#food-mode-${name}`).hidden = name !== activeFoodMode; });
+    $("#food-search-panel").hidden = true;
+    $("#food-browse-area").hidden = false;
     renderActiveFoodMode();
   }
 
   function renderActiveFoodMode() {
-    if (activeFoodMode === "food") renderFoodResults();
     if (activeFoodMode === "recent") renderRecentFoodResults();
     if (activeFoodMode === "frequent") renderFrequentFoodResults();
     if (activeFoodMode === "recipe") renderRecipeResults();
@@ -1237,11 +1253,10 @@
     container.innerHTML = "";
     renderCatalogStatus(container);
 
-    const localMatches = localLibraryFoods().filter(item => !query || foodSearchText(item).includes(query));
-    const selected = query
-      ? [...localMatches, ...searchExternalFoods(query, 45)]
-      : [...localMatches, ...externalFoods.slice(0, 18)];
-    const unique = [...new Map(selected.map(item => [item.id, item])).values()].slice(0, query ? 35 : 24);
+    if (!query) return;
+    const localMatches = localLibraryFoods().filter(item => foodSearchText(item).includes(query));
+    const selected = [...localMatches, ...searchExternalFoods(query, 45)];
+    const unique = [...new Map(selected.map(item => [item.id, item])).values()].slice(0, 35);
 
     if (!unique.length) {
       if (externalFoodsStatus !== "loading") {
@@ -1538,24 +1553,32 @@
     return wrapper;
   }
 
+  function activeFoodResultsSection() {
+    return hasActiveFoodSearch() ? $("#food-search-panel") : $(`#food-mode-${activeFoodMode}`);
+  }
+
   function focusSelectedFoodAmount() {
     requestAnimationFrame(() => {
-      const activeSection = $(`#food-mode-${activeFoodMode}`);
-      const input = activeSection?.querySelector('.food-result-card.active input[name="amount"]');
+      const input = activeFoodResultsSection()?.querySelector('.food-result-card.active input[name="amount"]');
       input?.focus();
       input?.select();
     });
   }
 
+  function renderCurrentFoodResults() {
+    if (hasActiveFoodSearch()) renderFoodResults();
+    else renderActiveFoodMode();
+  }
+
   function selectFoodInline(id, kind) {
     activeFoodSelection = { id, kind };
-    renderActiveFoodMode();
+    renderCurrentFoodResults();
     focusSelectedFoodAmount();
   }
 
   function cancelFoodInline() {
     activeFoodSelection = null;
-    renderActiveFoodMode();
+    renderCurrentFoodResults();
   }
 
   function updateFoodQuantityPreview(form) {
@@ -1591,12 +1614,9 @@
 
   function prepareNextFoodEntry() {
     activeFoodSelection = null;
-    if (activeFoodMode === "food") $("#food-search-input").value = "";
-    renderActiveFoodMode();
-    requestAnimationFrame(() => {
-      if (activeFoodMode === "food") $("#food-search-input").focus();
-      else $("#food-modal .food-mode-tabs button.active")?.focus();
-    });
+    $("#food-search-input").value = "";
+    updateFoodSearchDisplay();
+    requestAnimationFrame(() => $("#food-search-input")?.focus());
   }
 
   function addLibraryFood(id, kind, amountValue, unitValue) {
@@ -1655,7 +1675,7 @@
     clearTimeout(foodSearchTimer);
     foodSearchTimer = setTimeout(() => {
       activeFoodSelection = null;
-      renderFoodResults();
+      updateFoodSearchDisplay();
     }, 120);
   }
 
@@ -1944,8 +1964,8 @@
       renderLibraryManager();
       $("#library-modal").hidden = false;
     } else if (modalIsOpen("food-modal")) {
-      switchFoodMode("food");
-      $("#food-search-input").value = "";
+      $("#food-search-input").value = item.name;
+      updateFoodSearchDisplay();
       activeFoodSelection = { id: item.id, kind: "food" };
       renderFoodResults();
       focusSelectedFoodAmount();
@@ -2982,12 +3002,12 @@
         legend: ["Consumidas", "Objetivo", "", ""],
         classes: ["legend-trend", "legend-plan", "", ""]
       },
-      relationship: {
-        eyebrow: "ENERGÍA VS CAMBIO",
-        title: "Cómo se mueve el peso según las calorías registradas.",
-        description: "Cada punto resume un período: calorías sobre o bajo el objetivo y variación de tendencia en kg por semana.",
-        legend: ["Cada punto = un período", "Centro = objetivo", "", ""],
-        classes: ["legend-trend", "legend-goal", "", ""]
+      weekly: {
+        eyebrow: "PROMEDIO SEMANAL",
+        title: "Una lectura más estable de tus calorías.",
+        description: "Cada barra muestra el promedio diario de una semana. La línea punteada es el objetivo diario.",
+        legend: ["Promedio semanal", "Objetivo", "", ""],
+        classes: ["legend-trend", "legend-plan", "", ""]
       }
     }[kind];
     $("#progress-chart-eyebrow").textContent = copy.eyebrow;
@@ -3091,9 +3111,9 @@
     if (activeProgressChart === "calories") {
       hasData = drawProgressCalorieChart(canvas, chartPayload);
       renderCalorieInsight(chartPayload);
-    } else if (activeProgressChart === "relationship") {
-      hasData = drawRelationshipChart(canvas, chartPayload);
-      renderRelationshipInsight(chartPayload);
+    } else if (activeProgressChart === "weekly") {
+      hasData = drawWeeklyCalorieChart(canvas, chartPayload);
+      renderWeeklyCalorieInsight(chartPayload);
     } else {
       hasData = drawWeightChart(canvas, chartPayload);
       renderWeightInsight(chartPayload.profile, chartPayload.plan, chartPayload.weighIns, chartPayload.trends, chartPayload.observedWeekly);
@@ -3102,7 +3122,7 @@
   }
 
   function changeProgressChart(direction) {
-    const order = ["weight", "calories", "relationship"];
+    const order = ["weight", "calories", "weekly"];
     const index = order.indexOf(activeProgressChart);
     activeProgressChart = order[(index + direction + order.length) % order.length];
     renderActiveProgressChart();
@@ -3266,6 +3286,116 @@
       ctx.fillStyle = "rgba(242,239,230,.48)";
       ctx.fillText(new Intl.DateTimeFormat("es-UY", { month: "short", day: chartRange === "1m" ? "2-digit" : undefined }).format(date), x(date), height - margin.bottom + 10);
     }
+    return true;
+  }
+
+  function mondayOfWeek(date) {
+    const result = new Date(date);
+    const day = result.getDay();
+    result.setHours(0, 0, 0, 0);
+    result.setDate(result.getDate() - ((day + 6) % 7));
+    return result;
+  }
+
+  function weeklyCalorieSamples(payload) {
+    const days = calorieDaysForBounds(chartBounds(payload, false));
+    const groups = new Map();
+    days.forEach(day => {
+      const weekDate = mondayOfWeek(day.date);
+      const key = toISODate(weekDate);
+      if (!groups.has(key)) groups.set(key, { date: weekDate, days: [] });
+      groups.get(key).days.push(day);
+    });
+    return [...groups.values()].sort((a, b) => a.date - b.date).map(group => {
+      const completed = group.days.filter(day => day.completed);
+      const used = completed.length >= 3 ? completed : group.days;
+      const average = used.reduce((sum, day) => sum + day.calories, 0) / Math.max(1, used.length);
+      return {
+        date: group.date,
+        average,
+        difference: Number.isFinite(payload.plan.targetCalories) ? average - payload.plan.targetCalories : null,
+        loggedDays: group.days.length,
+        usedDays: used.length,
+        completedOnly: completed.length >= 3
+      };
+    });
+  }
+
+  function renderWeeklyCalorieInsight(payload) {
+    $(".progress-model-data").hidden = true;
+    const samples = weeklyCalorieSamples(payload);
+    const latest = samples.at(-1);
+    if (!latest || !Number.isFinite(payload.plan.targetCalories)) {
+      setInsightFact(1, "Semanas", "0");
+      setInsightFact(2, "Promedio", "—");
+      setInsightFact(3, "Días usados", "—");
+      $("#chart-insight-title").textContent = "Todavía falta una semana con registros.";
+      $("#chart-insight").textContent = "Registrá comidas durante varios días. Esta vista agrupa los datos por semana para que un día aislado no domine la lectura.";
+      $("#chart-insight-meta").textContent = "La barra semanal aparece desde el primer día registrado y mejora al completar más días.";
+      return;
+    }
+    const diff = latest.difference;
+    const aligned = Math.abs(diff) <= Math.max(75, payload.plan.targetCalories * 0.05);
+    const weekLabel = new Intl.DateTimeFormat("es-UY", { day: "2-digit", month: "short" }).format(latest.date);
+    setInsightFact(1, "Semana desde", weekLabel);
+    setInsightFact(2, "Promedio", `${formatNumber(Math.round(latest.average))} kcal`);
+    setInsightFact(3, "Días usados", String(latest.usedDays));
+    $("#chart-insight-title").textContent = aligned
+      ? "La última semana está cerca del objetivo."
+      : `La última semana quedó ${formatNumber(Math.abs(Math.round(diff)))} kcal ${diff > 0 ? "por encima" : "por debajo"}.`;
+    $("#chart-insight").textContent = aligned
+      ? "El promedio semanal está dentro de un margen pequeño. Conviene mantener el registro antes de hacer cambios por uno o dos días puntuales."
+      : `El promedio diario de esa semana fue ${formatNumber(Math.round(latest.average))} kcal. Mirá si el patrón se repite durante otra semana antes de modificar el objetivo.`;
+    $("#chart-insight-meta").textContent = `${samples.length} semanas visibles · ${latest.completedOnly ? "usa días terminados" : "usa todos los días con ingestas"}`;
+  }
+
+  function drawWeeklyCalorieChart(canvas, payload) {
+    const samples = weeklyCalorieSamples(payload);
+    const prepared = prepareCanvas(canvas);
+    if (!prepared) return samples.length > 0;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    if (!samples.length || !Number.isFinite(payload.plan.targetCalories)) return false;
+    const target = payload.plan.targetCalories;
+    const maxValue = Math.max(target, ...samples.map(item => item.average), 500) * 1.12;
+    const margin = { left: 54, right: 18, top: 22, bottom: 48 };
+    const plotWidth = width - margin.left - margin.right;
+    const step = plotWidth / Math.max(1, samples.length);
+    const barWidth = Math.max(12, Math.min(48, step * .58));
+    const y = value => margin.top + (maxValue - value) / maxValue * (height - margin.top - margin.bottom);
+
+    ctx.font = "10px ui-monospace, monospace";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i <= 4; i += 1) {
+      const value = maxValue * i / 4;
+      const py = y(value);
+      ctx.strokeStyle = "rgba(242,239,230,.12)";
+      ctx.beginPath(); ctx.moveTo(margin.left, py); ctx.lineTo(width - margin.right, py); ctx.stroke();
+      ctx.fillStyle = "rgba(242,239,230,.52)";
+      ctx.fillText(formatNumber(value, 0), margin.left - 7, py);
+    }
+
+    ctx.save();
+    ctx.strokeStyle = "#ff6b52";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 5]);
+    ctx.beginPath(); ctx.moveTo(margin.left, y(target)); ctx.lineTo(width - margin.right, y(target)); ctx.stroke();
+    ctx.restore();
+
+    samples.forEach((sample, index) => {
+      const px = margin.left + step * (index + .5);
+      const top = y(sample.average);
+      const tolerance = Math.max(75, target * .05);
+      ctx.fillStyle = Math.abs(sample.average - target) <= tolerance ? "#c8ff46" : sample.average > target ? "#ff6b52" : "#8d7cff";
+      ctx.fillRect(px - barWidth / 2, top, barWidth, y(0) - top);
+      if (samples.length <= 14 || index % Math.ceil(samples.length / 10) === 0 || index === samples.length - 1) {
+        ctx.fillStyle = "rgba(242,239,230,.5)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(new Intl.DateTimeFormat("es-UY", { day: "2-digit", month: "short" }).format(sample.date), px, height - margin.bottom + 10);
+      }
+    });
     return true;
   }
 
