@@ -1,13 +1,14 @@
 const CACHE = "masa-v12";
 const APP_SHELL = [
-  "./",
-  "./index.html",
-  "./css/styles.css?v=12",
-  "./js/app.js?v=12",
-  "./assets/favicon.svg",
-  "./manifest.webmanifest",
-  "./plantilla-pesajes.xlsx",
-  "./plantilla-ingestas.xlsx"
+  "/masa/",
+  "/masa/index.html",
+  "/masa/css/styles.css",
+  "/masa/js/app.js",
+  "/masa/assets/favicon.svg",
+  "/masa/manifest.webmanifest",
+  "/masa/plantilla-pesajes.xlsx",
+  "/masa/plantilla-ingestas.xlsx"
+];
 ];
 
 self.addEventListener("install", event => {
