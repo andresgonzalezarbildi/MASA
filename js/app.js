@@ -74,7 +74,7 @@
     cunningham: "Cunningham"
   };
 
-  let state = loadState();
+  let state;
   let settingsRequired = false;
   let importMode = "profile";
   let chartPayload = null;
@@ -333,7 +333,7 @@
 
     const configured = profileIsComplete(profile, sorted);
     return {
-      version: 15,
+      version: 17,
       configured,
       profile,
       weighIns: sorted,
@@ -3979,7 +3979,9 @@
     importMode = mode;
     const input = $("#import-file");
     input.value = "";
-    input.accept = mode === "profile" ? ".json,application/json" : ".xlsx,.xls,.csv,.tsv,.txt,.json";
+    input.accept = ["profile", "library"].includes(mode)
+      ? ".json,application/json"
+      : ".xlsx,.xls,.csv,.tsv,.txt,.json";
     input.click();
   }
 
@@ -3989,6 +3991,7 @@
     try {
       if (/\.(xlsx|xls)$/i.test(file.name)) {
         if (importMode === "profile") throw new Error("El perfil completo se importa desde un archivo JSON exportado por MASA.");
+        if (importMode === "library") throw new Error("La biblioteca de recetas y alimentos se importa desde un archivo JSON exportado por MASA.");
         const weights = parseWeightRows(await spreadsheetRows(file, ["Pesajes"]));
         if (!weights.length) throw new Error("No se encontraron columnas de fecha y peso en la planilla.");
         state.weighIns = mergeWeighIns(state.weighIns, weights);
@@ -4009,6 +4012,14 @@
       const isJson = file.name.toLowerCase().endsWith(".json") || text.trim().startsWith("{") || text.trim().startsWith("[");
       if (isJson) {
         const parsed = JSON.parse(text);
+        if (importMode === "library") {
+          const result = importLibraryData(parsed);
+          saveState(state);
+          render();
+          if (!$("#library-modal")?.hidden) renderLibraryManager();
+          window.alert(`Biblioteca importada: ${result.foods} alimento(s) y ${result.recipes} receta(s).`);
+          return;
+        }
         const imported = normalizeState(parsed);
         if (importMode === "profile") {
           if (!profileIsComplete(imported.profile, imported.weighIns)) {
@@ -4116,12 +4127,100 @@
     }
   }
 
+  function libraryExportPayload() {
+    return {
+      format: "masa-library",
+      version: 17,
+      exportedAt: new Date().toISOString(),
+      foods: clone(state.foods || []),
+      recipes: clone(state.recipes || [])
+    };
+  }
+
+  function exportLibrary() {
+    const payload = libraryExportPayload();
+    downloadText(`biblioteca-masa-${todayISO()}.json`, JSON.stringify(payload, null, 2), "application/json");
+  }
+
+  function importedLibraryCollections(raw = {}) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new Error("El archivo no contiene una biblioteca válida de MASA.");
+    }
+    const foods = Array.isArray(raw.foods) ? raw.foods.map(normalizeFood).filter(Boolean) : [];
+    const recipes = Array.isArray(raw.recipes)
+      ? raw.recipes.map(item => normalizeFood({ ...item, kind: "recipe" })).filter(Boolean)
+      : [];
+    if (!foods.length && !recipes.length) {
+      throw new Error("El archivo no contiene alimentos propios ni recetas para importar.");
+    }
+    return { foods, recipes };
+  }
+
+  function importLibraryData(raw) {
+    const incoming = importedLibraryCollections(raw);
+    const foods = [...state.foods];
+    const foodIdMap = new Map();
+
+    incoming.foods.forEach(food => {
+      const nameKey = normalizeHeader(food.name);
+      const indexById = foods.findIndex(item => item.id === food.id);
+      const indexByName = foods.findIndex(item => normalizeHeader(item.name) === nameKey);
+      const index = indexById >= 0 ? indexById : indexByName;
+      if (index >= 0) {
+        const preservedId = foods[index].id;
+        foodIdMap.set(food.id, preservedId);
+        foods[index] = normalizeFood({ ...food, id: preservedId, kind: "food" });
+      } else {
+        foodIdMap.set(food.id, food.id);
+        foods.push(food);
+      }
+    });
+
+    const remappedRecipes = incoming.recipes.map(recipe => normalizeFood({
+      ...recipe,
+      kind: "recipe",
+      ingredients: (recipe.ingredients || []).map(ingredient => {
+        if (ingredient.kind !== "food") return ingredient;
+        const originalId = ingredient.foodId || ingredient.sourceId;
+        const mappedId = foodIdMap.get(originalId) || originalId;
+        return { ...ingredient, foodId: mappedId, sourceId: mappedId };
+      })
+    })).filter(Boolean);
+
+    const recipes = [...state.recipes];
+    remappedRecipes.forEach(recipe => {
+      const nameKey = normalizeHeader(recipe.name);
+      const indexById = recipes.findIndex(item => item.id === recipe.id);
+      const indexByName = recipes.findIndex(item => normalizeHeader(item.name) === nameKey);
+      const index = indexById >= 0 ? indexById : indexByName;
+      if (index >= 0) {
+        const preservedId = recipes[index].id;
+        recipes[index] = normalizeFood({ ...recipe, id: preservedId, kind: "recipe" });
+      } else recipes.push(recipe);
+    });
+
+    state.foods = foods;
+    state.recipes = recipes.map(recalculateRecipe);
+    return { foods: incoming.foods.length, recipes: incoming.recipes.length };
+  }
+
+  function fullProfileExportPayload() {
+    return {
+      ...clone(state),
+      format: "masa-full-profile",
+      version: 17,
+      exportedAt: new Date().toISOString(),
+      foods: clone(state.foods || []),
+      recipes: clone(state.recipes || [])
+    };
+  }
+
   function exportHistory() {
-    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 15 }, null, 2), "application/json");
+    downloadText("datos-masa.json", JSON.stringify(fullProfileExportPayload(), null, 2), "application/json");
   }
 
   function exportBackup() {
-    downloadText(`perfil-completo-masa-${todayISO()}.json`, JSON.stringify({ ...state, version: 15 }, null, 2), "application/json");
+    downloadText(`perfil-completo-masa-${todayISO()}.json`, JSON.stringify(fullProfileExportPayload(), null, 2), "application/json");
   }
 
   function downloadText(filename, content, type) {
@@ -4307,6 +4406,8 @@
     $("#profile-import").addEventListener("click", () => openImport("profile"));
     $("#import-full-profile").addEventListener("click", () => openImport("profile"));
     $("#export-full-profile").addEventListener("click", exportBackup);
+    $("#import-library").addEventListener("click", () => openImport("library"));
+    $("#export-library").addEventListener("click", exportLibrary);
     $("#import-history").addEventListener("click", () => openImport("history"));
     $("#export-weights").addEventListener("click", exportWeights);
     $("#import-file").addEventListener("change", handleImport);
@@ -4356,6 +4457,8 @@
     $("#library-recipe-list").addEventListener("click", handleLibraryClick);
     $("#library-new-food").addEventListener("click", () => openFoodEditor({ returnTarget: "library" }));
     $("#library-new-recipe").addEventListener("click", () => openRecipeEditor({ returnTarget: "library" }));
+    $("#library-import").addEventListener("click", () => openImport("library"));
+    $("#library-export").addEventListener("click", exportLibrary);
     $("#close-food-editor").addEventListener("click", closeFoodEditor);
     $$('[data-close-food-editor]').forEach(element => element.addEventListener("click", closeFoodEditor));
     $("#food-editor-form").addEventListener("submit", saveCustomFood);
@@ -4426,6 +4529,7 @@
   }
 
   function init() {
+    state = loadState();
     loadExternalFoods();
     bindEvents();
     $$(".help-dot[data-tooltip]").forEach(button => { button.title = button.dataset.tooltip; });

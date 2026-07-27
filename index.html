@@ -9,8 +9,8 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=16" rel="stylesheet"/>
-<script defer="" src="./js/app.js?v=16"></script>
+<link href="./css/styles.css?v=17" rel="stylesheet"/>
+<script defer="" src="./js/app.js?v=17"></script>
 </head>
 <body>
 <div aria-hidden="true" class="ambient ambient-a"></div>
@@ -278,7 +278,8 @@
 <span>MASA</span>
 <p>Una herramienta para entender las cuentas detrás del peso. No reemplaza una evaluación clínica individual.</p>
 <div class="footer-actions">
-<button class="footer-about-button" id="open-about" type="button">Misión e historia</button>
+<button class="footer-about-button" id="open-about" type="button">Misión, historia y créditos</button>
+<a href="https://www.opennutrition.app/" rel="noopener" target="_blank">Datos: OpenNutrition ↗</a>
 <a href="https://andresgonzalez.netlify.app/" rel="noopener" target="_blank">Más herramientas ↗</a>
 </div>
 </footer>
@@ -310,6 +311,15 @@
 <p>La aplicación parte de una estimación inicial y la compara con tus registros reales de comidas, ejercicio y peso. A medida que incorporás información, detecta si tu evolución se está alejando de lo previsto y reajusta las estimaciones para adaptarse mejor a tu cuerpo y a tu rutina.</p>
 <p>La idea nació como una planilla personal. Registrando calorías y peso, y realizando pequeños ajustes sobre la marcha, fue posible anticipar con bastante precisión la evolución del peso durante varios meses y perder <strong>4,2 kg en tres meses</strong> sin realizar cambios extremos en la alimentación.</p>
 <div class="about-mission"><p class="eyebrow inverted">MISIÓN</p><p>Transformar ese método en una herramienta simple, clara y adaptable, que permita tomar decisiones basadas en datos reales en lugar de depender únicamente de fórmulas generales.</p></div>
+<section class="about-credits" aria-labelledby="about-credits-title">
+<p class="eyebrow" id="about-credits-title">CRÉDITOS DE DATOS</p>
+<p>La biblioteca de alimentos incluida en M.A.S.A. fue elaborada a partir de <a href="https://www.opennutrition.app/" rel="noopener" target="_blank"><strong>OpenNutrition Foods</strong></a>. Para integrarla a la aplicación se adaptaron nombres, unidades y estructura de búsqueda. Parte de los datos de OpenNutrition procede de <a href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts contributors</a>.</p>
+<p>OpenNutrition Foods se distribuye bajo la <a href="https://opendatacommons.org/licenses/odbl/1-0/" rel="noopener" target="_blank">Open Database License 1.0 (ODbL)</a>. Los derechos sobre los contenidos individuales se ofrecen bajo una licencia de contenidos de base de datos modificada. La información completa se encuentra en el archivo <a href="DATA-LICENSE.md" target="_blank">DATA-LICENSE.md</a> incluido con M.A.S.A.</p>
+</section>
+<section class="about-limitations" aria-labelledby="about-limitations-title">
+<p class="eyebrow" id="about-limitations-title">LIMITACIONES</p>
+<p>Los valores nutricionales son estimaciones obtenidas de bases de datos públicas y pueden variar según la marca, la preparación y la porción real. M.A.S.A. los utiliza como referencia para estimar el consumo energético y recalibrar la evolución del peso; no como información clínica ni como sustituto del etiquetado de cada producto.</p>
+</section>
 </div>
 <div class="profile-actions about-actions"><button class="primary-action" id="accept-about" type="button">Entendido, empezar</button></div>
 </article>
@@ -438,7 +448,7 @@
 <a class="text-link" download="" href="plantilla-pesajes.xlsx">Descargar plantilla Excel</a>
 </article>
 <article class="data-tool">
-<span>02</span><h3>Perfil completo</h3><p>Importá o exportá un JSON con perfil, objetivo, pesajes, alimentos propios y registros diarios.</p>
+<span>02</span><h3>Perfil completo</h3><p>Importá o exportá un JSON con perfil, objetivo, pesajes, alimentos propios, recetas, uso reciente y registros diarios.</p>
 <div class="data-tool-actions">
 <button class="secondary-action" id="import-full-profile" type="button">Importar perfil</button>
 <button class="secondary-action" id="export-full-profile" type="button">Exportar perfil</button>
@@ -453,9 +463,13 @@
 <button class="secondary-action" id="import-intakes" type="button">Importar Excel</button>
 </div>
 <a class="text-link" download="" href="plantilla-ingestas.xlsx">Descargar plantilla de ingestas</a>
-</article><article class="data-tool danger-tool">
-<span>04</span><h3>Empezar de nuevo</h3><p>Elimina perfil, objetivo, pesajes, alimentos propios y todos los registros diarios de esta instalación.</p>
-<button class="danger-action" id="start-over" type="button">Borrar todo</button>
+</article>
+<article class="data-tool library-data-tool">
+<span>04</span><h3>Recetas y alimentos propios</h3><p>Guardá o recuperá en JSON las recetas y los cambios que hiciste en tu biblioteca, sin importar el resto del perfil.</p>
+<div class="data-tool-actions">
+<button class="secondary-action" id="import-library" type="button">Importar biblioteca</button>
+<button class="secondary-action" id="export-library" type="button">Exportar biblioteca</button>
+</div>
 </article>
 </div>
 <button aria-expanded="false" class="history-manager-toggle" id="toggle-history-manager" type="button">
@@ -469,6 +483,10 @@
 <div class="history-list" id="history-list"></div>
 <p class="empty-message" hidden="" id="history-empty">No hay pesajes cargados.</p>
 </div>
+<section class="reset-data-panel" aria-labelledby="reset-data-title">
+<div><p class="eyebrow">ZONA DE BORRADO</p><h3 id="reset-data-title">Empezar de nuevo</h3><p>Elimina perfil, objetivo, pesajes, alimentos propios, recetas y todos los registros diarios de esta instalación.</p></div>
+<button class="danger-action" id="start-over" type="button">Borrar todos los datos</button>
+</section>
 </section>
 </div>
 </div>
@@ -494,6 +512,7 @@
 <p class="food-add-feedback" hidden id="food-add-feedback" role="status"></p>
 <label class="food-search food-search-always"><span>Buscar alimentos o recetas</span><input autocomplete="off" id="food-search-input" placeholder="Ej.: arroz, huevo, café..." type="search"/></label>
 <div class="food-library-actions food-global-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button><button class="secondary-action" data-open-library type="button">Editar biblioteca</button></div>
+<p class="data-attribution">Datos alimentarios basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a> y, cuando corresponde, <a href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts contributors</a>, bajo licencia <a href="https://opendatacommons.org/licenses/odbl/1-0/" rel="noopener" target="_blank">ODbL 1.0</a>.</p>
 <section class="food-search-results-panel" hidden id="food-search-panel">
 <p class="mode-help">Resultados de búsqueda. Al borrar el texto volvés automáticamente a Recientes.</p>
 <div class="food-results" id="food-results"></div>
@@ -596,6 +615,7 @@
 <section class="recipe-search-panel">
 <label class="food-search"><span>Buscar ingrediente</span><input id="recipe-ingredient-search" placeholder="Ej.: harina, huevo, leche..." type="search"/></label>
 <div class="recipe-search-actions"><button class="secondary-action" id="create-missing-ingredient" type="button">Crear alimento nuevo</button></div>
+<p class="data-attribution recipe-data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a> · algunos datos proceden de <a href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts contributors</a> · <a href="https://opendatacommons.org/licenses/odbl/1-0/" rel="noopener" target="_blank">ODbL 1.0</a>.</p>
 <div class="food-results recipe-ingredient-results" id="recipe-ingredient-results"></div>
 </section>
 <section class="recipe-selected-panel">
@@ -619,7 +639,10 @@
 <div><p class="eyebrow">BIBLIOTECA PERSONAL</p><h2 id="library-title">Editar alimentos y recetas</h2><p>Los elementos del catálogo general son de solo lectura. Acá administrás los que creaste vos.</p></div>
 <button aria-label="Cerrar" class="close-button" id="close-library" type="button">×</button>
 </div>
-<div class="library-toolbar"><button class="primary-action" id="library-new-food" type="button">Nuevo alimento</button><button class="secondary-action" id="library-new-recipe" type="button">Nueva receta</button></div>
+<div class="library-toolbar">
+<div class="library-create-actions"><button class="primary-action" id="library-new-food" type="button">Nuevo alimento</button><button class="secondary-action" id="library-new-recipe" type="button">Nueva receta</button></div>
+<div class="library-transfer-actions"><button class="secondary-action" id="library-import" type="button">Importar</button><button class="secondary-action" id="library-export" type="button">Exportar</button></div>
+</div>
 <div class="library-columns">
 <section><div class="library-section-title"><h3>Alimentos propios</h3><span id="library-food-count">0</span></div><div class="library-list" id="library-food-list"></div></section>
 <section><div class="library-section-title"><h3>Recetas</h3><span id="library-recipe-count">0</span></div><div class="library-list" id="library-recipe-list"></div></section>
@@ -643,7 +666,7 @@
 <div class="confirm-card">
 <p class="eyebrow">CONFIRMAR</p>
 <h2 id="confirm-title">Empezar de nuevo</h2>
-<p>Esto elimina el perfil, el objetivo, los pesajes y todos los registros diarios de esta instalación.</p>
+<p>Esto elimina el perfil, el objetivo, los pesajes, los alimentos propios, las recetas y todos los registros diarios de esta instalación.</p>
 <div><button class="secondary-action" id="cancel-confirm" type="button">Cancelar</button><button class="danger-action" id="confirm-action" type="button">Borrar y reiniciar</button></div>
 </div>
 </div>
