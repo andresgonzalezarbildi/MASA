@@ -3429,7 +3429,8 @@
         return isOldRootRegistration ? registration.unregister() : Promise.resolve(false);
       }));
 
-      await navigator.serviceWorker.register("./service-worker.js", { scope: "./" });
+      await navigator.serviceWorker.register("/masa/service-worker.js", {
+  scope: "/masa/" });
     } catch (_) {}
   }
 
