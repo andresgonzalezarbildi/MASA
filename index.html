@@ -9,8 +9,8 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=12" rel="stylesheet"/>
-<script defer="" src="./js/app.js?v=12"></script>
+<link href="./css/styles.css?v=13" rel="stylesheet"/>
+<script defer="" src="./js/app.js?v=13"></script>
 </head>
 <body>
 <div aria-hidden="true" class="ambient ambient-a"></div>
@@ -443,14 +443,28 @@
 <button aria-label="Cerrar" class="close-button" id="close-food" type="button">×</button>
 </div>
 <div class="food-mode-tabs">
-<button class="active" data-food-mode="food" type="button">Alimento</button>
-<button data-food-mode="quick" type="button">Solo calorías</button>
+<button class="active" data-food-mode="food" type="button">Buscar</button>
+<button data-food-mode="recent" type="button">Recientes</button>
+<button data-food-mode="frequent" type="button">Frecuentes</button>
 <button data-food-mode="recipe" type="button">Recetas</button>
+<button data-food-mode="quick" type="button">Solo calorías</button>
 </div>
 <section class="food-mode" id="food-mode-food">
-<label class="food-search"><span>Buscar entre recientes, frecuentes, propios y catálogo</span><input id="food-search-input" placeholder="Ej.: arroz, café, pollo..." type="search"/></label>
-<div class="food-library-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento propio</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button></div>
+<label class="food-search"><span>Buscar en alimentos propios y catálogo</span><input id="food-search-input" placeholder="Ej.: arroz, café, pollo..." type="search"/></label>
+<div class="food-library-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento propio</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button><button class="secondary-action" data-open-library type="button">Editar biblioteca</button></div>
 <div class="food-results" id="food-results"></div>
+</section>
+<section class="food-mode" hidden="" id="food-mode-recent">
+<p class="mode-help">Los últimos alimentos agregados al registro, ordenados desde el más reciente.</p>
+<div class="food-results" id="recent-food-results"></div>
+</section>
+<section class="food-mode" hidden="" id="food-mode-frequent">
+<p class="mode-help">Tus alimentos más consumidos, ordenados por cantidad de veces.</p>
+<div class="food-results" id="frequent-food-results"></div>
+</section>
+<section class="food-mode" hidden="" id="food-mode-recipe">
+<div class="food-results" id="recipe-results"></div>
+<div class="food-library-actions"><button class="secondary-action" id="new-recipe-secondary" type="button">Crear una receta</button><button class="secondary-action" data-open-library type="button">Editar biblioteca</button></div>
 </section>
 <section class="food-mode" hidden="" id="food-mode-quick">
 <form class="compact-form" id="quick-calorie-form">
@@ -459,17 +473,13 @@
 <button class="primary-action" type="submit">Agregar</button>
 </form>
 </section>
-<section class="food-mode" hidden="" id="food-mode-recipe">
-<div class="food-results" id="recipe-results"></div>
-<button class="secondary-action" id="new-recipe-secondary" type="button">Crear una receta</button>
-</section>
 </div>
 </div>
 <div aria-labelledby="food-editor-title" aria-modal="true" class="modal compact-modal" hidden="" id="food-editor-modal" role="dialog">
 <div class="modal-backdrop" data-close-food-editor=""></div>
 <div class="food-sheet small-sheet">
 <div class="settings-header">
-<div><p class="eyebrow">BIBLIOTECA PERSONAL</p><h2 id="food-editor-title">Nuevo alimento</h2><p>Guardalo una vez y reaparecerá entre recientes y frecuentes.</p></div>
+<div><p class="eyebrow">BIBLIOTECA PERSONAL</p><h2 id="food-editor-title">Nuevo alimento</h2><p id="food-editor-description">Guardalo una vez y reutilizalo en registros y recetas.</p></div>
 <button aria-label="Cerrar" class="close-button" id="close-food-editor" type="button">×</button>
 </div>
 <form class="form-grid editor-grid" id="food-editor-form">
@@ -479,26 +489,55 @@
 <label><span>Proteína</span><div class="unit-input"><input min="0" name="protein" step="0.1" type="number"/><i>g</i></div></label>
 <label><span>Grasas</span><div class="unit-input"><input min="0" name="fat" step="0.1" type="number"/><i>g</i></div></label>
 <label><span>Carbohidratos</span><div class="unit-input"><input min="0" name="carbs" step="0.1" type="number"/><i>g</i></div></label>
-<div class="profile-actions full-field"><button class="secondary-action" data-close-food-editor="" type="button">Cancelar</button><button class="primary-action" type="submit">Guardar y elegir cantidad</button></div>
+<div class="profile-actions full-field"><button class="secondary-action" data-close-food-editor="" type="button">Cancelar</button><button class="primary-action" id="save-food-editor" type="submit">Guardar alimento</button></div>
 </form>
 </div>
 </div>
 <div aria-labelledby="recipe-title" aria-modal="true" class="modal compact-modal" hidden="" id="recipe-modal" role="dialog">
 <div class="modal-backdrop" data-close-recipe=""></div>
-<div class="food-sheet small-sheet">
+<div class="food-sheet recipe-sheet">
 <div class="settings-header">
-<div><p class="eyebrow">RECETA PROPIA</p><h2 id="recipe-title">Guardar por porción</h2><p>En esta primera versión cargás los totales de una porción ya calculada.</p></div>
+<div><p class="eyebrow">RECETA PROPIA</p><h2 id="recipe-title">Crear receta por ingredientes</h2><p id="recipe-description">Buscá cada ingrediente en la base, indicá su cantidad y agregalo a la receta.</p></div>
 <button aria-label="Cerrar" class="close-button" id="close-recipe" type="button">×</button>
 </div>
-<form class="form-grid editor-grid" id="recipe-form">
+<form id="recipe-form">
+<div class="form-grid editor-grid recipe-meta-grid">
 <label class="full-field"><span>Nombre de la receta</span><input name="name" required="" type="text"/></label>
-<label><span>Calorías por porción</span><div class="unit-input"><input min="0" name="calories" required="" step="1" type="number"/><i>kcal</i></div></label>
-<label><span>Descripción de porción</span><input name="serving" placeholder="1 plato, 250 g..." type="text"/></label>
-<label><span>Proteína</span><div class="unit-input"><input min="0" name="protein" step="0.1" type="number"/><i>g</i></div></label>
-<label><span>Grasas</span><div class="unit-input"><input min="0" name="fat" step="0.1" type="number"/><i>g</i></div></label>
-<label><span>Carbohidratos</span><div class="unit-input"><input min="0" name="carbs" step="0.1" type="number"/><i>g</i></div></label>
-<div class="profile-actions full-field"><button class="secondary-action" data-close-recipe="" type="button">Cancelar</button><button class="primary-action" type="submit">Guardar receta</button></div>
+<label><span>Cantidad de porciones</span><input min="0.1" name="yield" required="" step="0.1" type="number" value="1"/></label>
+<label><span>Nombre de cada porción</span><input name="serving" placeholder="1 plato, 1 porción..." type="text" value="1 porción"/></label>
+</div>
+<div class="recipe-builder">
+<section class="recipe-search-panel">
+<label class="food-search"><span>Buscar ingrediente</span><input id="recipe-ingredient-search" placeholder="Ej.: harina, huevo, leche..." type="search"/></label>
+<div class="recipe-search-actions"><button class="secondary-action" id="create-missing-ingredient" type="button">Crear alimento nuevo</button></div>
+<div class="food-results recipe-ingredient-results" id="recipe-ingredient-results"></div>
+</section>
+<section class="recipe-selected-panel">
+<div class="recipe-section-head"><div><p class="eyebrow">INGREDIENTES</p><h3>Contenido de la receta</h3></div><span id="recipe-ingredient-count">0</span></div>
+<div class="recipe-ingredient-list" id="recipe-ingredient-list"></div>
+<div class="recipe-totals" id="recipe-totals">
+<div><small>Receta completa</small><b id="recipe-total-calories">0 kcal</b><span id="recipe-total-macros">P 0 · G 0 · C 0</span></div>
+<div><small>Por porción</small><b id="recipe-serving-calories">0 kcal</b><span id="recipe-serving-macros">P 0 · G 0 · C 0</span></div>
+</div>
+<p class="form-error" hidden="" id="recipe-error"></p>
+</section>
+</div>
+<div class="profile-actions recipe-save-actions"><button class="secondary-action" data-close-recipe="" type="button">Cancelar</button><button class="primary-action" id="save-recipe" type="submit">Guardar receta</button></div>
 </form>
+</div>
+</div>
+<div aria-labelledby="library-title" aria-modal="true" class="modal compact-modal" hidden="" id="library-modal" role="dialog">
+<div class="modal-backdrop" data-close-library=""></div>
+<div class="food-sheet library-sheet">
+<div class="settings-header">
+<div><p class="eyebrow">BIBLIOTECA PERSONAL</p><h2 id="library-title">Editar alimentos y recetas</h2><p>Los elementos del catálogo general son de solo lectura. Acá administrás los que creaste vos.</p></div>
+<button aria-label="Cerrar" class="close-button" id="close-library" type="button">×</button>
+</div>
+<div class="library-toolbar"><button class="primary-action" id="library-new-food" type="button">Nuevo alimento</button><button class="secondary-action" id="library-new-recipe" type="button">Nueva receta</button></div>
+<div class="library-columns">
+<section><div class="library-section-title"><h3>Alimentos propios</h3><span id="library-food-count">0</span></div><div class="library-list" id="library-food-list"></div></section>
+<section><div class="library-section-title"><h3>Recetas</h3><span id="library-recipe-count">0</span></div><div class="library-list" id="library-recipe-list"></div></section>
+</div>
 </div>
 </div>
 <div aria-labelledby="daily-checkin-title" aria-modal="true" class="modal compact-modal" hidden="" id="daily-checkin-modal" role="dialog">

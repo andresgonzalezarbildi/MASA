@@ -1,14 +1,13 @@
-const CACHE = "masa-v12";
+const CACHE = "masa-v13";
 const APP_SHELL = [
   "/masa/",
   "/masa/index.html",
-  "/masa/css/styles.css",
-  "/masa/js/app.js",
+  "/masa/css/styles.css?v=13",
+  "/masa/js/app.js?v=13",
   "/masa/assets/favicon.svg",
   "/masa/manifest.webmanifest",
   "/masa/plantilla-pesajes.xlsx",
   "/masa/plantilla-ingestas.xlsx"
-];
 ];
 
 self.addEventListener("install", event => {
@@ -41,7 +40,7 @@ self.addEventListener("fetch", event => {
       .catch(async () => {
         const cached = await caches.match(event.request);
         if (cached) return cached;
-        return caches.match(new URL("./index.html", self.registration.scope).href);
+        return caches.match(new URL("/masa/index.html", self.location.origin).href);
       })
   );
 });
