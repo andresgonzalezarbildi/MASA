@@ -13,6 +13,12 @@
   to = "/:splat"
   status = 200
 
+[[redirects]]
+  from = "/masa"
+  to = "/masa/"
+  status = 301
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]
