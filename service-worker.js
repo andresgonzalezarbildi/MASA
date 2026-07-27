@@ -1,13 +1,13 @@
-const CACHE = "masa-v11";
+const CACHE = "masa-v12";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./css/styles.css",
-  "./js/app.js",
+  "./css/styles.css?v=12",
+  "./js/app.js?v=12",
   "./assets/favicon.svg",
   "./manifest.webmanifest",
-  "/masa/plantilla-pesajes.xlsx",
-  "/masa/plantilla-ingestas.xlsx"
+  "./plantilla-pesajes.xlsx",
+  "./plantilla-ingestas.xlsx"
 ];
 
 self.addEventListener("install", event => {
@@ -16,7 +16,11 @@ self.addEventListener("install", event => {
 });
 
 self.addEventListener("activate", event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))));
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(key => key.startsWith("masa-v") && key !== CACHE).map(key => caches.delete(key))
+    ))
+  );
   self.clients.claim();
 });
 
@@ -24,8 +28,19 @@ self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
-  event.respondWith(fetch(event.request).then(response => {
-    if (response.ok) caches.open(CACHE).then(cache => cache.put(event.request, response.clone()));
-    return response;
-  }).catch(() => caches.match(event.request).then(hit => hit || caches.match("/masa/index.html"))));
+
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        if (response.ok) {
+          caches.open(CACHE).then(cache => cache.put(event.request, response.clone()));
+        }
+        return response;
+      })
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        return caches.match(new URL("./index.html", self.registration.scope).href);
+      })
+  );
 });

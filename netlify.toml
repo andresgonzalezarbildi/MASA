@@ -1,23 +1,19 @@
 [build]
   publish = "."
 
-# Permite que el mismo deploy funcione en su dominio propio y también
-# proxificado desde https://andresgonzalez.netlify.app/masa
-[[redirects]]
-  from = "/masa"
-  to = "/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/masa/*"
-  to = "/:splat"
-  status = 200
-
+# Fuerza la barra final para que las rutas relativas de CSS, JS y datos
+# se resuelvan dentro de /masa/.
 [[redirects]]
   from = "/masa"
   to = "/masa/"
   status = 301
   force = true
+
+# Publica esta carpeta también bajo /masa sin duplicar archivos.
+[[redirects]]
+  from = "/masa/*"
+  to = "/:splat"
+  status = 200
 
 [[headers]]
   for = "/*"
@@ -30,9 +26,9 @@
 [[headers]]
   for = "/service-worker.js"
   [headers.values]
-    Cache-Control = "no-cache"
+    Cache-Control = "no-cache, no-store, must-revalidate"
 
 [[headers]]
   for = "/masa/service-worker.js"
   [headers.values]
-    Cache-Control = "no-cache"
+    Cache-Control = "no-cache, no-store, must-revalidate"

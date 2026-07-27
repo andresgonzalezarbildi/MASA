@@ -9,8 +9,8 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css" rel="stylesheet"/>
-<script defer="" src="./js/app.js"></script>
+<link href="./css/styles.css?v=12" rel="stylesheet"/>
+<script defer="" src="./js/app.js?v=12"></script>
 </head>
 <body>
 <div aria-hidden="true" class="ambient ambient-a"></div>
@@ -448,7 +448,7 @@
 <button data-food-mode="recipe" type="button">Recetas</button>
 </div>
 <section class="food-mode" id="food-mode-food">
-<label class="food-search"><span>Buscar entre recientes, frecuentes y propios</span><input id="food-search-input" placeholder="Ej.: arroz, café, pollo..." type="search"/></label>
+<label class="food-search"><span>Buscar entre recientes, frecuentes, propios y catálogo</span><input id="food-search-input" placeholder="Ej.: arroz, café, pollo..." type="search"/></label>
 <div class="food-library-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento propio</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button></div>
 <div class="food-results" id="food-results"></div>
 </section>
@@ -479,7 +479,7 @@
 <label><span>Proteína</span><div class="unit-input"><input min="0" name="protein" step="0.1" type="number"/><i>g</i></div></label>
 <label><span>Grasas</span><div class="unit-input"><input min="0" name="fat" step="0.1" type="number"/><i>g</i></div></label>
 <label><span>Carbohidratos</span><div class="unit-input"><input min="0" name="carbs" step="0.1" type="number"/><i>g</i></div></label>
-<div class="profile-actions full-field"><button class="secondary-action" data-close-food-editor="" type="button">Cancelar</button><button class="primary-action" type="submit">Guardar y agregar</button></div>
+<div class="profile-actions full-field"><button class="secondary-action" data-close-food-editor="" type="button">Cancelar</button><button class="primary-action" type="submit">Guardar y elegir cantidad</button></div>
 </form>
 </div>
 </div>
