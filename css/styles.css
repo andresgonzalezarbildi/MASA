@@ -1428,7 +1428,7 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .library-item-actions { justify-content: flex-end; }
 }
 
-/* --- MASA v14: unidades configurables y presentación --- */
+/* --- MASA v15: unidades, consejos y carga múltiple --- */
 .field-note {
   margin: -3px 0 2px;
   color: var(--muted);
@@ -1436,40 +1436,25 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   line-height: 1.45;
 }
 .custom-unit-field[hidden], .custom-recipe-unit-field[hidden] { display: none; }
-.about-summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 24px;
-  align-items: center;
-  margin-top: 38px;
-  padding: clamp(24px, 4vw, 42px);
-  border: 2px solid var(--ink);
-  background: var(--yellow);
-  box-shadow: 8px 8px 0 var(--violet);
-}
-.about-summary h2 {
-  max-width: 720px;
-  margin: 6px 0 12px;
-  font-family: var(--font-display);
-  font-size: clamp(30px, 4vw, 48px);
-  line-height: .98;
-}
-.about-summary div > p:last-child {
-  max-width: 850px;
-  margin: 0;
-  color: var(--ink-2);
-  line-height: 1.55;
-}
-.about-summary > button { white-space: nowrap; }
+
+/* Las tarjetas siempre quedan por encima del fondo desenfocado y centradas. */
+.centered-modal-sheet,
 .about-sheet {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
   width: min(780px, calc(100% - 26px));
   max-height: calc(100vh - 36px);
+  max-height: calc(100dvh - 36px);
   overflow: auto;
+  transform: translate(-50%, -50%);
   padding: clamp(22px, 4vw, 38px);
   border: 2px solid var(--ink);
   background: var(--paper);
   box-shadow: 10px 10px 0 var(--violet);
 }
+
 .about-copy {
   display: grid;
   gap: 15px;
@@ -1490,8 +1475,93 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
 .about-mission p { margin: 0; }
 .about-mission p:last-child { margin-top: 8px; }
 .about-actions { justify-content: flex-end; margin-top: 20px; }
-@media (max-width: 760px) {
-  .about-summary { grid-template-columns: 1fr; }
-  .about-summary > button { width: 100%; white-space: normal; }
-  .about-sheet { padding: 20px 17px; }
+
+.tips-sheet { width: min(720px, calc(100% - 26px)); }
+.tips-copy { display: grid; gap: 9px; margin-top: 18px; }
+.tips-copy article {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 13px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.42);
+}
+.tips-copy article > span,
+.data-quality-grid article > span {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--acid);
+  background: var(--night);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+}
+.tips-copy b, .tips-copy p { display: block; }
+.tips-copy p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+/* El aviso grande vive solamente dentro de Progreso y contiene consejos. */
+.data-quality-panel {
+  margin-top: 38px;
+  padding: clamp(22px, 3.5vw, 38px);
+  border: 2px solid var(--ink);
+  background: var(--yellow);
+  box-shadow: 8px 8px 0 var(--violet);
+}
+.data-quality-heading { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr); gap: 24px; align-items: end; }
+.data-quality-heading h2 { margin: 6px 0 0; font-size: clamp(29px, 3.5vw, 46px); line-height: 1; }
+.data-quality-heading > p:last-child { margin: 0; color: var(--ink-2); line-height: 1.5; }
+.data-quality-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; margin-top: 22px; }
+.data-quality-grid article {
+  display: grid;
+  grid-template-columns: 40px minmax(0,1fr);
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--ink);
+  background: rgba(242,239,230,.7);
+}
+.data-quality-grid b { display: block; }
+.data-quality-grid p { margin: 5px 0 0; color: var(--ink-2); font-size: 12px; line-height: 1.45; }
+
+/* Confirmación no intrusiva para poder agregar varios alimentos seguidos. */
+.food-add-feedback {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 5px solid var(--acid);
+  color: var(--paper);
+  background: var(--night);
+  font-size: 12px;
+  font-weight: 800;
+}
+.food-add-feedback[hidden] { display: none; }
+
+.site-footer { align-items: center; }
+.footer-actions { display: flex; justify-content: flex-end; align-items: center; gap: 15px; }
+.footer-about-button {
+  min-height: 0;
+  padding: 3px 0;
+  border: 0;
+  border-bottom: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+}
+.footer-about-button:hover { color: var(--violet); border-bottom-color: var(--violet); }
+
+@media (max-width: 800px) {
+  .data-quality-heading { grid-template-columns: 1fr; }
+  .data-quality-grid { grid-template-columns: 1fr; }
+  .footer-actions { justify-content: flex-start; }
+}
+@media (max-width: 590px) {
+  .centered-modal-sheet, .about-sheet { max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); padding: 18px 14px; box-shadow: 6px 6px 0 var(--violet); }
+  .tips-copy article { grid-template-columns: 34px minmax(0,1fr); padding: 11px 9px; }
+  .tips-copy article > span, .data-quality-grid article > span { width: 31px; height: 31px; }
+  .data-quality-panel { margin-inline: -1px; padding: 19px 13px; box-shadow: 6px 6px 0 var(--violet); }
+  .data-quality-grid article { grid-template-columns: 34px minmax(0,1fr); padding: 11px 9px; }
+  .site-footer { display: grid; }
+  .footer-actions { flex-wrap: wrap; gap: 10px 15px; }
 }

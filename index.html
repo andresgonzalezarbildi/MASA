@@ -9,8 +9,8 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=14" rel="stylesheet"/>
-<script defer="" src="./js/app.js?v=14"></script>
+<link href="./css/styles.css?v=15" rel="stylesheet"/>
+<script defer="" src="./js/app.js?v=15"></script>
 </head>
 <body>
 <div aria-hidden="true" class="ambient ambient-a"></div>
@@ -258,21 +258,45 @@
 </div>
 </section>
 </aside>
-</section></section></section>
-<section class="about-summary" id="about-masa">
-<div>
-<p class="eyebrow">ACERCA DE M.A.S.A.</p>
-<h2>Un modelo que se ajusta con tus datos reales.</h2>
-<p>M.A.S.A. no busca decirte qué comer. Estima las calorías necesarias para acercarte a un peso objetivo y compara el plan con tus registros de comidas, actividad y peso para corregirlo cuando la evolución real se desvía.</p>
-</div>
-<button class="secondary-action" id="open-about" type="button">Conocer el objetivo y la historia</button>
 </section>
+<section class="data-quality-panel" id="data-quality-tips">
+<div class="data-quality-heading">
+<div><p class="eyebrow">DATOS ÚTILES, RESULTADOS ÚTILES</p><h2>La estimación mejora cuando registrás lo que realmente pasó.</h2></div>
+<p>M.A.S.A. puede ajustar sus cálculos, pero no puede corregir datos incompletos o cantidades aproximadas sistemáticamente.</p>
+</div>
+<div class="data-quality-grid">
+<article><span>01</span><div><b>Pesá la comida cuando puedas</b><p>Registrá la cantidad que efectivamente consumiste, no la porción que pensabas servirte.</p></div></article>
+<article><span>02</span><div><b>Pesate en condiciones parecidas</b><p>Usá horarios y condiciones similares. Un pesaje aislado importa menos que la tendencia.</p></div></article>
+<article><span>03</span><div><b>Cerrá días razonablemente completos</b><p>Omitir comidas hace que el consumo parezca menor y puede llevar a un reajuste equivocado.</p></div></article>
+<article><span>04</span><div><b>Datos incorrectos producen resultados incorrectos</b><p>La herramienta calcula con lo que recibe: cuanto más fiel sea el registro, más útil será la estimación.</p></div></article>
+</div>
+</section>
+</section></section>
 </main>
 <footer class="site-footer">
 <span>MASA</span>
 <p>Una herramienta para entender las cuentas detrás del peso. No reemplaza una evaluación clínica individual.</p>
-<a href="https://andresgonzalez.netlify.app/" rel="noopener" target="_blank">Más de mis herramientas ↗</a>
+<div class="footer-actions">
+<button class="footer-about-button" id="open-about" type="button">Misión e historia</button>
+<a href="https://andresgonzalez.netlify.app/" rel="noopener" target="_blank">Más herramientas ↗</a>
+</div>
 </footer>
+<div aria-labelledby="tips-title" aria-modal="true" class="modal compact-modal" hidden id="tips-modal" role="dialog">
+<div class="modal-backdrop" data-close-tips></div>
+<article class="centered-modal-sheet tips-sheet">
+<div class="settings-header">
+<div><p class="eyebrow">ANTES DE EMPEZAR</p><h2 id="tips-title">La calidad del resultado depende de la calidad del registro.</h2></div>
+<button aria-label="Cerrar" class="close-button" data-close-tips type="button">×</button>
+</div>
+<div class="tips-copy">
+<article><span>01</span><div><b>Pesá la comida siempre que sea posible.</b><p>Ingresá lo que realmente consumiste. Una diferencia pequeña aislada no importa, pero repetir estimaciones incorrectas sí.</p></div></article>
+<article><span>02</span><div><b>Registrá pesajes comparables.</b><p>Intentá pesarte en condiciones similares y mirá la tendencia de varios días, no un valor suelto.</p></div></article>
+<article><span>03</span><div><b>No cierres como completo un día incompleto.</b><p>Las comidas omitidas hacen que el sistema estime un gasto distinto del real.</p></div></article>
+<article><span>04</span><div><b>Datos equivocados generan ajustes equivocados.</b><p>M.A.S.A. no adivina lo que faltó: calcula y se recalibra a partir de la información que le das.</p></div></article>
+</div>
+<div class="profile-actions about-actions"><button class="primary-action" id="accept-tips" type="button">Entendido, empezar</button></div>
+</article>
+</div>
 <div aria-labelledby="about-title" aria-modal="true" class="modal compact-modal" hidden id="about-modal" role="dialog">
 <div class="modal-backdrop" data-close-about></div>
 <article class="about-sheet">
@@ -466,6 +490,7 @@
 <div><p class="eyebrow">AGREGAR AL REGISTRO</p><h2 id="food-modal-title">Elegí cómo cargarlo</h2><p id="food-meal-label">—</p><button class="change-meal-button" id="change-active-meal" type="button">Cambiar comida</button></div>
 <button aria-label="Cerrar" class="close-button" id="close-food" type="button">×</button>
 </div>
+<p class="food-add-feedback" hidden id="food-add-feedback" role="status"></p>
 <div class="food-mode-tabs">
 <button class="active" data-food-mode="food" type="button">Buscar</button>
 <button data-food-mode="recent" type="button">Recientes</button>
@@ -494,7 +519,7 @@
 <form class="compact-form" id="quick-calorie-form">
 <label><span>Descripción</span><input name="name" placeholder="Ej.: cena fuera" required="" type="text"/></label>
 <label><span>Calorías</span><div class="unit-input"><input max="10000" min="1" name="calories" required="" step="1" type="number"/><i>kcal</i></div></label>
-<button class="primary-action" type="submit">Agregar</button>
+<button class="primary-action" type="submit">Agregar y seguir</button>
 </form>
 </section>
 </div>

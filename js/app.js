@@ -2,7 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "masa-state-v10";
-  const ABOUT_SEEN_KEY = "masa-about-seen-v1";
+  const TIPS_SEEN_KEY = "masa-tips-seen-v1";
   const LEGACY_KEYS = ["masa-state-v9", "masa-state-v8", "masa-state-v7", "masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
   const DAY_MS = 86_400_000;
   const KG_KCAL = 7700;
@@ -26,7 +26,6 @@
   let foodEditorReturnTarget = "";
   let recipeEditorReturnTarget = "";
   let libraryReturnTarget = "";
-  let aboutOpenedAsIntro = false;
 
   const DEFAULT_PROFILE = {
     name: "",
@@ -334,7 +333,7 @@
 
     const configured = profileIsComplete(profile, sorted);
     return {
-      version: 14,
+      version: 15,
       configured,
       profile,
       weighIns: sorted,
@@ -1072,6 +1071,9 @@
     activeFoodSelection = null;
     $("#food-meal-label").textContent = `Agregar en ${mealLabel(meal)} · ${formatDate(selectedDiaryDate)}`;
     $("#food-modal").hidden = false;
+    const feedback = $("#food-add-feedback");
+    feedback.hidden = true;
+    feedback.textContent = "";
     document.body.classList.add("modal-open");
     switchFoodMode("food");
     $("#food-search-input").value = "";
@@ -1086,7 +1088,7 @@
   function updateModalBodyState() {
     const modalIds = [
       "food-modal", "food-editor-modal", "recipe-modal", "library-modal",
-      "settings-modal", "meal-picker-modal", "daily-checkin-modal", "confirm-modal", "about-modal"
+      "settings-modal", "meal-picker-modal", "daily-checkin-modal", "confirm-modal", "tips-modal", "about-modal"
     ];
     document.body.classList.toggle("modal-open", modalIds.some(modalIsOpen));
   }
@@ -1284,6 +1286,20 @@
   }
 
   const COMMON_UNIT_NAMES = {
+    unidad: ["unidad", "unidades"],
+    unidades: ["unidad", "unidades"],
+    porcion: ["porción", "porciones"],
+    porciones: ["porción", "porciones"],
+    taza: ["taza", "tazas"],
+    tazas: ["taza", "tazas"],
+    cucharada: ["cucharada", "cucharadas"],
+    cucharadas: ["cucharada", "cucharadas"],
+    cucharadita: ["cucharadita", "cucharaditas"],
+    cucharaditas: ["cucharadita", "cucharaditas"],
+    plato: ["plato", "platos"],
+    platos: ["plato", "platos"],
+    paquete: ["paquete", "paquetes"],
+    paquetes: ["paquete", "paquetes"],
     cookie: ["unidad", "unidades"],
     piece: ["unidad", "unidades"],
     item: ["unidad", "unidades"],
@@ -1434,7 +1450,10 @@
       return { amount: toNumber(usage.amount, savedOption.baseAmount), unit: savedOption.value };
     }
 
-    const option = options[0];
+    const databaseOption = item.kind === "external"
+      ? options.find(option => option.value === "common")
+      : null;
+    const option = databaseOption || options[0];
     return { amount: option.baseAmount, unit: option.value };
   }
 
@@ -1513,7 +1532,7 @@
       </div>
       <div class="food-inline-actions">
         <button class="text-action" data-cancel-food type="button">Cancelar</button>
-        <button class="primary-action" type="submit">Agregar</button>
+        <button class="primary-action" type="submit">Agregar y seguir</button>
       </div>`;
     wrapper.appendChild(form);
     return wrapper;
@@ -1564,6 +1583,22 @@
     form.elements.amount.select();
   }
 
+  function showFoodAddedFeedback(name, serving) {
+    const feedback = $("#food-add-feedback");
+    feedback.textContent = `Agregado: ${serving} de ${name}. Podés seguir cargando alimentos en esta misma ventana.`;
+    feedback.hidden = false;
+  }
+
+  function prepareNextFoodEntry() {
+    activeFoodSelection = null;
+    if (activeFoodMode === "food") $("#food-search-input").value = "";
+    renderActiveFoodMode();
+    requestAnimationFrame(() => {
+      if (activeFoodMode === "food") $("#food-search-input").focus();
+      else $("#food-modal .food-mode-tabs button.active")?.focus();
+    });
+  }
+
   function addLibraryFood(id, kind, amountValue, unitValue) {
     const item = findFood(id, kind);
     if (!item) return;
@@ -1611,8 +1646,9 @@
     }
 
     saveState(state);
-    closeFoodModal();
     render();
+    showFoodAddedFeedback(item.name, serving);
+    prepareNextFoodEntry();
   }
 
   function queueFoodSearch() {
@@ -1671,9 +1707,12 @@
     if (!item) return;
     state.diary[selectedDiaryDate] = [...todayDiary(), item];
     saveState(state);
+    const addedName = item.name;
+    const addedCalories = Math.round(item.calories);
     form.reset();
-    closeFoodModal();
     render();
+    showFoodAddedFeedback(addedName, `${formatNumber(addedCalories)} kcal`);
+    requestAnimationFrame(() => form.elements.name.focus());
   }
 
   function openLibraryManager(returnTarget = "food") {
@@ -3948,11 +3987,11 @@
   }
 
   function exportHistory() {
-    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 14 }, null, 2), "application/json");
+    downloadText("datos-masa.json", JSON.stringify({ ...state, version: 15 }, null, 2), "application/json");
   }
 
   function exportBackup() {
-    downloadText(`perfil-completo-masa-${todayISO()}.json`, JSON.stringify({ ...state, version: 14 }, null, 2), "application/json");
+    downloadText(`perfil-completo-masa-${todayISO()}.json`, JSON.stringify({ ...state, version: 15 }, null, 2), "application/json");
   }
 
   function downloadText(filename, content, type) {
@@ -4064,33 +4103,42 @@
     renderRecipeTotals();
   }
 
-  function openAboutModal(asIntro = false) {
-    aboutOpenedAsIntro = Boolean(asIntro);
+  function openTipsModal() {
+    $("#tips-modal").hidden = false;
+    document.body.classList.add("modal-open");
+  }
+
+  function closeTipsModal() {
+    try { localStorage.setItem(TIPS_SEEN_KEY, "1"); } catch (_) {}
+    $("#tips-modal").hidden = true;
+    updateModalBodyState();
+    setTimeout(maybeOpenDailyCheckin, 120);
+  }
+
+  function maybeOpenTipsIntro() {
+    let seen = false;
+    try { seen = localStorage.getItem(TIPS_SEEN_KEY) === "1"; } catch (_) {}
+    if (seen) return false;
+    openTipsModal();
+    return true;
+  }
+
+  function openAboutModal() {
     $("#about-modal").hidden = false;
     document.body.classList.add("modal-open");
   }
 
   function closeAboutModal() {
-    try { localStorage.setItem(ABOUT_SEEN_KEY, "1"); } catch (_) {}
     $("#about-modal").hidden = true;
-    const shouldCheckIn = aboutOpenedAsIntro;
-    aboutOpenedAsIntro = false;
     updateModalBodyState();
-    if (shouldCheckIn) setTimeout(maybeOpenDailyCheckin, 120);
-  }
-
-  function maybeOpenAboutIntro() {
-    let seen = false;
-    try { seen = localStorage.getItem(ABOUT_SEEN_KEY) === "1"; } catch (_) {}
-    if (seen) return false;
-    openAboutModal(true);
-    return true;
   }
 
   function bindEvents() {
-    $("#open-about").addEventListener("click", () => openAboutModal(false));
+    $("#open-about").addEventListener("click", openAboutModal);
     $("#accept-about").addEventListener("click", closeAboutModal);
     $$('[data-close-about]').forEach(element => element.addEventListener("click", closeAboutModal));
+    $("#accept-tips").addEventListener("click", closeTipsModal);
+    $$('[data-close-tips]').forEach(element => element.addEventListener("click", closeTipsModal));
     $("#begin-setup").addEventListener("click", () => openSettings(true, "profile"));
     $("#welcome-import").addEventListener("click", () => openImport("profile"));
     $("#open-profile").addEventListener("click", () => openSettings(false, "profile"));
@@ -4255,7 +4303,7 @@
     render();
     switchAppView("today", false);
     switchDiaryView("record");
-    const introOpened = maybeOpenAboutIntro();
+    const introOpened = maybeOpenTipsIntro();
     if (!introOpened) setTimeout(maybeOpenDailyCheckin, 180);
     registerServiceWorker();
   }
