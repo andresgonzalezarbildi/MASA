@@ -9,10 +9,52 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=17" rel="stylesheet"/>
-<script defer="" src="./js/app.js?v=17"></script>
+<link href="./css/styles.css?v=18" rel="stylesheet"/>
+<link href="./css/auth.css?v=18" rel="stylesheet"/>
+<script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer="" src="./js/config.js?v=18"></script>
+<script defer="" src="./js/cloud.js?v=18"></script>
+<script defer="" src="./js/app.js?v=18"></script>
 </head>
 <body>
+
+<section class="auth-gate" id="auth-gate">
+<article class="auth-card">
+<div class="auth-brand">
+<span aria-hidden="true" class="brand-mark"><b>P</b><i>=</i><strong>m·g</strong></span>
+<div><p class="eyebrow">M.A.S.A. ONLINE</p><h1>Tus datos, en tu cuenta.</h1></div>
+</div>
+<p class="auth-intro">Iniciá sesión para acceder a tus pesajes, registros, alimentos propios y recetas desde cualquier dispositivo.</p>
+<div id="auth-loading" hidden="">
+<div aria-hidden="true" class="auth-spinner"></div>
+<b id="auth-loading-text">Cargando tus datos…</b>
+</div>
+<div id="auth-forms">
+<nav aria-label="Acceso a la cuenta" class="auth-tabs">
+<button class="active" id="auth-mode-login" type="button">Iniciar sesión</button>
+<button id="auth-mode-signup" type="button">Crear cuenta</button>
+</nav>
+<form class="auth-form" id="auth-login-form">
+<label><span>Correo</span><input autocomplete="email" name="email" required="" type="email"/></label>
+<label><span>Contraseña</span><input autocomplete="current-password" minlength="8" name="password" required="" type="password"/></label>
+<button class="primary-action" type="submit">Entrar</button>
+<button class="text-action auth-forgot" id="forgot-password" type="button">Olvidé mi contraseña</button>
+</form>
+<form class="auth-form" hidden="" id="auth-signup-form">
+<label><span>Nombre <small>opcional</small></span><input autocomplete="name" maxlength="60" name="name" type="text"/></label>
+<label><span>Correo</span><input autocomplete="email" name="email" required="" type="email"/></label>
+<label><span>Contraseña</span><input autocomplete="new-password" minlength="8" name="password" required="" type="password"/></label>
+<button class="primary-action" type="submit">Crear cuenta</button>
+</form>
+<form class="auth-form" hidden="" id="auth-recovery-form">
+<label><span>Nueva contraseña</span><input autocomplete="new-password" minlength="8" name="password" required="" type="password"/></label>
+<button class="primary-action" type="submit">Guardar contraseña</button>
+</form>
+<p aria-live="polite" class="auth-message" id="auth-message"></p>
+</div>
+<small class="auth-note">Los alimentos generales se comparten. Tus datos y alimentos agregados son privados.</small>
+</article>
+</section>
 <div aria-hidden="true" class="ambient ambient-a"></div>
 <div aria-hidden="true" class="ambient ambient-b"></div>
 <div aria-hidden="true" class="grid-noise"></div>
@@ -24,9 +66,12 @@
 <nav aria-label="Secciones principales" class="app-nav">
 <button class="active" data-app-view="today" type="button">Registros</button>
 <button data-app-view="progress" type="button">Progreso</button>
-</nav><button aria-label="Abrir configuración" class="settings-trigger" id="open-profile" type="button">
+</nav><div class="header-actions">
+<div class="account-area" hidden="" id="account-area"><span class="sync-status" data-status="loading" id="sync-status">Cargando…</span><span class="account-email" id="account-email"></span><button class="account-logout" id="logout-button" type="button">Salir</button></div>
+<button aria-label="Abrir configuración" class="settings-trigger" id="open-profile" type="button">
 <span aria-hidden="true">⌁</span><b>Configuración</b>
 </button>
+</div>
 </header>
 <main class="page-shell">
 <section class="welcome-stage" hidden="" id="empty-state">
@@ -666,7 +711,7 @@
 <div class="confirm-card">
 <p class="eyebrow">CONFIRMAR</p>
 <h2 id="confirm-title">Empezar de nuevo</h2>
-<p>Esto elimina el perfil, el objetivo, los pesajes, los alimentos propios, las recetas y todos los registros diarios de esta instalación.</p>
+<p>Esto elimina de tu cuenta el perfil, el objetivo, los pesajes, los alimentos propios, las recetas y todos los registros diarios.</p>
 <div><button class="secondary-action" id="cancel-confirm" type="button">Cancelar</button><button class="danger-action" id="confirm-action" type="button">Borrar y reiniciar</button></div>
 </div>
 </div>

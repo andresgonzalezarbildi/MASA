@@ -437,18 +437,23 @@
     externalFoodsError = "";
 
     try {
-      const response = await fetch(EXTERNAL_FOOD_CATALOG_URL, {
-        cache: "no-store"
-      });
+      let raw = [];
+      let source = "Supabase";
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} al cargar el catálogo`);
+      try {
+        raw = await window.MASA_CLOUD.loadGlobalFoods();
+      } catch (cloudError) {
+        console.warn("No se pudo cargar el catálogo desde Supabase; se usará la copia local.", cloudError);
       }
 
-      const raw = await response.json();
-      if (!Array.isArray(raw)) {
-        throw new Error("El catálogo no contiene una lista JSON");
+      if (!Array.isArray(raw) || !raw.length) {
+        source = "copia local";
+        const response = await fetch(EXTERNAL_FOOD_CATALOG_URL, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status} al cargar el catálogo`);
+        raw = await response.json();
       }
+
+      if (!Array.isArray(raw)) throw new Error("El catálogo no contiene una lista JSON");
 
       externalFoods = raw.map(normalizeExternalFood).filter(Boolean);
       externalFoodsById = new Map(externalFoods.map(item => [item.id, item]));
@@ -458,14 +463,14 @@
         searchText: foodSearchText(item)
       }));
       externalFoodsStatus = "ready";
-      console.info(`Catálogo cargado: ${externalFoods.length.toLocaleString("es-UY")} alimentos.`);
+      console.info(`Catálogo cargado desde ${source}: ${externalFoods.length.toLocaleString("es-UY")} alimentos.`);
     } catch (error) {
       externalFoods = [];
       externalFoodsById = new Map();
       externalFoodSearchIndex = [];
       externalFoodsStatus = "error";
       externalFoodsError = error instanceof Error ? error.message : String(error);
-      console.error("No se pudo cargar el catálogo externo:", error);
+      console.error("No se pudo cargar el catálogo:", error);
     }
 
     if (!$("#food-modal")?.hidden) renderActiveFoodMode();
@@ -499,7 +504,11 @@
     );
   }
 
-  function loadState() {
+  function emptyState() {
+    return normalizeState({ configured: false, profile: DEFAULT_PROFILE, weighIns: [] });
+  }
+
+  function loadLegacyState() {
     try {
       const current = localStorage.getItem(STORAGE_KEY);
       if (current) return normalizeState(JSON.parse(current));
@@ -508,12 +517,35 @@
         if (legacy) return normalizeState(JSON.parse(legacy));
       }
     } catch (_) {}
-    return normalizeState({ configured: false, profile: DEFAULT_PROFILE, weighIns: [] });
+    return emptyState();
+  }
+
+  function hasMeaningfulState(value) {
+    return Boolean(
+      value?.configured ||
+      value?.weighIns?.length ||
+      value?.foods?.length ||
+      value?.recipes?.length ||
+      Object.values(value?.diary || {}).some(entries => entries?.length)
+    );
+  }
+
+  function clearLegacyState() {
+    try {
+      const original = localStorage.getItem(STORAGE_KEY);
+      if (original) localStorage.setItem(`masa-legacy-backup-${Date.now()}`, original);
+      localStorage.removeItem(STORAGE_KEY);
+      LEGACY_KEYS.forEach(key => localStorage.removeItem(key));
+    } catch (_) {}
   }
 
   function saveState(next = state) {
     state = normalizeState(next);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+    if (window.MASA_CLOUD?.isAuthenticated()) {
+      window.MASA_CLOUD.scheduleStateSync(state);
+    } else {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+    }
     return state;
   }
 
@@ -4244,12 +4276,14 @@
     $("#confirm-modal").hidden = true;
   }
 
-  function resetAll() {
+  async function resetAll() {
+    state = emptyState();
+    saveState(state);
     try {
-      localStorage.removeItem(STORAGE_KEY);
-      LEGACY_KEYS.forEach(key => localStorage.removeItem(key));
-    } catch (_) {}
-    state = normalizeState({ configured: false, profile: DEFAULT_PROFILE, weighIns: [] });
+      await window.MASA_CLOUD.flush();
+    } catch (error) {
+      window.alert(`Los datos se borraron en este dispositivo, pero no se pudo confirmar el borrado online: ${error.message}`);
+    }
     closeConfirm();
     $("#settings-modal").hidden = true;
     document.body.classList.remove("modal-open");
@@ -4528,18 +4562,44 @@
     } catch (_) {}
   }
 
-  function init() {
-    state = loadState();
-    loadExternalFoods();
-    bindEvents();
-    $$(".help-dot[data-tooltip]").forEach(button => { button.title = button.dataset.tooltip; });
-    bindHelpTooltips();
-    render();
-    switchAppView("today", false);
-    switchDiaryView("record");
-    const introOpened = maybeOpenTipsIntro();
-    if (!introOpened) setTimeout(maybeOpenDailyCheckin, 180);
-    registerServiceWorker();
+  async function init() {
+    try {
+      await window.MASA_CLOUD.requireSession();
+      const cloudResult = await window.MASA_CLOUD.loadUserState();
+      let initialState = normalizeState(cloudResult.state || emptyState());
+
+      if (!cloudResult.hasData) {
+        const legacyState = loadLegacyState();
+        if (hasMeaningfulState(legacyState)) {
+          const importLocal = window.confirm(
+            "Encontramos datos de la versión local de MASA en este dispositivo. ¿Querés importarlos a esta cuenta?"
+          );
+          if (importLocal) {
+            initialState = legacyState;
+            window.MASA_CLOUD.setSyncStatus("saving", "Importando datos locales…");
+            await window.MASA_CLOUD.replaceState(initialState);
+            clearLegacyState();
+          }
+        }
+      }
+
+      state = normalizeState(initialState);
+      window.MASA_CLOUD.cacheState(state);
+      bindEvents();
+      $$(".help-dot[data-tooltip]").forEach(button => { button.title = button.dataset.tooltip; });
+      bindHelpTooltips();
+      render();
+      switchAppView("today", false);
+      switchDiaryView("record");
+      window.MASA_CLOUD.finishBoot();
+      loadExternalFoods();
+      const introOpened = maybeOpenTipsIntro();
+      if (!introOpened) setTimeout(maybeOpenDailyCheckin, 180);
+      registerServiceWorker();
+    } catch (error) {
+      console.error("No se pudo iniciar MASA:", error);
+      window.MASA_CLOUD?.showFatalError(error);
+    }
   }
 
   init();
