@@ -2282,3 +2282,193 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .records-sidebar .finish-day-button,
   .records-sidebar .finish-day-note { grid-column: 1 / -1; }
 }
+
+
+/* --- MASA v21: barras al borde, edición por tarjeta y controles proporcionados --- */
+.settings-sheet {
+  --settings-sheet-side: clamp(20px, 3vw, 38px);
+  --settings-sheet-bottom: clamp(20px, 3vw, 38px);
+  padding-right: var(--settings-sheet-side);
+  padding-bottom: var(--settings-sheet-bottom);
+  padding-left: var(--settings-sheet-side);
+}
+.settings-sticky-actions {
+  isolation: isolate;
+  bottom: 0;
+  margin-right: calc(var(--settings-sheet-side) * -1);
+  margin-bottom: calc(var(--settings-sheet-bottom) * -1);
+  margin-left: calc(var(--settings-sheet-side) * -1);
+  padding: 10px var(--settings-sheet-side);
+  background: var(--paper);
+  box-shadow: 0 -8px 18px rgba(23,26,33,.12);
+  transition: padding .18s ease, box-shadow .18s ease;
+}
+.settings-sheet.is-scrolled .settings-sticky-actions {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  box-shadow: 0 -5px 12px rgba(23,26,33,.11);
+}
+.settings-sheet.is-scrolled .settings-sticky-actions button {
+  min-height: 34px;
+  padding-block: 3px;
+  font-size: 10px;
+}
+
+.meal-item-editable {
+  cursor: pointer;
+  margin-inline: -7px;
+  padding-inline: 7px;
+  transition: background .15s ease, box-shadow .15s ease;
+}
+.meal-item-editable:hover {
+  outline: 0;
+  background: rgba(200,255,70,.18);
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+.meal-item-editable .meal-serving {
+  border-bottom: 1px dotted var(--muted);
+}
+.meal-item.editing {
+  margin-inline: -7px;
+  padding: 8px 7px;
+  background: rgba(200,255,70,.12);
+}
+.meal-inline-edit-actions {
+  justify-content: flex-end;
+}
+.meal-inline-edit-actions .primary-action {
+  min-width: 76px;
+}
+
+/* El formulario de cantidad vuelve a tener una escala homogénea. */
+#food-modal .food-inline-add {
+  grid-template-columns: minmax(82px,.48fr) minmax(105px,.62fr) minmax(135px,1fr) auto;
+  gap: 7px;
+  padding: 8px 9px;
+}
+#food-modal .food-inline-add input,
+#food-modal .food-inline-add select,
+#food-modal .food-inline-preview {
+  min-height: 39px;
+  height: 39px;
+  box-sizing: border-box;
+}
+#food-modal .food-inline-add input[name="amount"] {
+  min-height: 39px;
+  height: 39px;
+  border-width: 1px;
+  font-size: 17px;
+  text-align: left;
+}
+#food-modal .food-inline-preview {
+  padding: 4px 8px;
+}
+#food-modal .food-inline-preview b { font-size: 13px; }
+#food-modal .food-inline-preview small { font-size: 8px; }
+#food-modal .food-inline-actions {
+  gap: 5px;
+}
+#food-modal .food-inline-actions button,
+#food-modal .food-catalog-actions button {
+  min-height: 36px;
+  padding: 0 9px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+#food-modal .food-catalog-actions {
+  grid-column: 1 / 4;
+  gap: 7px;
+}
+#food-modal .food-inline-add.has-catalog-actions .food-inline-actions {
+  grid-column: 4;
+}
+
+/* El creador de recetas prioriza el área útil. */
+#recipe-modal .recipe-sheet { padding-block: 9px 7px; }
+#recipe-modal .settings-header { padding-bottom: 5px; }
+#recipe-modal .recipe-meta-grid { margin-top: 6px; gap-block: 4px; }
+#recipe-modal .recipe-builder { margin-top: 5px; gap: 8px; }
+#recipe-modal .recipe-search-panel,
+#recipe-modal .recipe-selected-panel { padding: 7px 9px; }
+#recipe-modal .recipe-search-panel .food-search { gap: 2px; }
+#recipe-modal .recipe-search-panel .food-search input {
+  min-height: 34px;
+  height: 34px;
+  padding-block: 5px;
+}
+#recipe-modal .recipe-search-actions { min-height: 32px; margin: 3px 0 1px; }
+#recipe-modal .recipe-search-actions button { min-height: 30px; }
+#recipe-modal .food-results { margin-top: 3px; gap: 4px; }
+#recipe-modal .food-result { padding-block: 6px; }
+#recipe-modal .recipe-ingredient-list { margin-top: 4px; gap: 4px; }
+#recipe-modal .recipe-ingredient-row { padding-block: 5px; }
+#recipe-modal .recipe-totals { margin-top: 4px; gap: 7px; }
+#recipe-modal .recipe-totals > div { padding-block: 6px; }
+#recipe-modal .recipe-save-actions {
+  margin-top: 4px;
+  margin-bottom: -7px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+/* Biblioteca: acciones neutras y consistentes. */
+.library-toolbar button,
+.library-item-actions button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: none;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none;
+  transform: none;
+}
+.library-toolbar button:hover,
+.library-item-actions button:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+  text-decoration: none;
+  transform: none;
+}
+.library-create-actions #library-new-food,
+.library-create-actions #library-new-recipe {
+  position: relative;
+  z-index: 1;
+  transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.library-create-actions #library-new-food:hover,
+.library-create-actions #library-new-recipe:hover,
+.library-create-actions #library-new-food:focus-visible,
+.library-create-actions #library-new-recipe:focus-visible {
+  z-index: 3;
+  background: var(--acid);
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: scale(1.055);
+}
+
+@media (max-width: 720px) {
+  .settings-sheet {
+    --settings-sheet-side: 13px;
+    --settings-sheet-bottom: 13px;
+  }
+  #food-modal .food-inline-add { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  #food-modal .food-inline-preview,
+  #food-modal .food-catalog-actions,
+  #food-modal .food-inline-actions,
+  #food-modal .food-inline-add.has-catalog-actions .food-inline-actions { grid-column: 1 / -1; }
+  #food-modal .food-inline-actions { justify-content: flex-end; }
+  #recipe-modal .recipe-sheet { padding-block: 7px 5px; }
+  #recipe-modal .recipe-save-actions { margin-bottom: -5px; }
+}
+
+@media (max-width: 470px) {
+  #food-modal .food-inline-add { grid-template-columns: 1fr; }
+  #food-modal .food-inline-add > *,
+  #food-modal .food-catalog-actions,
+  #food-modal .food-inline-actions { grid-column: 1; }
+  .library-item-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .library-item-actions button { width: 100%; min-width: 0; }
+}

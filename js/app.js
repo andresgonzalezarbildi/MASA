@@ -975,11 +975,16 @@
             <div class="meal-inline-edit-title"><b>${escapeHTML(item.name)}</b><small data-diary-edit-preview>${formatNumber(Math.round(item.calories))} kcal</small></div>
             <label><span>Cantidad</span><input name="amount" type="number" min="0.01" step="any" inputmode="decimal" value="${escapeHTML(item.quantity || selectedOption.baseAmount)}" required></label>
             <label><span>Unidad</span><select name="unit" ${options.length === 1 ? "disabled" : ""}>${options.map(option => `<option value="${escapeHTML(option.value)}" ${option.value === selectedOption.value ? "selected" : ""}>${escapeHTML(option.plural)}</option>`).join("")}</select></label>
-            <div class="meal-inline-edit-actions"><button class="text-action" data-cancel-diary-edit type="button">Cancelar</button><button class="primary-action" type="submit">Guardar</button></div>
+            <div class="meal-inline-edit-actions"><button class="primary-action" type="submit">Guardar</button></div>
           </form>`;
         } else {
           const canEditQuantity = toNumber(item.quantity, 0) > 0;
-          row.innerHTML = `<div><b>${escapeHTML(item.name)}</b><small>${canEditQuantity ? `<button class="meal-quantity-edit" type="button" data-edit-diary="${escapeHTML(item.id)}">${escapeHTML(item.serving || "1 porción")} · Editar</button>` : escapeHTML(item.serving || "1 porción")} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span><button type="button" data-remove-diary="${item.id}" aria-label="Eliminar ${escapeHTML(item.name)}">×</button>`;
+          if (canEditQuantity) {
+            row.classList.add("meal-item-editable");
+            row.dataset.editDiary = item.id;
+            row.setAttribute("aria-label", `Editar cantidad de ${item.name}`);
+          }
+          row.innerHTML = `<div><b>${escapeHTML(item.name)}</b><small><span class="meal-serving">${escapeHTML(item.serving || "1 porción")}</span> · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span><button type="button" data-remove-diary="${item.id}" aria-label="Eliminar ${escapeHTML(item.name)}">×</button>`;
         }
         container.appendChild(row);
       });
@@ -1653,7 +1658,7 @@
     const options = foodQuantityOptions(item);
     const preview = quantityPreview(item, defaults.amount, defaults.unit);
     const form = document.createElement("form");
-    form.className = "food-inline-add";
+    form.className = `food-inline-add${item.kind === "external" ? " has-catalog-actions" : ""}`;
     form.dataset.foodAddForm = "";
     form.dataset.foodId = item.id;
     form.dataset.foodKind = item.kind;
@@ -2638,25 +2643,38 @@
     if (label) label.textContent = `${formatNumber(Math.round(preview.calories))} kcal`;
   }
 
+  function closeDiaryEntryEditor() {
+    if (!editingDiaryEntryId) return;
+    editingDiaryEntryId = null;
+    renderDiary(calculatePlan());
+  }
+
   function handleDiaryEntryClick(event) {
-    const edit = event.target.closest("[data-edit-diary]");
-    if (edit) {
-      editingDiaryEntryId = edit.dataset.editDiary;
+    const removeButton = event.target.closest("[data-remove-diary]");
+    if (removeButton) {
+      event.stopPropagation();
+      state.diary[selectedDiaryDate] = todayDiary().filter(item => item.id !== removeButton.dataset.removeDiary);
+      if (editingDiaryEntryId === removeButton.dataset.removeDiary) editingDiaryEntryId = null;
+      saveState(state);
+      render();
+      return;
+    }
+
+    const editCard = event.target.closest(".meal-item[data-edit-diary]");
+    if (editCard) {
+      editingDiaryEntryId = editCard.dataset.editDiary;
       renderDiary(calculatePlan());
       requestAnimationFrame(() => document.querySelector('[data-diary-edit-form] input[name="amount"]')?.select());
       return;
     }
-    if (event.target.closest("[data-cancel-diary-edit]")) {
-      editingDiaryEntryId = null;
-      renderDiary(calculatePlan());
-      return;
-    }
-    const button = event.target.closest("[data-remove-diary]");
-    if (!button) return;
-    state.diary[selectedDiaryDate] = todayDiary().filter(item => item.id !== button.dataset.removeDiary);
-    if (editingDiaryEntryId === button.dataset.removeDiary) editingDiaryEntryId = null;
-    saveState(state);
-    render();
+
+    if (editingDiaryEntryId && !event.target.closest(".meal-item.editing")) closeDiaryEntryEditor();
+  }
+
+  function closeDiaryEditorFromOutside(event) {
+    if (!editingDiaryEntryId) return;
+    if (event.target.closest("#meal-grid")) return;
+    closeDiaryEntryEditor();
   }
 
   function handleDiaryEntryEditInput(event) {
@@ -4743,6 +4761,7 @@
     $("#finish-day").addEventListener("click", finishDay);
     $("#hide-day-summary").addEventListener("click", hideDaySummary);
     $("#meal-grid").addEventListener("click", handleDiaryEntryClick);
+    document.addEventListener("pointerdown", closeDiaryEditorFromOutside, true);
     $("#meal-grid").addEventListener("input", handleDiaryEntryEditInput);
     $("#meal-grid").addEventListener("change", handleDiaryEntryEditInput);
     $("#meal-grid").addEventListener("submit", submitDiaryEntryEdit);
