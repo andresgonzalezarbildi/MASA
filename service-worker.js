@@ -1,12 +1,12 @@
-const CACHE = "masa-v25.1";
+const CACHE = "masa-v25.2";
 const APP_SHELL = [
   "/masa/",
   "/masa/index.html",
-  "/masa/css/styles.css?v=25.1",
-  "/masa/css/auth.css?v=25.1",
-  "/masa/js/config.js?v=25.1",
-  "/masa/js/cloud.js?v=25.1",
-  "/masa/js/app.js?v=25.1",
+  "/masa/css/styles.css?v=25.2",
+  "/masa/css/auth.css?v=25.2",
+  "/masa/js/config.js?v=25.2",
+  "/masa/js/cloud.js?v=25.2",
+  "/masa/js/app.js?v=25.2",
   "/masa/assets/favicon.svg",
   "/masa/manifest.webmanifest",
   "/masa/DATA-LICENSE.md",
@@ -32,6 +32,13 @@ self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Las respuestas del proxy alimentario siempre deben ser actuales y nunca
+  // confundirse con la página principal cuando no hay conexión.
+  if (url.pathname.startsWith("/api/open-food-facts/")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

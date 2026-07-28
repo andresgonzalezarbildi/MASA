@@ -2889,3 +2889,36 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .barcode-manual-form button { width: 100%; }
   #recipe-modal .recipe-search-actions { display: grid; grid-template-columns: 1fr 1fr; }
 }
+
+
+/* --- MASA v25.2: búsqueda simétrica y correcciones de barcode --- */
+#food-modal .food-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  flex: 0 0 auto;
+  margin-top: 7px;
+}
+#food-modal .food-search-row .food-search-always {
+  min-width: 0;
+  margin-top: 0;
+}
+#food-modal .food-scan-action {
+  min-width: 154px;
+  min-height: 41px;
+  padding-inline: 14px;
+  white-space: nowrap;
+}
+#food-modal .food-global-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+#food-modal .food-global-actions button {
+  width: 100%;
+}
+@media (max-width: 470px) {
+  #food-modal .food-search-row { grid-template-columns: minmax(0, 1fr) 112px; gap: 5px; }
+  #food-modal .food-scan-action { min-width: 0; min-height: 37px; padding: 2px 5px; font-size: 8.5px; white-space: normal; line-height: 1.05; }
+  #food-modal .food-global-actions { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 5px; }
+}

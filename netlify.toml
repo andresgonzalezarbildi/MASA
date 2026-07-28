@@ -1,6 +1,13 @@
 [build]
   publish = "."
 
+# Proxy de solo lectura para evitar bloqueos CORS/CSP al consultar productos.
+[[redirects]]
+  from = "/api/open-food-facts/:code"
+  to = "https://world.openfoodfacts.org/api/v2/product/:code.json"
+  status = 200
+  force = true
+
 # Fuerza la barra final para que las rutas relativas de CSS, JS y datos
 # se resuelvan dentro de /masa/.
 [[redirects]]
@@ -20,8 +27,8 @@
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: https://images.openfoodfacts.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
 
 [[headers]]
   for = "/service-worker.js"

@@ -9,13 +9,13 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=25.1" rel="stylesheet"/>
-<link href="./css/auth.css?v=25.1" rel="stylesheet"/>
+<link href="./css/styles.css?v=25.2" rel="stylesheet"/>
+<link href="./css/auth.css?v=25.2" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=25.1"></script>
-<script defer="" src="./js/cloud.js?v=25.1"></script>
+<script defer="" src="./js/config.js?v=25.2"></script>
+<script defer="" src="./js/cloud.js?v=25.2"></script>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
-<script defer="" src="./js/app.js?v=25.1"></script>
+<script defer="" src="./js/app.js?v=25.2"></script>
 </head>
 <body>
 
@@ -564,8 +564,11 @@
 <button aria-label="Cerrar" class="close-button" id="close-food" type="button">×</button>
 </div>
 <p class="food-add-feedback" hidden id="food-add-feedback" role="status"></p>
+<div class="food-search-row">
 <label class="food-search food-search-always"><span>Buscar alimentos o recetas</span><input autocomplete="off" id="food-search-input" placeholder="Ej.: arroz, huevo, café..." type="search"/></label>
-<div class="food-library-actions food-global-actions"><button class="primary-action" id="scan-barcode-food" type="button">Escanear código</button><button class="secondary-action" id="new-custom-food" type="button">Crear alimento</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button><button class="secondary-action" data-open-library type="button">Editar biblioteca</button></div>
+<button class="primary-action food-scan-action" id="scan-barcode-food" type="button">Escanear código</button>
+</div>
+<div class="food-library-actions food-global-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button></div>
 <p class="data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a>.</p>
 <section class="food-search-results-panel" hidden id="food-search-panel">
 <p class="mode-help">Resultados de búsqueda. Al borrar el texto volvés automáticamente a Recientes.</p>
@@ -588,7 +591,7 @@
 </section>
 <section class="food-mode" hidden="" id="food-mode-recipe">
 <div class="food-results" id="recipe-results"></div>
-<div class="food-library-actions"><button class="secondary-action" id="new-recipe-secondary" type="button">Crear una receta</button><button class="secondary-action" data-open-library type="button">Editar biblioteca</button></div>
+<div class="food-library-actions"><button class="secondary-action" id="new-recipe-secondary" type="button">Crear una receta</button></div>
 </section>
 <section class="food-mode" hidden="" id="food-mode-quick">
 <form class="compact-form" id="quick-calorie-form">

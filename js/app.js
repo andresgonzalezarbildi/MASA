@@ -11,6 +11,7 @@
     document.currentScript?.src || window.location.href
   ).href;
   const OPEN_FOOD_FACTS_PRODUCT_URL = "https://world.openfoodfacts.org/api/v2/product";
+  const OPEN_FOOD_FACTS_PROXY_URL = new URL("/api/open-food-facts/", window.location.origin).href;
 
   let externalFoodCatalog = [];
   let externalFoodCatalogById = new Map();
@@ -1276,6 +1277,15 @@
     stopBarcodeScanner();
     const video = $("#barcode-video");
     if (!video) return;
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      setBarcodeStatus("La cámara requiere abrir M.A.S.A. desde una dirección HTTPS. Podés ingresar el código manualmente.", "error");
+      return;
+    }
+    const permissionsPolicy = document.permissionsPolicy || document.featurePolicy;
+    if (permissionsPolicy?.allowsFeature && !permissionsPolicy.allowsFeature("camera")) {
+      setBarcodeStatus("La configuración del sitio está bloqueando la cámara. Volvé a publicar esta versión y recargá la página.", "error");
+      return;
+    }
     if (!window.ZXingBrowser?.BrowserMultiFormatReader) {
       setBarcodeStatus("No se pudo cargar el lector. Podés ingresar el código manualmente.", "error");
       return;
@@ -1297,8 +1307,13 @@
       $("#barcode-torch").hidden = typeof barcodeScannerControls?.switchTorch !== "function";
     } catch (error) {
       console.warn("No se pudo iniciar la cámara:", error);
-      const denied = error?.name === "NotAllowedError";
-      setBarcodeStatus(denied ? "No se concedió acceso a la cámara. Ingresá el código manualmente." : "No se pudo abrir la cámara. Ingresá el código manualmente.", "error");
+      const messages = {
+        NotAllowedError: "No se concedió acceso a la cámara. Revisá el permiso del sitio en el navegador.",
+        SecurityError: "El navegador bloqueó la cámara por la configuración de seguridad del sitio.",
+        NotFoundError: "No se encontró una cámara disponible en este dispositivo.",
+        NotReadableError: "La cámara está siendo usada por otra aplicación o no se pudo iniciar."
+      };
+      setBarcodeStatus(`${messages[error?.name] || "No se pudo abrir la cámara."} Podés ingresar el código manualmente.`, "error");
     }
   }
 
@@ -1380,6 +1395,37 @@
       : "El producto existe, pero faltan datos. Completá lo que figure en la etiqueta antes de guardarlo.");
   }
 
+  async function fetchOpenFoodFactsProduct(code, fields) {
+    const query = new URLSearchParams({ fields, lc: "es" }).toString();
+    const candidates = [
+      `${OPEN_FOOD_FACTS_PROXY_URL}${encodeURIComponent(code)}?${query}`,
+      `${OPEN_FOOD_FACTS_PRODUCT_URL}/${encodeURIComponent(code)}.json?${query}`
+    ];
+    let lastError = null;
+
+    for (const url of candidates) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12_000);
+      try {
+        const response = await fetch(url, {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("json")) throw new Error("La respuesta no es JSON");
+        return await response.json();
+      } catch (error) {
+        lastError = error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    throw lastError || new Error("No se pudo consultar Open Food Facts");
+  }
+
   async function lookupBarcode(value) {
     if (barcodeLookupBusy) return;
     const code = normalizeBarcode(value);
@@ -1401,11 +1447,9 @@
     setBarcodeStatus(`Buscando ${code} en Open Food Facts…`, "loading");
     try {
       const fields = ["code","product_name","product_name_es","generic_name","generic_name_es","brands","quantity","serving_size","nutriments","image_front_small_url","image_front_url"].join(",");
-      const url = `${OPEN_FOOD_FACTS_PRODUCT_URL}/${encodeURIComponent(code)}?fields=${encodeURIComponent(fields)}&lc=es&cc=uy`;
-      const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      if (data.status === 1 && data.product) openFoodFactsProduct(data.product, code);
+      const data = await fetchOpenFoodFactsProduct(code, fields);
+      const productFound = Boolean(data?.product) && (data.status === 1 || data.status === "success" || data.status === undefined);
+      if (productFound) openFoodFactsProduct(data.product, code);
       else openScannedFoodEditor({ barcode: code, servingAmount: 100, servingUnit: "g", serving: "100 g" }, "Ese código no está en Open Food Facts. Podés cargar los datos desde la etiqueta y guardarlo en tu biblioteca.");
     } catch (error) {
       console.warn("No se pudo consultar Open Food Facts:", error);
