@@ -2819,3 +2819,46 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   align-content: start;
   grid-auto-rows: max-content;
 }
+
+/* --- MASA v25: cierre de sesión como acción de Ajustes --- */
+.settings-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  gap: 8px;
+}
+.settings-logout-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.settings-logout-button:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+@media (max-width: 590px) {
+  #settings-modal .settings-header {
+    gap: 8px;
+  }
+  #settings-modal .settings-header > div:first-child {
+    min-width: 0;
+  }
+  #settings-modal .settings-header h2 {
+    font-size: clamp(28px, 9vw, 36px);
+  }
+  .settings-header-actions {
+    gap: 5px;
+  }
+  .settings-logout-button {
+    min-height: 34px;
+    padding: 0 8px;
+    font-size: 8px;
+  }
+}

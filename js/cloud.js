@@ -137,12 +137,10 @@
     const email = session?.user?.email || "";
     const accountEmail = $("#account-email");
     if (accountEmail) accountEmail.textContent = email;
-    const settingsEmail = $("#account-email-settings");
-    if (settingsEmail) settingsEmail.textContent = email;
     const accountArea = $("#account-area");
     if (accountArea) accountArea.hidden = !email;
-    const settingsCard = $("#account-settings-card");
-    if (settingsCard) settingsCard.hidden = !email;
+    const logoutButton = $("#logout-button");
+    if (logoutButton) logoutButton.hidden = !email;
   }
 
   function setSyncStatus(kind, text) {
