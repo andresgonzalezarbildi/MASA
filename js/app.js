@@ -11,6 +11,8 @@
     document.currentScript?.src || window.location.href
   ).href;
 
+  let externalFoodCatalog = [];
+  let externalFoodCatalogById = new Map();
   let externalFoods = [];
   let externalFoodsById = new Map();
   let externalFoodSearchIndex = [];
@@ -22,6 +24,7 @@
   let activeRecipeIngredientSelection = null;
   let recipeDraftIngredients = [];
   let editingFoodId = null;
+  let editingCatalogFoodId = null;
   let editingRecipeId = null;
   let foodEditorReturnTarget = "";
   let recipeEditorReturnTarget = "";
@@ -88,6 +91,7 @@
   let activeDiaryView = "record";
   let calorieRange = 14;
   let weightEditorForced = false;
+  let editingDiaryEntryId = null;
   let selectedDiaryDate = todayISO();
 
   const $ = selector => document.querySelector(selector);
@@ -288,6 +292,27 @@
     };
   }
 
+  function normalizeCatalogOverride(item = {}, fallbackId = "") {
+    const id = String(item.id || fallbackId || "").trim();
+    if (!id) return null;
+    const result = { id, hidden: Boolean(item.hidden) };
+    const name = String(item.name || "").trim();
+    const calories = toNumber(item.calories, NaN);
+    const servingAmount = toNumber(item.servingAmount, NaN);
+    if (name) result.name = name;
+    if (Number.isFinite(calories) && calories >= 0) result.calories = calories;
+    ["protein", "fat", "carbs"].forEach(key => {
+      const value = toNumber(item[key], NaN);
+      if (Number.isFinite(value) && value >= 0) result[key] = value;
+    });
+    if (Number.isFinite(servingAmount) && servingAmount > 0) result.servingAmount = servingAmount;
+    if (item.servingUnit) result.servingUnit = String(item.servingUnit);
+    if (item.servingUnitCustom) result.servingUnitCustom = String(item.servingUnitCustom).trim();
+    if (item.serving) result.serving = String(item.serving).trim();
+    result.updatedAt = normalizeTimestamp(item.updatedAt) || new Date().toISOString();
+    return result;
+  }
+
   function normalizeState(raw = {}) {
     const input = Array.isArray(raw) ? { weighIns: raw } : raw;
     const weighIns = Array.isArray(input.weighIns)
@@ -331,9 +356,16 @@
       };
     });
 
+    const catalogOverrides = {};
+    const rawCatalogOverrides = input.catalogOverrides || input.externalFoodOverrides || {};
+    Object.entries(rawCatalogOverrides).forEach(([id, value]) => {
+      const normalized = normalizeCatalogOverride(value, id);
+      if (normalized) catalogOverrides[normalized.id] = normalized;
+    });
+
     const configured = profileIsComplete(profile, sorted);
     return {
-      version: 17,
+      version: 19,
       configured,
       profile,
       weighIns: sorted,
@@ -342,6 +374,7 @@
       diary,
       completedDays,
       foodUsage,
+      catalogOverrides,
       calibrationHistory: Array.isArray(input.calibrationHistory) ? input.calibrationHistory.slice(-20) : [],
       lastCheckinDate: normalizeDate(input.lastCheckinDate)
     };
@@ -432,6 +465,45 @@
     };
   }
 
+  function effectiveCatalogFood(base, override = null) {
+    if (!base || !override) return base;
+    const servingAmount = Math.max(0.01, toNumber(override.servingAmount, base.metricQuantity || 100));
+    const unit = override.servingUnit || "g";
+    const customUnit = override.servingUnitCustom || "";
+    return {
+      ...base,
+      name: override.name || base.name,
+      calories: Number.isFinite(toNumber(override.calories, NaN)) ? toNumber(override.calories) : base.calories,
+      protein: Number.isFinite(toNumber(override.protein, NaN)) ? toNumber(override.protein) : base.protein,
+      fat: Number.isFinite(toNumber(override.fat, NaN)) ? toNumber(override.fat) : base.fat,
+      carbs: Number.isFinite(toNumber(override.carbs, NaN)) ? toNumber(override.carbs) : base.carbs,
+      serving: override.serving || servingLabel(servingAmount, unit, customUnit),
+      servingAmount,
+      servingUnit: unit,
+      servingUnitCustom: customUnit,
+      userOverride: true
+    };
+  }
+
+  function rebuildExternalFoodCatalog() {
+    const overrides = state?.catalogOverrides || {};
+    externalFoods = externalFoodCatalog
+      .filter(base => !overrides[base.id]?.hidden)
+      .map(base => effectiveCatalogFood(base, overrides[base.id]));
+    externalFoodsById = new Map(externalFoods.map(item => [item.id, item]));
+    externalFoodSearchIndex = externalFoods.map(item => ({
+      item,
+      nameText: normalizeHeader(item.name),
+      searchText: foodSearchText(item)
+    }));
+  }
+
+  function catalogFoodForEditing(id) {
+    const base = externalFoodCatalogById.get(id);
+    if (!base) return null;
+    return effectiveCatalogFood(base, state.catalogOverrides?.[id]);
+  }
+
   async function loadExternalFoods() {
     externalFoodsStatus = "loading";
     externalFoodsError = "";
@@ -455,16 +527,14 @@
 
       if (!Array.isArray(raw)) throw new Error("El catálogo no contiene una lista JSON");
 
-      externalFoods = raw.map(normalizeExternalFood).filter(Boolean);
-      externalFoodsById = new Map(externalFoods.map(item => [item.id, item]));
-      externalFoodSearchIndex = externalFoods.map(item => ({
-        item,
-        nameText: normalizeHeader(item.name),
-        searchText: foodSearchText(item)
-      }));
+      externalFoodCatalog = raw.map(normalizeExternalFood).filter(Boolean);
+      externalFoodCatalogById = new Map(externalFoodCatalog.map(item => [item.id, item]));
+      rebuildExternalFoodCatalog();
       externalFoodsStatus = "ready";
       console.info(`Catálogo cargado desde ${source}: ${externalFoods.length.toLocaleString("es-UY")} alimentos.`);
     } catch (error) {
+      externalFoodCatalog = [];
+      externalFoodCatalogById = new Map();
       externalFoods = [];
       externalFoodsById = new Map();
       externalFoodSearchIndex = [];
@@ -474,6 +544,7 @@
     }
 
     if (!$("#food-modal")?.hidden) renderActiveFoodMode();
+    if (!$("#library-modal")?.hidden) renderLibraryManager();
     if (!$("#recipe-modal")?.hidden) {
       renderRecipeIngredientResults();
       renderRecipeIngredientList();
@@ -541,6 +612,7 @@
 
   function saveState(next = state) {
     state = normalizeState(next);
+    if (externalFoodCatalog.length) rebuildExternalFoodCatalog();
     if (window.MASA_CLOUD?.isAuthenticated()) {
       window.MASA_CLOUD.scheduleStateSync(state);
     } else {
@@ -893,8 +965,22 @@
       }
       mealEntries.forEach(item => {
         const row = document.createElement("div");
-        row.className = "meal-item";
-        row.innerHTML = `<div><b>${escapeHTML(item.name)}</b><small>${escapeHTML(item.serving || "1 porción")} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span><button type="button" data-remove-diary="${item.id}" aria-label="Eliminar ${escapeHTML(item.name)}">×</button>`;
+        const editing = editingDiaryEntryId === item.id;
+        row.className = `meal-item${editing ? " editing" : ""}`;
+        if (editing) {
+          const source = diaryEntrySource(item);
+          const options = source ? foodQuantityOptions(source) : [parseServingDefinition(item.serving)];
+          const selectedOption = options.find(option => option.value === item.quantityUnit) || options[0];
+          row.innerHTML = `<form class="meal-inline-edit" data-diary-edit-form="${escapeHTML(item.id)}">
+            <div class="meal-inline-edit-title"><b>${escapeHTML(item.name)}</b><small data-diary-edit-preview>${formatNumber(Math.round(item.calories))} kcal</small></div>
+            <label><span>Cantidad</span><input name="amount" type="number" min="0.01" step="any" inputmode="decimal" value="${escapeHTML(item.quantity || selectedOption.baseAmount)}" required></label>
+            <label><span>Unidad</span><select name="unit" ${options.length === 1 ? "disabled" : ""}>${options.map(option => `<option value="${escapeHTML(option.value)}" ${option.value === selectedOption.value ? "selected" : ""}>${escapeHTML(option.plural)}</option>`).join("")}</select></label>
+            <div class="meal-inline-edit-actions"><button class="text-action" data-cancel-diary-edit type="button">Cancelar</button><button class="primary-action" type="submit">Guardar</button></div>
+          </form>`;
+        } else {
+          const canEditQuantity = toNumber(item.quantity, 0) > 0;
+          row.innerHTML = `<div><b>${escapeHTML(item.name)}</b><small>${canEditQuantity ? `<button class="meal-quantity-edit" type="button" data-edit-diary="${escapeHTML(item.id)}">${escapeHTML(item.serving || "1 porción")} · Editar</button>` : escapeHTML(item.serving || "1 porción")} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span><button type="button" data-remove-diary="${item.id}" aria-label="Eliminar ${escapeHTML(item.name)}">×</button>`;
+        }
         container.appendChild(row);
       });
     });
@@ -1078,6 +1164,16 @@
   function renderRecordWeight() {
     const entry = state.weighIns.find(item => item.date === selectedDiaryDate);
     const recorded = Boolean(entry);
+    const card = $("#record-weight-card");
+    const ledger = $("#meal-grid");
+    const sidebar = document.querySelector(".records-sidebar");
+    const compact = recorded && !weightEditorForced;
+    card.classList.toggle("compact-recorded-weight", compact);
+    if (compact && sidebar && card.parentElement !== sidebar) {
+      const quickTools = sidebar.querySelector(".diary-quick-tools");
+      sidebar.insertBefore(card, quickTools || null);
+    }
+    if (!compact && ledger && card.parentElement !== ledger) ledger.prepend(card);
     const selectedLabel = selectedDiaryDate === todayISO() ? "hoy" : `el ${formatDate(selectedDiaryDate)}`;
     $("#record-weight-title").textContent = recorded ? `Peso de ${selectedLabel}` : `Registrar peso de ${selectedLabel}`;
     $("#weight-context").textContent = recorded
@@ -1464,7 +1560,7 @@
   }
 
   function foodQuantityOptions(item) {
-    if (item.kind !== "external") return [parseServingDefinition(item.serving)];
+    if (item.kind !== "external" || item.userOverride) return [parseServingDefinition(item.serving)];
 
     const options = [{
       value: "g",
@@ -1577,9 +1673,10 @@
         <b data-food-preview-calories>${formatNumber(Math.round(preview.calories))} kcal</b>
         <small data-food-preview-macros>P ${formatNumber(preview.protein,1)} · G ${formatNumber(preview.fat,1)} · C ${formatNumber(preview.carbs,1)}</small>
       </div>
+      ${item.kind === "external" ? `<div class="food-catalog-actions"><button class="text-action" data-edit-catalog-food="${escapeHTML(item.id)}" type="button">Editar alimento</button><button class="danger-text-action" data-hide-catalog-food="${escapeHTML(item.id)}" type="button">Ocultar</button></div>` : ""}
       <div class="food-inline-actions">
         <button class="text-action" data-cancel-food type="button">Cancelar</button>
-        <button class="primary-action" type="submit">Agregar y seguir</button>
+        <button class="primary-action" type="submit">Agregar</button>
       </div>`;
     wrapper.appendChild(form);
     return wrapper;
@@ -1626,22 +1723,16 @@
   function changeFoodQuantityUnit(form) {
     const item = findFood(form.dataset.foodId, form.dataset.foodKind);
     if (!item || !form.elements.unit) return;
-    const options = foodQuantityOptions(item);
-    const previous = options.find(option => option.value === form.dataset.currentUnit) || options[0];
-    const next = options.find(option => option.value === form.elements.unit.value) || options[0];
-    const amount = Math.max(0, toNumber(form.elements.amount.value, previous.baseAmount));
-    const factor = amount / previous.baseAmount;
-    form.elements.amount.value = Number((factor * next.baseAmount).toFixed(3));
-    form.dataset.currentUnit = next.value;
+    form.dataset.currentUnit = form.elements.unit.value;
     updateFoodQuantityPreview(form);
     form.elements.amount.focus();
-    form.elements.amount.select();
   }
 
-  function showFoodAddedFeedback(name, serving) {
+  function showFoodAddedFeedback() {
     const feedback = $("#food-add-feedback");
-    feedback.textContent = `Agregado: ${serving} de ${name}. Podés seguir cargando alimentos en esta misma ventana.`;
-    feedback.hidden = false;
+    if (!feedback) return;
+    feedback.textContent = "";
+    feedback.hidden = true;
   }
 
   function prepareNextFoodEntry() {
@@ -1712,6 +1803,16 @@
   }
 
   function handleFoodResultClick(event) {
+    const editCatalog = event.target.closest("[data-edit-catalog-food]");
+    if (editCatalog) {
+      openFoodEditor({ catalogId: editCatalog.dataset.editCatalogFood, returnTarget: "food" });
+      return;
+    }
+    const hideCatalog = event.target.closest("[data-hide-catalog-food]");
+    if (hideCatalog) {
+      hideCatalogFood(hideCatalog.dataset.hideCatalogFood);
+      return;
+    }
     if (event.target.closest("[data-cancel-food]")) {
       cancelFoodInline();
       return;
@@ -1780,12 +1881,23 @@
     updateModalBodyState();
   }
 
-  function libraryItemCard(item) {
+  function libraryItemCard(item, options = {}) {
     const article = document.createElement("article");
     article.className = "library-item";
     const detail = item.kind === "recipe"
       ? `${item.ingredients?.length || 0} ingredientes · ${item.serving}`
       : item.serving;
+    if (options.catalog) {
+      const hidden = Boolean(options.override?.hidden);
+      article.classList.toggle("catalog-hidden", hidden);
+      article.innerHTML = `
+        <div><b>${escapeHTML(item.name)}</b><small>${hidden ? "Oculto de tu catálogo" : `${escapeHTML(detail)} · ${formatNumber(Math.round(item.calories))} kcal`}</small></div>
+        <div class="library-item-actions">
+          <button class="text-action" data-edit-library="${escapeHTML(item.id)}" data-library-kind="external" type="button">Editar</button>
+          <button class="text-action" data-restore-catalog="${escapeHTML(item.id)}" type="button">Restaurar original</button>
+        </div>`;
+      return article;
+    }
     article.innerHTML = `
       <div><b>${escapeHTML(item.name)}</b><small>${escapeHTML(detail)} · ${formatNumber(Math.round(item.calories))} kcal</small></div>
       <div class="library-item-actions">
@@ -1798,23 +1910,40 @@
   function renderLibraryManager() {
     const foodList = $("#library-food-list");
     const recipeList = $("#library-recipe-list");
+    const catalogList = $("#library-catalog-list");
     foodList.innerHTML = "";
     recipeList.innerHTML = "";
+    catalogList.innerHTML = "";
     $("#library-food-count").textContent = state.foods.length;
     $("#library-recipe-count").textContent = state.recipes.length;
+    const catalogEntries = Object.entries(state.catalogOverrides || {});
+    $("#library-catalog-count").textContent = catalogEntries.length;
 
     if (!state.foods.length) foodList.innerHTML = '<p class="empty-message">No creaste alimentos propios.</p>';
     else [...state.foods].sort((a,b) => a.name.localeCompare(b.name, "es")).forEach(item => foodList.appendChild(libraryItemCard(item)));
 
     if (!state.recipes.length) recipeList.innerHTML = '<p class="empty-message">No creaste recetas.</p>';
     else [...state.recipes].sort((a,b) => a.name.localeCompare(b.name, "es")).forEach(item => recipeList.appendChild(libraryItemCard(item)));
+
+    if (!catalogEntries.length) catalogList.innerHTML = '<p class="empty-message">Todavía no modificaste alimentos del catálogo general.</p>';
+    else catalogEntries
+      .map(([id, override]) => ({ item: catalogFoodForEditing(id), override }))
+      .filter(row => row.item)
+      .sort((a,b) => a.item.name.localeCompare(b.item.name, "es"))
+      .forEach(row => catalogList.appendChild(libraryItemCard(row.item, { catalog: true, override: row.override })));
   }
 
   function handleLibraryClick(event) {
+    const restore = event.target.closest("[data-restore-catalog]");
+    if (restore) {
+      restoreCatalogFood(restore.dataset.restoreCatalog);
+      return;
+    }
     const edit = event.target.closest("[data-edit-library]");
     if (edit) {
       const options = { editId: edit.dataset.editLibrary, returnTarget: "library" };
       if (edit.dataset.libraryKind === "recipe") openRecipeEditor(options);
+      else if (edit.dataset.libraryKind === "external") openFoodEditor({ catalogId: edit.dataset.editLibrary, returnTarget: "library" });
       else openFoodEditor(options);
       return;
     }
@@ -1839,17 +1968,44 @@
     renderActiveFoodMode();
   }
 
+  function hideCatalogFood(id) {
+    const base = externalFoodCatalogById.get(id);
+    if (!base) return;
+    state.catalogOverrides ||= {};
+    state.catalogOverrides[id] = normalizeCatalogOverride({ ...(state.catalogOverrides[id] || {}), id, hidden: true });
+    delete state.foodUsage?.[foodUsageKey(base)];
+    saveState(state);
+    rebuildExternalFoodCatalog();
+    activeFoodSelection = null;
+    renderCurrentFoodResults();
+    if (!$("#library-modal")?.hidden) renderLibraryManager();
+  }
+
+  function restoreCatalogFood(id) {
+    if (!state.catalogOverrides?.[id]) return;
+    delete state.catalogOverrides[id];
+    saveState(state);
+    rebuildExternalFoodCatalog();
+    renderLibraryManager();
+    renderCurrentFoodResults();
+    if (!$("#recipe-modal")?.hidden) renderRecipeIngredientResults();
+  }
+
   function openFoodEditor(options = {}) {
     if (options instanceof Event) options = {};
     editingFoodId = options.editId || null;
+    editingCatalogFoodId = options.catalogId || null;
     foodEditorReturnTarget = options.returnTarget || (modalIsOpen("library-modal") ? "library" : "food");
     const form = $("#food-editor-form");
     form.reset();
-    const item = editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
+    const item = editingCatalogFoodId
+      ? catalogFoodForEditing(editingCatalogFoodId)
+      : editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
 
     $("#food-editor-title").textContent = item ? "Editar alimento" : "Nuevo alimento";
-    $("#food-editor-description").textContent = item
-      ? "Los cambios también recalculan las recetas que usan este alimento."
+    $("#food-editor-description").textContent = editingCatalogFoodId
+      ? "Los cambios quedan solamente en tu cuenta."
+      : item ? "Los cambios también recalculan las recetas que usan este alimento."
       : "Guardalo una vez y reutilizalo en registros y recetas.";
     $("#save-food-editor").textContent = item ? "Guardar cambios" : "Guardar alimento";
 
@@ -1857,7 +2013,7 @@
       const parsed = parseServingDefinition(item.serving);
       form.elements.name.value = item.name;
       form.elements.calories.value = item.calories;
-      form.elements.servingAmount.value = item.servingAmount || parsed.baseAmount;
+      form.elements.servingAmount.value = item.servingAmount || item.metricQuantity || parsed.baseAmount;
       setEditableUnitFields(
         form.elements.servingUnit,
         form.elements.servingUnitCustom,
@@ -1885,6 +2041,7 @@
     const target = foodEditorReturnTarget;
     foodEditorReturnTarget = "";
     editingFoodId = null;
+    editingCatalogFoodId = null;
     if (target === "library") {
       renderLibraryManager();
       $("#library-modal").hidden = false;
@@ -1951,12 +2108,51 @@
     event.preventDefault();
     const form = event.currentTarget;
     const previous = editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
+    const previousCatalog = editingCatalogFoodId ? catalogFoodForEditing(editingCatalogFoodId) : null;
     const unitData = editableUnitFromForm(form.elements.servingUnit, form.elements.servingUnitCustom);
     if (unitData.unit === "custom" && !unitData.customUnit) {
       form.elements.servingUnitCustom.focus();
       return;
     }
     const servingAmount = Math.max(0.01, toNumber(form.elements.servingAmount.value, 1) || 1);
+    if (editingCatalogFoodId && previousCatalog) {
+      state.catalogOverrides ||= {};
+      state.catalogOverrides[editingCatalogFoodId] = normalizeCatalogOverride({
+        id: editingCatalogFoodId,
+        hidden: false,
+        name: form.elements.name.value,
+        calories: form.elements.calories.value,
+        serving: servingLabel(servingAmount, unitData.unit, unitData.customUnit),
+        servingAmount,
+        servingUnit: unitData.unit,
+        servingUnitCustom: unitData.customUnit,
+        protein: form.elements.protein.value,
+        fat: form.elements.fat.value,
+        carbs: form.elements.carbs.value
+      });
+      rebuildExternalFoodCatalog();
+      const updated = catalogFoodForEditing(editingCatalogFoodId);
+      if (updated) refreshRecipesUsingFood(updated);
+      saveState(state);
+      const target = foodEditorReturnTarget;
+      $("#food-editor-modal").hidden = true;
+      editingCatalogFoodId = null;
+      editingFoodId = null;
+      foodEditorReturnTarget = "";
+      if (target === "library") {
+        renderLibraryManager();
+        $("#library-modal").hidden = false;
+      } else if (target === "recipe") {
+        $("#recipe-modal").hidden = false;
+        renderRecipeIngredientResults();
+        renderRecipeIngredientList();
+      } else if (modalIsOpen("food-modal")) {
+        updateFoodSearchDisplay();
+      } else render();
+      updateModalBodyState();
+      return;
+    }
+
     const item = normalizeFood({
       id: previous?.id || createId(),
       kind: "food",
@@ -1983,6 +2179,7 @@
     const target = foodEditorReturnTarget;
     $("#food-editor-modal").hidden = true;
     editingFoodId = null;
+    editingCatalogFoodId = null;
     foodEditorReturnTarget = "";
 
     if (target === "recipe") {
@@ -2134,13 +2331,7 @@
     const item = findFood(controls.dataset.foodId, controls.dataset.foodKind);
     const select = controls.querySelector('[name="unit"]');
     if (!item || !select) return;
-    const options = foodQuantityOptions(item);
-    const previous = options.find(option => option.value === controls.dataset.currentUnit) || options[0];
-    const next = options.find(option => option.value === select.value) || options[0];
-    const input = controls.querySelector('[name="amount"]');
-    const factor = Math.max(0, toNumber(input.value, previous.baseAmount)) / previous.baseAmount;
-    input.value = Number((factor * next.baseAmount).toFixed(3));
-    controls.dataset.currentUnit = next.value;
+    controls.dataset.currentUnit = select.value;
     updateRecipeIngredientPreview(controls);
   }
 
@@ -2275,12 +2466,7 @@
     const unitSelect = row.querySelector('[name="draftUnit"]');
 
     if (changeUnit && food && unitSelect) {
-      const options = foodQuantityOptions(food);
-      const previous = options.find(option => option.value === row.dataset.currentUnit) || options[0];
-      const next = options.find(option => option.value === unitSelect.value) || options[0];
-      const factor = Math.max(0, toNumber(amountInput.value, previous.baseAmount)) / previous.baseAmount;
-      amountInput.value = Number((factor * next.baseAmount).toFixed(3));
-      row.dataset.currentUnit = next.value;
+      row.dataset.currentUnit = unitSelect.value;
     }
 
     const amount = Math.max(0.01, toNumber(amountInput.value, ingredient.amount));
@@ -2430,10 +2616,81 @@
     updateModalBodyState();
   }
 
-  function removeDiaryEntry(event) {
+  function diaryEntrySource(entry) {
+    const sourceId = String(entry?.sourceId || "");
+    if (!sourceId) return normalizeFood(entry);
+    return state.foods.find(item => item.id === sourceId)
+      || state.recipes.find(item => item.id === sourceId)
+      || externalFoodsById.get(sourceId)
+      || externalFoodsById.get(`external:${sourceId}`)
+      || catalogFoodForEditing(sourceId)
+      || catalogFoodForEditing(`external:${sourceId}`)
+      || normalizeFood(entry);
+  }
+
+  function updateDiaryEditPreview(form) {
+    const entry = todayDiary().find(item => item.id === form.dataset.diaryEditForm);
+    const source = diaryEntrySource(entry);
+    if (!entry || !source) return;
+    const unit = form.elements.unit?.value || entry.quantityUnit;
+    const preview = quantityPreview(source, toNumber(form.elements.amount.value, 0), unit);
+    const label = form.querySelector("[data-diary-edit-preview]");
+    if (label) label.textContent = `${formatNumber(Math.round(preview.calories))} kcal`;
+  }
+
+  function handleDiaryEntryClick(event) {
+    const edit = event.target.closest("[data-edit-diary]");
+    if (edit) {
+      editingDiaryEntryId = edit.dataset.editDiary;
+      renderDiary(calculatePlan());
+      requestAnimationFrame(() => document.querySelector('[data-diary-edit-form] input[name="amount"]')?.select());
+      return;
+    }
+    if (event.target.closest("[data-cancel-diary-edit]")) {
+      editingDiaryEntryId = null;
+      renderDiary(calculatePlan());
+      return;
+    }
     const button = event.target.closest("[data-remove-diary]");
     if (!button) return;
     state.diary[selectedDiaryDate] = todayDiary().filter(item => item.id !== button.dataset.removeDiary);
+    if (editingDiaryEntryId === button.dataset.removeDiary) editingDiaryEntryId = null;
+    saveState(state);
+    render();
+  }
+
+  function handleDiaryEntryEditInput(event) {
+    const form = event.target.closest("[data-diary-edit-form]");
+    if (!form || !["amount", "unit"].includes(event.target.name)) return;
+    updateDiaryEditPreview(form);
+  }
+
+  function submitDiaryEntryEdit(event) {
+    const form = event.target.closest("[data-diary-edit-form]");
+    if (!form) return;
+    event.preventDefault();
+    const entries = todayDiary();
+    const index = entries.findIndex(item => item.id === form.dataset.diaryEditForm);
+    if (index < 0) return;
+    const entry = entries[index];
+    const source = diaryEntrySource(entry);
+    const amount = toNumber(form.elements.amount.value, NaN);
+    const unit = form.elements.unit?.value || entry.quantityUnit;
+    if (!source || !Number.isFinite(amount) || amount <= 0) return;
+    const preview = quantityPreview(source, amount, unit);
+    const option = preview.option;
+    entries[index] = normalizeDiaryEntry({
+      ...entry,
+      quantity: amount,
+      quantityUnit: option.value,
+      serving: `${formatQuantityAmount(amount)} ${quantityUnitText(option, amount)}`,
+      calories: preview.calories,
+      protein: preview.protein,
+      fat: preview.fat,
+      carbs: preview.carbs
+    });
+    state.diary[selectedDiaryDate] = entries;
+    editingDiaryEntryId = null;
     saveState(state);
     render();
   }
@@ -4049,7 +4306,7 @@
           saveState(state);
           render();
           if (!$("#library-modal")?.hidden) renderLibraryManager();
-          window.alert(`Biblioteca importada: ${result.foods} alimento(s) y ${result.recipes} receta(s).`);
+          window.alert(`Biblioteca importada: ${result.foods} alimento(s), ${result.recipes} receta(s) y ${result.catalog} cambio(s) del catálogo.`);
           return;
         }
         const imported = normalizeState(parsed);
@@ -4162,10 +4419,11 @@
   function libraryExportPayload() {
     return {
       format: "masa-library",
-      version: 17,
+      version: 19,
       exportedAt: new Date().toISOString(),
       foods: clone(state.foods || []),
-      recipes: clone(state.recipes || [])
+      recipes: clone(state.recipes || []),
+      catalogOverrides: clone(state.catalogOverrides || {})
     };
   }
 
@@ -4182,10 +4440,15 @@
     const recipes = Array.isArray(raw.recipes)
       ? raw.recipes.map(item => normalizeFood({ ...item, kind: "recipe" })).filter(Boolean)
       : [];
-    if (!foods.length && !recipes.length) {
-      throw new Error("El archivo no contiene alimentos propios ni recetas para importar.");
+    const catalogOverrides = {};
+    Object.entries(raw.catalogOverrides || {}).forEach(([id, value]) => {
+      const normalized = normalizeCatalogOverride(value, id);
+      if (normalized) catalogOverrides[id] = normalized;
+    });
+    if (!foods.length && !recipes.length && !Object.keys(catalogOverrides).length) {
+      throw new Error("El archivo no contiene alimentos, recetas ni cambios del catálogo para importar.");
     }
-    return { foods, recipes };
+    return { foods, recipes, catalogOverrides };
   }
 
   function importLibraryData(raw) {
@@ -4233,14 +4496,16 @@
 
     state.foods = foods;
     state.recipes = recipes.map(recalculateRecipe);
-    return { foods: incoming.foods.length, recipes: incoming.recipes.length };
+    state.catalogOverrides = { ...(state.catalogOverrides || {}), ...(incoming.catalogOverrides || {}) };
+    rebuildExternalFoodCatalog();
+    return { foods: incoming.foods.length, recipes: incoming.recipes.length, catalog: Object.keys(incoming.catalogOverrides || {}).length };
   }
 
   function fullProfileExportPayload() {
     return {
       ...clone(state),
       format: "masa-full-profile",
-      version: 17,
+      version: 19,
       exportedAt: new Date().toISOString(),
       foods: clone(state.foods || []),
       recipes: clone(state.recipes || [])
@@ -4469,7 +4734,10 @@
     }));
     $("#finish-day").addEventListener("click", finishDay);
     $("#hide-day-summary").addEventListener("click", hideDaySummary);
-    $("#meal-grid").addEventListener("click", removeDiaryEntry);
+    $("#meal-grid").addEventListener("click", handleDiaryEntryClick);
+    $("#meal-grid").addEventListener("input", handleDiaryEntryEditInput);
+    $("#meal-grid").addEventListener("change", handleDiaryEntryEditInput);
+    $("#meal-grid").addEventListener("submit", submitDiaryEntryEdit);
     $("#close-food").addEventListener("click", closeFoodModal);
     $$("[data-close-food]").forEach(element => element.addEventListener("click", closeFoodModal));
     $$("[data-food-mode]").forEach(button => button.addEventListener("click", () => switchFoodMode(button.dataset.foodMode)));
@@ -4482,6 +4750,8 @@
     });
     $("#quick-calorie-form").addEventListener("submit", addQuickCalories);
     $("#new-custom-food").addEventListener("click", () => openFoodEditor({ returnTarget: "food" }));
+    $("#sidebar-new-food").addEventListener("click", () => openFoodEditor({ returnTarget: "main" }));
+    $("#sidebar-open-library").addEventListener("click", () => openLibraryManager("main"));
     $("#new-recipe").addEventListener("click", () => openRecipeEditor({ returnTarget: "food" }));
     $("#new-recipe-secondary").addEventListener("click", () => openRecipeEditor({ returnTarget: "food" }));
     $$('[data-open-library]').forEach(button => button.addEventListener("click", () => openLibraryManager("food")));
@@ -4489,6 +4759,7 @@
     $$('[data-close-library]').forEach(element => element.addEventListener("click", closeLibraryManager));
     $("#library-food-list").addEventListener("click", handleLibraryClick);
     $("#library-recipe-list").addEventListener("click", handleLibraryClick);
+    $("#library-catalog-list").addEventListener("click", handleLibraryClick);
     $("#library-new-food").addEventListener("click", () => openFoodEditor({ returnTarget: "library" }));
     $("#library-new-recipe").addEventListener("click", () => openRecipeEditor({ returnTarget: "library" }));
     $("#library-import").addEventListener("click", () => openImport("library"));

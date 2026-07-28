@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const SCHEMA_VERSION = 17;
+  const SCHEMA_VERSION = 19;
   const CACHE_PREFIX = "masa-user-cache-v1:";
   const PAGE_SIZE = 1000;
   const BATCH_SIZE = 250;
@@ -404,6 +404,7 @@
         diary: diaryFromRows(diaryRows),
         completedDays: profileData.completedDays,
         foodUsage: profileData.foodUsage,
+        catalogOverrides: profileData.catalogOverrides,
         calibrationHistory: profileData.calibrationHistory,
         lastCheckinDate: profileData.lastCheckinDate
       };
@@ -437,6 +438,7 @@
       profile: wrapped ? data.profile : data,
       completedDays: wrapped && plainObject(data.completedDays) ? data.completedDays : {},
       foodUsage: wrapped && plainObject(data.foodUsage) ? data.foodUsage : {},
+      catalogOverrides: wrapped && plainObject(data.catalogOverrides) ? data.catalogOverrides : {},
       calibrationHistory: wrapped && Array.isArray(data.calibrationHistory) ? data.calibrationHistory : [],
       lastCheckinDate: wrapped ? String(data.lastCheckinDate || "") : ""
     };
@@ -658,6 +660,7 @@
         profile: state.profile || {},
         completedDays: state.completedDays || {},
         foodUsage: state.foodUsage || {},
+        catalogOverrides: state.catalogOverrides || {},
         calibrationHistory: state.calibrationHistory || [],
         lastCheckinDate: state.lastCheckinDate || ""
       }),
@@ -679,6 +682,7 @@
         profile,
         completedDays: plainObject(state.completedDays) ? state.completedDays : {},
         foodUsage: plainObject(state.foodUsage) ? state.foodUsage : {},
+        catalogOverrides: plainObject(state.catalogOverrides) ? state.catalogOverrides : {},
         calibrationHistory: Array.isArray(state.calibrationHistory) ? state.calibrationHistory : [],
         lastCheckinDate: state.lastCheckinDate || ""
       },

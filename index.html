@@ -9,12 +9,12 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=18" rel="stylesheet"/>
-<link href="./css/auth.css?v=18" rel="stylesheet"/>
+<link href="./css/styles.css?v=19" rel="stylesheet"/>
+<link href="./css/auth.css?v=19" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=18"></script>
-<script defer="" src="./js/cloud.js?v=18"></script>
-<script defer="" src="./js/app.js?v=18"></script>
+<script defer="" src="./js/config.js?v=19"></script>
+<script defer="" src="./js/cloud.js?v=19"></script>
+<script defer="" src="./js/app.js?v=19"></script>
 </head>
 <body>
 
@@ -162,7 +162,12 @@
 </div>
 <button class="finish-day-button" id="finish-day" type="button">Terminar día</button>
 <p class="finish-day-note">El cierre y la lectura teórica quedan asociados a la fecha seleccionada.</p>
-</aside></div></div>
+</aside>
+<div class="diary-quick-tools" aria-label="Accesos rápidos de biblioteca">
+<button class="secondary-action" id="sidebar-new-food" type="button">Nuevo alimento</button>
+<button class="secondary-action" id="sidebar-open-library" type="button">Editar recetas y alimentos</button>
+</div>
+</div></div>
 </div>
 <div class="diary-view" hidden="" id="diary-chart-view">
 <div class="calorie-chart-toolbar">
@@ -476,7 +481,7 @@
 <div><span>Fecha estimada</span><b id="preview-date">—</b></div>
 </section>
 <p class="feedback" id="profile-feedback" role="status"></p>
-<div class="profile-actions">
+<div class="profile-actions settings-sticky-actions">
 <button class="secondary-action" id="cancel-profile" type="button">Cancelar</button>
 <button class="primary-action" type="submit">Guardar cambios</button>
 </div>
@@ -585,7 +590,7 @@
 <form class="compact-form" id="quick-calorie-form">
 <label><span>Descripción</span><input name="name" placeholder="Ej.: cena fuera" required="" type="text"/></label>
 <label><span>Calorías</span><div class="unit-input"><input max="10000" min="1" name="calories" required="" step="1" type="number"/><i>kcal</i></div></label>
-<button class="primary-action" type="submit">Agregar y seguir</button>
+<button class="primary-action" type="submit">Agregar</button>
 </form>
 </section>
 </div>
@@ -681,7 +686,7 @@
 <div class="modal-backdrop" data-close-library=""></div>
 <div class="food-sheet library-sheet">
 <div class="settings-header">
-<div><p class="eyebrow">BIBLIOTECA PERSONAL</p><h2 id="library-title">Editar alimentos y recetas</h2><p>Los elementos del catálogo general son de solo lectura. Acá administrás los que creaste vos.</p></div>
+<div><p class="eyebrow">TU BIBLIOTECA</p><h2 id="library-title">Editar alimentos y recetas</h2><p>Los cambios del catálogo general quedan guardados solamente en tu cuenta.</p></div>
 <button aria-label="Cerrar" class="close-button" id="close-library" type="button">×</button>
 </div>
 <div class="library-toolbar">
@@ -691,6 +696,7 @@
 <div class="library-columns">
 <section><div class="library-section-title"><h3>Alimentos propios</h3><span id="library-food-count">0</span></div><div class="library-list" id="library-food-list"></div></section>
 <section><div class="library-section-title"><h3>Recetas</h3><span id="library-recipe-count">0</span></div><div class="library-list" id="library-recipe-list"></div></section>
+<section class="library-catalog-section"><div class="library-section-title"><h3>Catálogo personalizado</h3><span id="library-catalog-count">0</span></div><p class="mode-help">Alimentos generales que editaste u ocultaste. Podés restaurarlos cuando quieras.</p><div class="library-list" id="library-catalog-list"></div></section>
 </div>
 </div>
 </div>
