@@ -1048,6 +1048,7 @@
     $$('[data-diary-view]').forEach(button => button.classList.toggle("active", button.dataset.diaryView === activeDiaryView));
     $("#diary-record-view").hidden = activeDiaryView !== "record";
     $("#diary-chart-view").hidden = activeDiaryView !== "chart";
+    syncCalorieRangeButtons();
     if (activeDiaryView === "chart") requestAnimationFrame(() => drawCalorieChart(calculatePlan()));
   }
 
@@ -1055,10 +1056,24 @@
     return diaryTotals(state.diary[date] || []);
   }
 
+  function isMobileLayout() {
+    return window.matchMedia?.("(max-width: 590px)").matches ?? window.innerWidth <= 590;
+  }
+
+  function effectiveCalorieRange() {
+    return isMobileLayout() ? 7 : calorieRange;
+  }
+
+  function syncCalorieRangeButtons() {
+    const visibleRange = effectiveCalorieRange();
+    $$('[data-calorie-range]').forEach(button => button.classList.toggle("active", toNumber(button.dataset.calorieRange, 0) === visibleRange));
+  }
+
   function calorieChartDays() {
     const end = parseDate(selectedDiaryDate);
     const days = [];
-    for (let offset = calorieRange - 1; offset >= 0; offset -= 1) {
+    const visibleRange = effectiveCalorieRange();
+    for (let offset = visibleRange - 1; offset >= 0; offset -= 1) {
       const date = addDays(end, -offset);
       const iso = toISODate(date);
       const totals = diaryTotalsForDate(iso);
@@ -1119,7 +1134,10 @@
         ctx.textBaseline = "bottom";
         ctx.fillText(formatNumber(day.calories, 0), x, Math.max(12, top - 5));
       }
-      const showLabel = calorieRange <= 14 || index % Math.ceil(calorieRange / 10) === 0 || index === days.length - 1;
+      const visibleRange = effectiveCalorieRange();
+      const showLabel = isMobileLayout()
+        ? index % 2 === 0 || index === days.length - 1
+        : visibleRange <= 14 || index % Math.ceil(visibleRange / 10) === 0 || index === days.length - 1;
       if (showLabel) {
         ctx.fillStyle = "rgba(23,26,33,.62)";
         ctx.textBaseline = "top";
@@ -1705,9 +1723,14 @@
 
   function focusSelectedFoodAmount() {
     requestAnimationFrame(() => {
-      const input = activeFoodResultsSection()?.querySelector('.food-result-card.active input[name="amount"]');
-      input?.focus();
-      input?.select();
+      const section = activeFoodResultsSection();
+      const form = section?.querySelector('.food-result-card.active .food-inline-add');
+      const input = form?.querySelector('input[name="amount"]');
+      if (isMobileLayout()) form?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      window.setTimeout(() => {
+        input?.focus({ preventScroll: true });
+        input?.select();
+      }, isMobileLayout() ? 260 : 0);
     });
   }
 
@@ -3614,8 +3637,9 @@
 
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    for (let i = 0; i <= 5; i += 1) {
-      const timestamp = minDate + (maxDate - minDate) * i / 5;
+    const horizontalTicks = width < 520 ? 3 : 5;
+    for (let i = 0; i <= horizontalTicks; i += 1) {
+      const timestamp = minDate + (maxDate - minDate) * i / horizontalTicks;
       const date = new Date(timestamp);
       ctx.fillStyle = "rgba(242,239,230,.48)";
       ctx.fillText(new Intl.DateTimeFormat("es-UY", { month: "short", year: chartRange === "all" ? "2-digit" : undefined }).format(date), x(date), height - margin.bottom + 11);
@@ -3682,8 +3706,9 @@
 
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    for (let i = 0; i <= 5; i += 1) {
-      const date = new Date(minDate + (maxDate - minDate) * i / 5);
+    const horizontalTicks = width < 520 ? 3 : 5;
+    for (let i = 0; i <= horizontalTicks; i += 1) {
+      const date = new Date(minDate + (maxDate - minDate) * i / horizontalTicks);
       ctx.fillStyle = "rgba(242,239,230,.48)";
       ctx.fillText(new Intl.DateTimeFormat("es-UY", { month: "short", day: chartRange === "1m" ? "2-digit" : undefined }).format(date), x(date), height - margin.bottom + 10);
     }
@@ -3790,7 +3815,8 @@
       const tolerance = Math.max(75, target * .05);
       ctx.fillStyle = Math.abs(sample.average - target) <= tolerance ? "#c8ff46" : sample.average > target ? "#ff6b52" : "#8d7cff";
       ctx.fillRect(px - barWidth / 2, top, barWidth, y(0) - top);
-      if (samples.length <= 14 || index % Math.ceil(samples.length / 10) === 0 || index === samples.length - 1) {
+      const labelStep = width < 520 ? Math.max(2, Math.ceil(samples.length / 5)) : Math.max(1, Math.ceil(samples.length / 10));
+      if ((width < 520 ? index % labelStep === 0 : samples.length <= 14 || index % labelStep === 0) || index === samples.length - 1) {
         ctx.fillStyle = "rgba(242,239,230,.5)";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
@@ -4848,8 +4874,8 @@
     $("#change-active-meal").addEventListener("click", () => { closeFoodModal(); openMealPicker(); });
     $$("[data-diary-view]").forEach(button => button.addEventListener("click", () => switchDiaryView(button.dataset.diaryView)));
     $$("[data-calorie-range]").forEach(button => button.addEventListener("click", () => {
-      calorieRange = toNumber(button.dataset.calorieRange, 14);
-      $$("[data-calorie-range]").forEach(item => item.classList.toggle("active", item === button));
+      calorieRange = isMobileLayout() ? 7 : toNumber(button.dataset.calorieRange, 14);
+      syncCalorieRangeButtons();
       drawCalorieChart(calculatePlan());
     }));
     $("#finish-day").addEventListener("click", finishDay);
@@ -4926,6 +4952,7 @@
       if (chartPayload) renderActiveProgressChart();
     }));
     window.addEventListener("resize", debounce(() => {
+      syncCalorieRangeButtons();
       if (chartPayload && activeAppView === "progress") renderActiveProgressChart();
       if (activeDiaryView === "chart") drawCalorieChart(calculatePlan());
     }, 100));

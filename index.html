@@ -9,12 +9,12 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=23" rel="stylesheet"/>
-<link href="./css/auth.css?v=23" rel="stylesheet"/>
+<link href="./css/styles.css?v=24" rel="stylesheet"/>
+<link href="./css/auth.css?v=24" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=23"></script>
-<script defer="" src="./js/cloud.js?v=23"></script>
-<script defer="" src="./js/app.js?v=23"></script>
+<script defer="" src="./js/config.js?v=24"></script>
+<script defer="" src="./js/cloud.js?v=24"></script>
+<script defer="" src="./js/app.js?v=24"></script>
 </head>
 <body>
 
@@ -67,9 +67,9 @@
 <button class="active" data-app-view="today" type="button">Registros</button>
 <button data-app-view="progress" type="button">Progreso</button>
 </nav><div class="header-actions">
-<div class="account-area" hidden="" id="account-area"><span class="sync-status" data-status="loading" id="sync-status">Cargando…</span><span class="account-email" id="account-email"></span><button class="account-logout" id="logout-button" type="button">Salir</button></div>
-<button aria-label="Abrir configuración" class="settings-trigger" id="open-profile" type="button">
-<span aria-hidden="true">⌁</span><b>Configuración</b>
+<div class="account-area" hidden="" id="account-area"><span class="sync-status" data-status="loading" id="sync-status">Cargando…</span><span class="account-email" id="account-email"></span></div>
+<button aria-label="Abrir ajustes" class="settings-trigger" id="open-profile" type="button">
+<span aria-hidden="true">⚙</span><b>Ajustes</b>
 </button>
 </div>
 </header>
@@ -102,7 +102,7 @@
 <div class="diary-heading-actions">
 <div aria-label="Cambiar vista del registro" class="diary-view-switch">
 <button class="active" data-diary-view="record" type="button">Registro</button>
-<button data-diary-view="chart" type="button">Gráfica</button>
+<button data-diary-view="chart" type="button">Comparación</button>
 </div>
 <button class="add-intake-button" id="global-add-intake" type="button"><span>＋</span> Agregar ingesta</button>
 </div>
@@ -387,7 +387,7 @@
 </div>
 <nav aria-label="Secciones de configuración" class="settings-tabs">
 <button class="active" data-settings-tab="profile" type="button">Perfil y plan</button>
-<button data-settings-tab="weights" type="button">Datos y pesajes</button>
+<button data-settings-tab="weights" type="button">Mis datos</button>
 </nav>
 <section class="settings-view" id="settings-profile">
 <div class="profile-import-callout" hidden="" id="profile-import-callout">
@@ -481,7 +481,7 @@
 <div><span>Fecha estimada</span><b id="preview-date">—</b></div>
 </section>
 <p class="feedback" id="profile-feedback" role="status"></p>
-<div class="profile-actions settings-sticky-actions">
+<div class="profile-actions settings-sticky-actions action-pair">
 <button class="secondary-action" id="cancel-profile" type="button">Cancelar</button>
 <button class="primary-action" type="submit">Guardar cambios</button>
 </div>
@@ -520,6 +520,10 @@
 <button class="secondary-action" id="import-library" type="button">Importar biblioteca</button>
 <button class="secondary-action" id="export-library" type="button">Exportar biblioteca</button>
 </div>
+</article>
+<article class="data-tool account-data-tool" hidden id="account-settings-card">
+<span>05</span><h3>Sesión</h3><p>Cuenta conectada: <b class="settings-account-email" id="account-email-settings">—</b></p>
+<div class="data-tool-actions single-action"><button class="secondary-action account-logout" id="logout-button" type="button">Cerrar sesión</button></div>
 </article>
 </div>
 <button aria-expanded="false" class="history-manager-toggle" id="toggle-history-manager" type="button">
@@ -562,7 +566,7 @@
 <p class="food-add-feedback" hidden id="food-add-feedback" role="status"></p>
 <label class="food-search food-search-always"><span>Buscar alimentos o recetas</span><input autocomplete="off" id="food-search-input" placeholder="Ej.: arroz, huevo, café..." type="search"/></label>
 <div class="food-library-actions food-global-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button><button class="secondary-action" data-open-library type="button">Editar biblioteca</button></div>
-<p class="data-attribution">Datos alimentarios basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a> y, cuando corresponde, <a href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts contributors</a>, bajo licencia <a href="https://opendatacommons.org/licenses/odbl/1-0/" rel="noopener" target="_blank">ODbL 1.0</a>.</p>
+<p class="data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a>.</p>
 <section class="food-search-results-panel" hidden id="food-search-panel">
 <p class="mode-help">Resultados de búsqueda. Al borrar el texto volvés automáticamente a Recientes.</p>
 <div class="food-results" id="food-results"></div>
@@ -627,7 +631,7 @@
 <label><span>Proteína</span><div class="unit-input"><input min="0" name="protein" step="0.1" type="number"/><i>g</i></div></label>
 <label><span>Grasas</span><div class="unit-input"><input min="0" name="fat" step="0.1" type="number"/><i>g</i></div></label>
 <label><span>Carbohidratos</span><div class="unit-input"><input min="0" name="carbs" step="0.1" type="number"/><i>g</i></div></label>
-<div class="profile-actions full-field"><button class="secondary-action" data-close-food-editor="" type="button">Cancelar</button><button class="primary-action" id="save-food-editor" type="submit">Guardar alimento</button></div>
+<div class="profile-actions full-field action-pair"><button class="secondary-action" data-close-food-editor="" type="button">Cancelar</button><button class="primary-action" id="save-food-editor" type="submit">Guardar alimento</button></div>
 </form>
 </div>
 </div>
@@ -665,7 +669,7 @@
 <section class="recipe-search-panel">
 <label class="food-search"><span>Buscar ingrediente</span><input id="recipe-ingredient-search" placeholder="Ej.: harina, huevo, leche..." type="search"/></label>
 <div class="recipe-search-actions"><button class="secondary-action" id="create-missing-ingredient" type="button">Crear alimento nuevo</button></div>
-<p class="data-attribution recipe-data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a> · algunos datos proceden de <a href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts contributors</a> · <a href="https://opendatacommons.org/licenses/odbl/1-0/" rel="noopener" target="_blank">ODbL 1.0</a>.</p>
+<p class="data-attribution recipe-data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a>.</p>
 <div class="food-results recipe-ingredient-results" id="recipe-ingredient-results"></div>
 </section>
 <section class="recipe-selected-panel">
@@ -678,7 +682,7 @@
 <p class="form-error" hidden="" id="recipe-error"></p>
 </section>
 </div>
-<div class="profile-actions recipe-save-actions"><button class="secondary-action" data-close-recipe="" type="button">Cancelar</button><button class="primary-action" id="save-recipe" type="submit">Guardar receta</button></div>
+<div class="profile-actions recipe-save-actions action-pair"><button class="secondary-action" data-close-recipe="" type="button">Cancelar</button><button class="primary-action" id="save-recipe" type="submit">Guardar receta</button></div>
 </form>
 </div>
 </div>

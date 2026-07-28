@@ -76,3 +76,12 @@
   .settings-trigger { margin-left: auto; }
   .settings-trigger b { display: none; }
 }
+
+
+/* v24: la cuenta no ocupa la cabecera móvil; la sesión se gestiona en Ajustes. */
+@media (max-width: 590px) {
+  .site-header { flex-wrap: nowrap; padding-block: 4px; }
+  .header-actions { width: auto; justify-content: flex-end; }
+  .header-actions .account-area { display: none !important; }
+  .settings-trigger b { display: inline; }
+}

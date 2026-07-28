@@ -2657,3 +2657,165 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
     min-width: 0;
   }
 }
+
+
+/* --- MASA v24: navegación y formularios móviles más compactos --- */
+.progress-daily-panel .objective-plan-summary .signal { color: var(--ink) !important; }
+.data-tool-actions.single-action { grid-template-columns: 1fr; }
+.settings-account-email { overflow-wrap: anywhere; }
+
+@media (max-width: 590px) {
+  .site-header {
+    min-height: 48px;
+    flex-wrap: nowrap !important;
+    gap: 5px;
+    padding: 4px 0;
+  }
+  .brand { flex: 0 0 auto; }
+  .brand-mark { width: 44px; height: 32px; }
+  .brand-mark b { font-size: 19px; }
+  .brand-mark i, .brand-mark strong { font-size: 9px; }
+  .brand-name { display: none; }
+  .app-nav {
+    order: initial;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+  }
+  .app-nav button {
+    min-height: 32px;
+    padding: 0 7px;
+    font-size: 9px;
+    letter-spacing: .02em;
+  }
+  .header-actions {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    justify-content: flex-end;
+  }
+  .header-actions .account-area { display: none !important; }
+  .settings-trigger {
+    width: auto;
+    min-width: 67px;
+    min-height: 34px;
+    margin: 0;
+    gap: 4px;
+    padding: 0 7px;
+    box-shadow: 2px 2px 0 var(--violet);
+  }
+  .settings-trigger span { font-size: 16px; }
+  .settings-trigger b { display: inline; font-size: 9px; }
+  .page-shell { padding-top: 12px; }
+
+  .action-pair {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr) !important;
+    gap: 7px !important;
+  }
+  .action-pair > button { width: 100%; min-width: 0; }
+  #food-modal .food-inline-actions {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    width: 100%;
+  }
+  #food-modal .food-inline-actions button { width: 100%; min-width: 0; }
+
+  #diary-chart-view .calorie-range button:not([data-calorie-range="7"]) { display: none; }
+  #diary-chart-view .calorie-range { width: 100%; }
+  #diary-chart-view .calorie-range button[data-calorie-range="7"] { width: 100%; }
+  .calorie-chart-wrap { height: 285px; }
+  .calorie-chart-toolbar { gap: 8px; margin-top: 16px; }
+  .calorie-chart-toolbar h3 { font-size: 27px; }
+
+  #food-modal .food-browse-area .food-mode-tabs {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 0;
+  }
+  #food-modal .food-mode-tabs button,
+  #food-modal .food-mode-tabs button:last-child {
+    grid-column: auto;
+    min-height: 30px;
+    padding: 0 4px;
+    border-right: 1px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+    font-size: 8.5px;
+    white-space: nowrap;
+  }
+  #food-modal .food-mode-tabs button:nth-child(even) { border-right: 0; }
+  #food-modal .food-mode-tabs button:nth-child(n+3) { border-bottom: 0; }
+  #food-modal .food-global-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+    gap: 4px;
+  }
+  #food-modal .food-global-actions button {
+    min-height: 29px;
+    padding: 2px 3px;
+    font-size: 8px;
+    line-height: 1.05;
+    white-space: normal;
+  }
+  #food-modal .food-search-always input { min-height: 37px; }
+  #food-modal .food-sheet { padding-inline: 8px; }
+
+  #recipe-modal .recipe-sheet { overflow-y: auto; overflow-x: hidden; }
+  #recipe-modal #recipe-form { display: block; min-height: auto; overflow: visible; }
+  #recipe-modal .recipe-builder {
+    display: grid;
+    min-height: auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    overflow: visible;
+  }
+  #recipe-modal .recipe-search-panel,
+  #recipe-modal .recipe-selected-panel { min-height: 0; overflow: visible; }
+  #recipe-modal .recipe-ingredient-results {
+    flex: none;
+    min-height: 205px;
+    height: 205px;
+    max-height: 205px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    box-shadow: inset 0 -12px 13px -14px rgba(23,26,33,.85);
+  }
+  #recipe-modal .recipe-ingredient-list {
+    flex: none;
+    min-height: 215px;
+    height: 215px;
+    max-height: 215px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    box-shadow: inset 0 -12px 13px -14px rgba(23,26,33,.85);
+  }
+  #recipe-modal .recipe-save-actions { position: sticky; bottom: -5px; }
+
+  .site-footer {
+    grid-template-columns: auto minmax(0,1fr);
+    gap: 5px 9px;
+    padding: 11px 0 14px;
+    align-items: center;
+  }
+  .site-footer > span { font-size: 10px; }
+  .site-footer p { font-size: 8px; line-height: 1.25; }
+  .footer-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 6px;
+    width: 100%;
+    text-align: center;
+  }
+  .footer-actions > * { min-width: 0; font-size: 7.5px; line-height: 1.2; }
+  .footer-about-button { padding-inline: 2px; }
+}
+
+/* Las listas con pocos resultados no estiran sus tarjetas para llenar el panel. */
+#food-modal .food-results,
+#recipe-modal .food-results {
+  align-content: start;
+  grid-auto-rows: max-content;
+}
