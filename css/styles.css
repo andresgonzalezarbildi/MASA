@@ -2037,3 +2037,248 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
     min-width: 0;
   }
 }
+
+/* --- MASA v20: barras compactas, accesos visibles y carga de comidas más aprovechada --- */
+.settings-tabs {
+  --settings-sheet-side: clamp(20px, 3vw, 38px);
+  isolation: isolate;
+  transition: margin .18s ease, box-shadow .18s ease;
+}
+.settings-tabs::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -18px;
+  right: calc(var(--settings-sheet-side) * -1);
+  bottom: -9px;
+  left: calc(var(--settings-sheet-side) * -1);
+  pointer-events: none;
+  background: var(--paper);
+  border-bottom: 1px solid rgba(23,26,33,.18);
+}
+.settings-tabs button {
+  transition: min-height .18s ease, padding .18s ease, font-size .18s ease;
+}
+.settings-sheet.is-scrolled .settings-tabs {
+  margin-top: 0;
+  box-shadow: 0 5px 10px rgba(23,26,33,.11);
+}
+.settings-sheet.is-scrolled .settings-tabs button {
+  min-height: 32px;
+  padding-block: 3px;
+  font-size: 10px;
+}
+
+/* El resumen, el pesaje registrado y los accesos forman una sola columna visible. */
+@media (min-width: 860px) {
+  .diary-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 310px);
+    gap: 20px;
+  }
+  .records-sidebar {
+    position: sticky;
+    top: 86px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+    width: auto;
+    max-height: calc(100dvh - 98px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 5px 5px 0;
+    scrollbar-width: thin;
+  }
+  .records-sidebar .diary-summary {
+    position: static;
+    display: block;
+    padding: 14px 15px;
+    box-shadow: 5px 5px 0 var(--coral);
+  }
+  .records-sidebar .diary-total strong {
+    font-size: clamp(46px, 4.4vw, 61px);
+    line-height: .9;
+  }
+  .records-sidebar .diary-total span,
+  .records-sidebar .diary-total small { font-size: 8px; }
+  .records-sidebar .diary-progress {
+    margin: 10px 0;
+  }
+  .records-sidebar .diary-progress > div {
+    padding: 7px 0;
+  }
+  .records-sidebar .finish-day-button { min-height: 40px; }
+  .records-sidebar .finish-day-note {
+    margin: 7px 0 0;
+    font-size: 8px;
+    line-height: 1.25;
+  }
+  .records-sidebar .record-weight-card.compact-recorded-weight {
+    margin: 0;
+  }
+  .records-sidebar .diary-quick-tools {
+    position: sticky;
+    bottom: -5px;
+    z-index: 4;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+    padding: 7px 0 2px;
+    background: var(--paper);
+    box-shadow: 0 -8px 12px rgba(242,239,230,.94);
+  }
+  .records-sidebar .diary-quick-tools button {
+    min-width: 0;
+    min-height: 36px;
+    padding-inline: 7px;
+    font-size: 10px;
+    line-height: 1.15;
+  }
+}
+
+.record-weight-card.compact-recorded-weight .today-weight-recorded {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.record-weight-card.compact-recorded-weight .today-weight-recorded > div:first-child {
+  min-width: 0;
+}
+.record-weight-card.compact-recorded-weight .recorded-weight-actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* La cabecera de agregar comida ocupa solamente lo necesario. */
+#food-modal .food-sheet {
+  padding: 12px 14px 11px;
+}
+#food-modal .settings-header {
+  min-height: 0;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 7px;
+}
+#food-modal .settings-header > div:first-child {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 9px;
+  align-items: center;
+  min-width: 0;
+}
+#food-modal .settings-header .eyebrow { display: none; }
+#food-modal .settings-header h2 {
+  grid-column: 1;
+  margin: 0;
+  font-size: clamp(23px, 2.7vw, 31px);
+  line-height: .95;
+}
+#food-modal #food-meal-label {
+  grid-column: 1;
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 9px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#food-modal .change-meal-button {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+#food-modal .close-button {
+  width: 36px;
+  height: 36px;
+  font-size: 24px;
+}
+#food-modal .food-search-always {
+  margin-top: 7px;
+  gap: 3px;
+}
+#food-modal .food-search-always input { min-height: 41px; }
+#food-modal .food-global-actions {
+  gap: 6px;
+  margin: 6px 0 3px;
+}
+#food-modal .food-global-actions button {
+  min-height: 34px;
+  padding-inline: 8px;
+  font-size: 10px;
+}
+#food-modal > .food-sheet > .data-attribution {
+  margin: 1px 0 4px;
+  font-size: 8px;
+  line-height: 1.25;
+}
+#food-modal .food-browse-area .food-mode-tabs {
+  margin: 7px 0;
+}
+#food-modal .food-mode-tabs button { min-height: 36px; }
+#food-modal .food-search-results-panel .mode-help,
+#food-modal .food-mode .mode-help {
+  margin: 3px 0 5px;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+@media (max-width: 720px) {
+  .settings-tabs { --settings-sheet-side: 13px; }
+  .settings-tabs::before { top: -18px; }
+  #food-modal .food-sheet { padding: 9px 10px; }
+  #food-modal .settings-header h2 { font-size: 22px; }
+  #food-modal .change-meal-button { padding-inline: 7px; }
+}
+
+@media (max-height: 650px) and (min-width: 860px) {
+  .records-sidebar .finish-day-note { display: none; }
+  .records-sidebar .diary-progress > div { padding: 5px 0; }
+  .records-sidebar .diary-total strong { font-size: 43px; }
+}
+
+/* En zoom alto o pantallas angostas, los controles pasan antes de las comidas. */
+@media (max-width: 859px) {
+  .records-sidebar {
+    order: -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    width: 100%;
+  }
+  .records-sidebar .diary-summary {
+    position: static;
+    padding: 14px;
+  }
+  .records-sidebar .diary-total strong { font-size: 48px; }
+  .records-sidebar .diary-progress { margin: 10px 0; }
+  .records-sidebar .diary-progress > div { padding: 7px 0; }
+  .records-sidebar .finish-day-button { min-height: 42px; }
+  .records-sidebar .finish-day-note { margin-top: 7px; font-size: 9px; }
+  .records-sidebar .record-weight-card.compact-recorded-weight { margin: 0; }
+  .records-sidebar .diary-quick-tools {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+  }
+  .records-sidebar .diary-quick-tools button {
+    min-width: 0;
+    min-height: 38px;
+    padding-inline: 7px;
+    font-size: 10px;
+  }
+}
+@media (max-width: 470px) {
+  .records-sidebar .diary-quick-tools { grid-template-columns: 1fr; }
+}
+@media (min-width: 471px) and (max-width: 859px) {
+  .records-sidebar .diary-summary {
+    display: grid;
+    grid-template-columns: minmax(135px, .38fr) minmax(0, 1fr);
+    gap: 10px 16px;
+    align-items: center;
+  }
+  .records-sidebar .diary-progress { margin: 0; }
+  .records-sidebar .finish-day-button,
+  .records-sidebar .finish-day-note { grid-column: 1 / -1; }
+}

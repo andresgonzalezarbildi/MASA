@@ -3782,6 +3782,12 @@
     });
   }
 
+  function updateSettingsScrollState() {
+    const sheet = document.querySelector(".settings-sheet");
+    if (!sheet) return;
+    sheet.classList.toggle("is-scrolled", sheet.scrollTop > 110);
+  }
+
   function openSettings(required = false, tab = "profile") {
     settingsRequired = required || !state.configured;
     fillProfileForm();
@@ -3791,6 +3797,7 @@
     document.body.classList.add("modal-open");
     switchSettingsTab(tab);
     updateProfilePreview();
+    requestAnimationFrame(updateSettingsScrollState);
   }
 
   function closeSettings() {
@@ -4676,6 +4683,7 @@
     $("#cancel-profile").addEventListener("click", closeSettings);
     $$('[data-close-settings]').forEach(element => element.addEventListener("click", closeSettings));
     $$('[data-settings-tab]').forEach(button => button.addEventListener("click", () => switchSettingsTab(button.dataset.settingsTab)));
+    document.querySelector(".settings-sheet")?.addEventListener("scroll", updateSettingsScrollState, { passive: true });
     $("#profile-form").addEventListener("submit", saveProfile);
     $("#profile-form").addEventListener("input", updateProfilePreview);
     $("#profile-form").addEventListener("change", updateProfilePreview);
