@@ -21,6 +21,7 @@
   let activeFoodSelection = null;
   let foodSearchTimer = null;
   let recipeSearchTimer = null;
+  let libraryCatalogSearchTimer = null;
   let activeRecipeIngredientSelection = null;
   let recipeDraftIngredients = [];
   let editingFoodId = null;
@@ -1649,7 +1650,12 @@
     if (context === "recent" && stats.lastUsed) usageDetail = ` · Último: ${formatDate(stats.lastUsed)}`;
     if (context === "frequent") usageDetail = ` · ${stats.uses} ${stats.uses === 1 ? "consumo" : "consumos"}`;
 
-    button.innerHTML = `<div><b>${escapeHTML(item.name)}</b><small>${escapeHTML(recipeDetail)} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}${escapeHTML(usageDetail)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span>`;
+    const originBadge = item.kind === "food"
+      ? '<span class="food-origin-badge food-origin-own">Propio</span>'
+      : item.kind === "external" && item.userOverride
+        ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
+        : "";
+    button.innerHTML = `<div><div class="food-result-name"><b>${escapeHTML(item.name)}</b>${originBadge}</div><small>${escapeHTML(recipeDetail)} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}${escapeHTML(usageDetail)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span>`;
     wrapper.appendChild(button);
 
     if (!selected) return wrapper;
@@ -1886,6 +1892,78 @@
     updateModalBodyState();
   }
 
+  function searchEntireCatalog(query, limit = 40) {
+    const normalizedQuery = normalizeHeader(query || "");
+    if (!normalizedQuery) return [];
+    const starts = [];
+    const contains = [];
+
+    for (const base of externalFoodCatalog) {
+      const item = effectiveCatalogFood(base, state.catalogOverrides?.[base.id]);
+      const nameText = normalizeHeader(item.name);
+      const searchText = `${foodSearchText(item)} ${foodSearchText(base)}`;
+      if (!searchText.includes(normalizedQuery)) continue;
+      const target = nameText.startsWith(normalizedQuery) ? starts : contains;
+      if (target.length < limit) target.push(item);
+      if (starts.length >= limit && contains.length >= limit) break;
+    }
+
+    return [...starts, ...contains].slice(0, limit);
+  }
+
+  function libraryCatalogSearchCard(item) {
+    const article = document.createElement("article");
+    const override = state.catalogOverrides?.[item.id];
+    const status = override?.hidden ? "Oculto" : override ? "Editado" : "Catálogo general";
+    article.className = `library-item library-catalog-search-item${override?.hidden ? " catalog-hidden" : ""}`;
+    article.innerHTML = `
+      <div><div class="library-item-title"><b>${escapeHTML(item.name)}</b>${override ? '<span class="food-origin-badge food-origin-edited">Editado</span>' : ""}</div><small>${escapeHTML(status)} · ${escapeHTML(item.serving)} · ${formatNumber(Math.round(item.calories))} kcal</small></div>
+      <div class="library-item-actions"><button class="text-action" data-edit-library="${escapeHTML(item.id)}" data-library-kind="external" type="button">Editar</button></div>`;
+    return article;
+  }
+
+  function renderLibraryCatalogSearchResults() {
+    const panel = $("#library-catalog-search-panel");
+    const input = $("#library-catalog-search-input");
+    const container = $("#library-catalog-search-results");
+    if (!panel || !input || !container || panel.hidden) return;
+    const query = input.value.trim();
+    container.innerHTML = "";
+    if (!query) {
+      container.innerHTML = '<p class="empty-message">Escribí un nombre para buscar en toda la base.</p>';
+      return;
+    }
+    if (externalFoodsStatus === "loading") {
+      container.innerHTML = '<p class="empty-message">Cargando catálogo de alimentos…</p>';
+      return;
+    }
+    const results = searchEntireCatalog(query);
+    if (!results.length) {
+      container.innerHTML = '<p class="empty-message">No se encontraron alimentos con ese nombre.</p>';
+      return;
+    }
+    results.forEach(item => container.appendChild(libraryCatalogSearchCard(item)));
+  }
+
+  function queueLibraryCatalogSearch() {
+    clearTimeout(libraryCatalogSearchTimer);
+    libraryCatalogSearchTimer = setTimeout(renderLibraryCatalogSearchResults, 120);
+  }
+
+  function toggleLibraryCatalogSearch() {
+    const panel = $("#library-catalog-search-panel");
+    const button = $("#library-search-catalog");
+    const input = $("#library-catalog-search-input");
+    const opening = panel.hidden;
+    panel.hidden = !opening;
+    button.setAttribute("aria-expanded", String(opening));
+    button.textContent = opening ? "Cerrar búsqueda" : "Buscar alimento de la base";
+    if (opening) {
+      renderLibraryCatalogSearchResults();
+      requestAnimationFrame(() => input.focus());
+    }
+  }
+
   function libraryItemCard(item, options = {}) {
     const article = document.createElement("article");
     article.className = "library-item";
@@ -1936,6 +2014,7 @@
       .filter(row => row.item)
       .sort((a,b) => a.item.name.localeCompare(b.item.name, "es"))
       .forEach(row => catalogList.appendChild(libraryItemCard(row.item, { catalog: true, override: row.override })));
+    renderLibraryCatalogSearchResults();
   }
 
   function handleLibraryClick(event) {
@@ -2299,7 +2378,12 @@
     button.className = "food-result";
     button.dataset.selectRecipeIngredient = item.id;
     button.dataset.foodKind = item.kind;
-    button.innerHTML = `<div><b>${escapeHTML(item.name)}</b><small>${escapeHTML(item.serving)} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span>`;
+    const originBadge = item.kind === "food"
+      ? '<span class="food-origin-badge food-origin-own">Propio</span>'
+      : item.kind === "external" && item.userOverride
+        ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
+        : "";
+    button.innerHTML = `<div><div class="food-result-name"><b>${escapeHTML(item.name)}</b>${originBadge}</div><small>${escapeHTML(item.serving)} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span>`;
     wrapper.appendChild(button);
     if (!selected) return wrapper;
 
@@ -4787,6 +4871,9 @@
     $("#library-food-list").addEventListener("click", handleLibraryClick);
     $("#library-recipe-list").addEventListener("click", handleLibraryClick);
     $("#library-catalog-list").addEventListener("click", handleLibraryClick);
+    $("#library-catalog-search-results").addEventListener("click", handleLibraryClick);
+    $("#library-search-catalog").addEventListener("click", toggleLibraryCatalogSearch);
+    $("#library-catalog-search-input").addEventListener("input", queueLibraryCatalogSearch);
     $("#library-new-food").addEventListener("click", () => openFoodEditor({ returnTarget: "library" }));
     $("#library-new-recipe").addEventListener("click", () => openRecipeEditor({ returnTarget: "library" }));
     $("#library-import").addEventListener("click", () => openImport("library"));

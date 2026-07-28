@@ -9,12 +9,12 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=21" rel="stylesheet"/>
-<link href="./css/auth.css?v=21" rel="stylesheet"/>
+<link href="./css/styles.css?v=22" rel="stylesheet"/>
+<link href="./css/auth.css?v=22" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=21"></script>
-<script defer="" src="./js/cloud.js?v=21"></script>
-<script defer="" src="./js/app.js?v=21"></script>
+<script defer="" src="./js/config.js?v=22"></script>
+<script defer="" src="./js/cloud.js?v=22"></script>
+<script defer="" src="./js/app.js?v=22"></script>
 </head>
 <body>
 
@@ -696,7 +696,15 @@
 <div class="library-columns">
 <section><div class="library-section-title"><h3>Alimentos propios</h3><span id="library-food-count">0</span></div><div class="library-list" id="library-food-list"></div></section>
 <section><div class="library-section-title"><h3>Recetas</h3><span id="library-recipe-count">0</span></div><div class="library-list" id="library-recipe-list"></div></section>
-<section class="library-catalog-section"><div class="library-section-title"><h3>Catálogo personalizado</h3><span id="library-catalog-count">0</span></div><p class="mode-help">Alimentos generales que editaste u ocultaste. Podés restaurarlos cuando quieras.</p><div class="library-list" id="library-catalog-list"></div></section>
+<section class="library-catalog-section">
+<div class="library-section-title"><div><h3>Catálogo personalizado</h3><span id="library-catalog-count">0</span></div><button aria-expanded="false" class="secondary-action" id="library-search-catalog" type="button">Buscar alimento de la base</button></div>
+<p class="mode-help">Alimentos generales que editaste u ocultaste. Podés restaurarlos cuando quieras.</p>
+<div class="library-catalog-search-panel" hidden id="library-catalog-search-panel">
+<label class="food-search"><span>Buscar cualquier alimento para editar</span><input autocomplete="off" id="library-catalog-search-input" placeholder="Ej.: arroz, huevo, yogur..." type="search"/></label>
+<div class="library-list library-catalog-search-results" id="library-catalog-search-results"></div>
+</div>
+<div class="library-list" id="library-catalog-list"></div>
+</section>
 </div>
 </div>
 </div>

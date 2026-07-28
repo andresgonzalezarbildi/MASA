@@ -2472,3 +2472,99 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .library-item-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
   .library-item-actions button { width: 100%; min-width: 0; }
 }
+
+
+/* --- MASA v22: barra inferior al borde e identificación del catálogo --- */
+.settings-sheet {
+  padding-bottom: 0;
+}
+.settings-sticky-actions {
+  bottom: 0;
+  margin-bottom: 0;
+  padding-bottom: 10px;
+}
+.settings-sheet.is-scrolled .settings-sticky-actions {
+  padding-bottom: 6px;
+}
+#settings-weights {
+  padding-bottom: var(--settings-sheet-side);
+}
+
+.food-result-name,
+.library-item-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.food-origin-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 2px 6px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.food-origin-own { background: var(--acid); }
+.food-origin-edited { background: var(--yellow); }
+
+.library-catalog-section > .library-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.library-catalog-section > .library-section-title > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.library-catalog-section > .library-section-title h3 { margin: 0; }
+#library-search-catalog {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: none;
+  font-size: 10px;
+  font-weight: 900;
+}
+#library-search-catalog:hover { background: var(--paper-2); }
+.library-catalog-search-panel {
+  margin-top: 12px;
+  padding: 11px;
+  border: 1px solid var(--ink);
+  background: rgba(255,255,255,.45);
+}
+.library-catalog-search-panel .food-search { gap: 4px; }
+.library-catalog-search-panel input {
+  min-height: 40px;
+  height: 40px;
+}
+.library-catalog-search-results {
+  max-height: 330px;
+  margin-top: 8px;
+}
+.library-catalog-search-item .library-item-actions {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 720px) {
+  .library-catalog-section > .library-section-title {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  #library-search-catalog { width: 100%; }
+}
