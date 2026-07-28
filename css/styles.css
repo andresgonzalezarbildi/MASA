@@ -2862,3 +2862,30 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
     font-size: 8px;
   }
 }
+
+/* --- MASA v25.1: lector de códigos de barras --- */
+.barcode-sheet { width: min(720px, calc(100% - 20px)); }
+.barcode-camera { position: relative; min-height: 300px; margin-top: 18px; overflow: hidden; border: 2px solid var(--ink); background: var(--night); }
+.barcode-camera video { width: 100%; height: min(48vh, 430px); display: block; object-fit: cover; }
+.barcode-guide { position: absolute; left: 10%; right: 10%; top: 50%; height: 34%; transform: translateY(-50%); border: 3px solid var(--acid); box-shadow: 0 0 0 999px rgba(8,10,14,.28); pointer-events: none; }
+.barcode-guide::after { content: ""; position: absolute; left: 7%; right: 7%; top: 50%; border-top: 2px solid var(--coral); }
+.barcode-status { margin: 12px 0 0; padding: 10px 12px; border-left: 5px solid var(--violet); background: rgba(141,124,255,.1); font-size: 12px; font-weight: 800; }
+.barcode-status.error { border-color: var(--coral); background: rgba(255,107,82,.14); }
+.barcode-status.success { border-color: var(--acid); }
+.barcode-status.loading { border-color: var(--yellow); }
+.barcode-tools { display: flex; justify-content: flex-end; margin-top: 8px; }
+.barcode-tools button { min-height: 36px; }
+.barcode-manual-form { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: end; margin-top: 14px; }
+.barcode-manual-form label { display: grid; gap: 6px; }
+.barcode-manual-form label > span { font-size: 10px; font-weight: 900; text-transform: uppercase; }
+.food-global-actions { flex-wrap: wrap; }
+.food-origin-badge.food-origin-own { white-space: nowrap; }
+@media (max-width: 720px) {
+  .food-global-actions { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .barcode-sheet { max-height: calc(100dvh - 12px); padding: 16px 12px; }
+  .barcode-camera { min-height: 220px; }
+  .barcode-camera video { height: 38vh; }
+  .barcode-manual-form { grid-template-columns: 1fr; }
+  .barcode-manual-form button { width: 100%; }
+  #recipe-modal .recipe-search-actions { display: grid; grid-template-columns: 1fr 1fr; }
+}

@@ -16,6 +16,8 @@ Partes de OpenNutrition Foods incorporan información de **Open Food Facts**. Cu
 
 La base derivada incluida en este proyecto se distribuye manteniendo la atribución y las condiciones aplicables de la fuente original.
 
+Además del catálogo incluido, el lector de códigos consulta en tiempo real la API pública de **Open Food Facts**. Los productos importados conservan el código, la fuente y el enlace al registro original para facilitar su revisión.
+
 ## Limitaciones
 
 Los valores nutricionales son estimaciones y pueden variar según la marca, el método de preparación y la porción real. M.A.S.A. utiliza estos datos como referencia para estimar el consumo energético y recalibrar el modelo de evolución del peso. No constituyen información clínica ni sustituyen el etiquetado del producto o una evaluación profesional individual.

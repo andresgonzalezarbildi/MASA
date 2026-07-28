@@ -10,6 +10,7 @@
     "../data/opennutrition-es-general.json",
     document.currentScript?.src || window.location.href
   ).href;
+  const OPEN_FOOD_FACTS_PRODUCT_URL = "https://world.openfoodfacts.org/api/v2/product";
 
   let externalFoodCatalog = [];
   let externalFoodCatalogById = new Map();
@@ -18,6 +19,7 @@
   let externalFoodSearchIndex = [];
   let externalFoodsStatus = "idle";
   let externalFoodsError = "";
+  let externalFoodsLoadPromise = null;
   let activeFoodSelection = null;
   let foodSearchTimer = null;
   let recipeSearchTimer = null;
@@ -30,6 +32,11 @@
   let foodEditorReturnTarget = "";
   let recipeEditorReturnTarget = "";
   let libraryReturnTarget = "";
+  let foodEditorPrefill = null;
+  let barcodeReader = null;
+  let barcodeScannerControls = null;
+  let barcodeReturnTarget = "food";
+  let barcodeLookupBusy = false;
 
   const DEFAULT_PROFILE = {
     name: "",
@@ -320,6 +327,22 @@
     return result;
   }
 
+  function normalizeBarcode(value) {
+    return String(value || "").replace(/\D/g, "");
+  }
+
+  function validBarcode(value) {
+    const code = normalizeBarcode(value);
+    if (![8, 12, 13, 14].includes(code.length)) return false;
+    const digits = [...code].map(Number);
+    const check = digits.pop();
+    let sum = 0;
+    for (let index = digits.length - 1, position = 0; index >= 0; index--, position++) {
+      sum += digits[index] * (position % 2 === 0 ? 3 : 1);
+    }
+    return (10 - (sum % 10)) % 10 === check;
+  }
+
   function normalizeState(raw = {}) {
     const input = Array.isArray(raw) ? { weighIns: raw } : raw;
     const weighIns = Array.isArray(input.weighIns)
@@ -407,6 +430,12 @@
       id: item.id || createId(),
       name,
       calories,
+      barcode: normalizeBarcode(item.barcode || item.code),
+      brand: String(item.brand || item.brands || "").trim(),
+      source: String(item.source || "").trim(),
+      sourceUrl: String(item.sourceUrl || "").trim(),
+      sourceImportedAt: normalizeTimestamp(item.sourceImportedAt),
+      imageUrl: String(item.imageUrl || "").trim(),
       protein: Math.max(0, toNumber(item.protein, 0)),
       fat: Math.max(0, toNumber(item.fat, 0)),
       carbs: Math.max(0, toNumber(item.carbs, 0)),
@@ -457,7 +486,9 @@
       catalogId: String(item.id || ""),
       name,
       aliases,
-      sourceName: String(item.sourceName || "").trim(),
+      barcode: normalizeBarcode(item.barcode || item.code),
+      brand: String(item.brand || item.brands || "").trim(),
+      sourceName: String(item.sourceName || item.brand || item.brands || "").trim(),
       metricQuantity,
       commonQuantity,
       commonUnit,
@@ -1223,6 +1254,175 @@
     return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
   }
 
+  function setBarcodeStatus(message, type = "") {
+    const status = $("#barcode-status");
+    if (!status) return;
+    status.textContent = message;
+    status.className = `barcode-status${type ? ` ${type}` : ""}`;
+  }
+
+  function stopBarcodeScanner() {
+    try { barcodeScannerControls?.stop?.(); } catch (_) {}
+    barcodeScannerControls = null;
+    try { barcodeReader?.reset?.(); } catch (_) {}
+    barcodeReader = null;
+    const video = $("#barcode-video");
+    const stream = video?.srcObject;
+    if (stream?.getTracks) stream.getTracks().forEach(track => track.stop());
+    if (video) video.srcObject = null;
+  }
+
+  async function startBarcodeScanner() {
+    stopBarcodeScanner();
+    const video = $("#barcode-video");
+    if (!video) return;
+    if (!window.ZXingBrowser?.BrowserMultiFormatReader) {
+      setBarcodeStatus("No se pudo cargar el lector. Podés ingresar el código manualmente.", "error");
+      return;
+    }
+    setBarcodeStatus("Apuntá al código de barras y mantené el envase quieto.");
+    try {
+      barcodeReader = new window.ZXingBrowser.BrowserMultiFormatReader();
+      barcodeScannerControls = await barcodeReader.decodeFromConstraints(
+        { audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+        video,
+        result => {
+          if (!result || barcodeLookupBusy) return;
+          const code = normalizeBarcode(result.getText?.() || result.text || "");
+          if (!validBarcode(code)) return;
+          stopBarcodeScanner();
+          lookupBarcode(code);
+        }
+      );
+      $("#barcode-torch").hidden = typeof barcodeScannerControls?.switchTorch !== "function";
+    } catch (error) {
+      console.warn("No se pudo iniciar la cámara:", error);
+      const denied = error?.name === "NotAllowedError";
+      setBarcodeStatus(denied ? "No se concedió acceso a la cámara. Ingresá el código manualmente." : "No se pudo abrir la cámara. Ingresá el código manualmente.", "error");
+    }
+  }
+
+  function openBarcodeScanner(target = "food") {
+    barcodeReturnTarget = target === "recipe" ? "recipe" : "food";
+    if (barcodeReturnTarget === "recipe") $("#recipe-modal").hidden = true;
+    else $("#food-modal").hidden = true;
+    $("#barcode-modal").hidden = false;
+    $("#barcode-manual-form").reset();
+    $("#barcode-torch").hidden = true;
+    document.body.classList.add("modal-open");
+    startBarcodeScanner();
+  }
+
+  function closeBarcodeScanner(restore = true) {
+    stopBarcodeScanner();
+    $("#barcode-modal").hidden = true;
+    if (restore) {
+      if (barcodeReturnTarget === "recipe") $("#recipe-modal").hidden = false;
+      else $("#food-modal").hidden = false;
+    }
+    updateModalBodyState();
+  }
+
+  function showBarcodeMatch(item) {
+    const target = barcodeReturnTarget;
+    closeBarcodeScanner(false);
+    if (target === "recipe") {
+      $("#recipe-modal").hidden = false;
+      $("#recipe-ingredient-search").value = item.name;
+      activeRecipeIngredientSelection = { id: item.id, kind: item.kind };
+      renderRecipeIngredientResults();
+    } else {
+      $("#food-modal").hidden = false;
+      $("#food-search-input").value = item.name;
+      updateFoodSearchDisplay();
+      activeFoodSelection = { id: item.id, kind: item.kind };
+      renderFoodResults();
+      focusSelectedFoodAmount();
+    }
+    updateModalBodyState();
+  }
+
+  function openScannedFoodEditor(prefill, note) {
+    const target = barcodeReturnTarget;
+    closeBarcodeScanner(false);
+    openFoodEditor({ returnTarget: target, prefillFood: prefill, sourceNote: note });
+  }
+
+  function openFoodFactsProduct(product, code) {
+    const nutriments = product?.nutriments || {};
+    let calories = toNumber(nutriments["energy-kcal_100g"], NaN);
+    if (!Number.isFinite(calories)) {
+      const energyKj = toNumber(nutriments["energy-kj_100g"] ?? nutriments.energy_100g, NaN);
+      if (Number.isFinite(energyKj)) calories = energyKj / 4.184;
+    }
+    const protein = toNumber(nutriments.proteins_100g, NaN);
+    const fat = toNumber(nutriments.fat_100g, NaN);
+    const carbs = toNumber(nutriments.carbohydrates_100g, NaN);
+    const name = String(product.product_name_es || product.product_name || product.generic_name_es || product.generic_name || "").trim();
+    const complete = Boolean(name) && [calories, protein, fat, carbs].every(Number.isFinite);
+    openScannedFoodEditor({
+      name,
+      barcode: code,
+      brand: String(product.brands || "").trim(),
+      calories: Number.isFinite(calories) ? calories : "",
+      protein: Number.isFinite(protein) ? protein : "",
+      fat: Number.isFinite(fat) ? fat : "",
+      carbs: Number.isFinite(carbs) ? carbs : "",
+      serving: "100 g",
+      servingAmount: 100,
+      servingUnit: "g",
+      source: "openfoodfacts",
+      sourceUrl: `https://world.openfoodfacts.org/product/${code}`,
+      sourceImportedAt: new Date().toISOString(),
+      imageUrl: String(product.image_front_small_url || product.image_front_url || "")
+    }, complete
+      ? "Producto encontrado en Open Food Facts. Revisá los datos antes de guardarlo."
+      : "El producto existe, pero faltan datos. Completá lo que figure en la etiqueta antes de guardarlo.");
+  }
+
+  async function lookupBarcode(value) {
+    if (barcodeLookupBusy) return;
+    const code = normalizeBarcode(value);
+    if (!validBarcode(code)) {
+      setBarcodeStatus("El código debe ser un EAN/UPC válido de 8, 12, 13 o 14 dígitos.", "error");
+      return;
+    }
+    let existing = findFoodByBarcode(code);
+    if (!existing && externalFoodsStatus === "loading" && externalFoodsLoadPromise) {
+      try { await externalFoodsLoadPromise; } catch (_) {}
+      existing = findFoodByBarcode(code);
+    }
+    if (existing) {
+      setBarcodeStatus("Producto encontrado en tu biblioteca.", "success");
+      showBarcodeMatch(existing);
+      return;
+    }
+    barcodeLookupBusy = true;
+    setBarcodeStatus(`Buscando ${code} en Open Food Facts…`, "loading");
+    try {
+      const fields = ["code","product_name","product_name_es","generic_name","generic_name_es","brands","quantity","serving_size","nutriments","image_front_small_url","image_front_url"].join(",");
+      const url = `${OPEN_FOOD_FACTS_PRODUCT_URL}/${encodeURIComponent(code)}?fields=${encodeURIComponent(fields)}&lc=es&cc=uy`;
+      const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (data.status === 1 && data.product) openFoodFactsProduct(data.product, code);
+      else openScannedFoodEditor({ barcode: code, servingAmount: 100, servingUnit: "g", serving: "100 g" }, "Ese código no está en Open Food Facts. Podés cargar los datos desde la etiqueta y guardarlo en tu biblioteca.");
+    } catch (error) {
+      console.warn("No se pudo consultar Open Food Facts:", error);
+      openScannedFoodEditor(
+        { barcode: code, servingAmount: 100, servingUnit: "g", serving: "100 g" },
+        "No se pudo consultar Open Food Facts. Completá los datos desde la etiqueta; el código quedará guardado para reconocerlo la próxima vez."
+      );
+    } finally {
+      barcodeLookupBusy = false;
+    }
+  }
+
+  function submitManualBarcode(event) {
+    event.preventDefault();
+    lookupBarcode(event.currentTarget.elements.barcode.value);
+  }
+
   function openFoodModal(meal) {
     activeMeal = meal;
     activeFoodMode = "recent";
@@ -1247,7 +1447,7 @@
   function updateModalBodyState() {
     const modalIds = [
       "food-modal", "food-editor-modal", "recipe-modal", "library-modal",
-      "settings-modal", "meal-picker-modal", "daily-checkin-modal", "confirm-modal", "tips-modal", "about-modal"
+      "settings-modal", "meal-picker-modal", "daily-checkin-modal", "confirm-modal", "tips-modal", "about-modal", "barcode-modal"
     ];
     document.body.classList.toggle("modal-open", modalIds.some(modalIsOpen));
   }
@@ -1355,9 +1555,19 @@
       || null;
   }
 
+  function findFoodByBarcode(value) {
+    const barcode = normalizeBarcode(value);
+    if (!barcode) return null;
+    return state.foods.find(item => normalizeBarcode(item.barcode) === barcode)
+      || externalFoods.find(item => normalizeBarcode(item.barcode) === barcode)
+      || null;
+  }
+
   function foodSearchText(item) {
     return normalizeHeader([
       item.name,
+      item.brand,
+      item.barcode,
       ...(Array.isArray(item.aliases) ? item.aliases : []),
       item.sourceName
     ].filter(Boolean).join(" "));
@@ -1675,7 +1885,7 @@
     if (context === "frequent") usageDetail = ` · ${stats.uses} ${stats.uses === 1 ? "consumo" : "consumos"}`;
 
     const originBadge = item.kind === "food"
-      ? '<span class="food-origin-badge food-origin-own">Propio</span>'
+      ? `<span class="food-origin-badge food-origin-own">${item.source === "openfoodfacts" ? "Escaneado" : "Propio"}</span>`
       : item.kind === "external" && item.userOverride
         ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
         : "";
@@ -2108,34 +2318,44 @@
     if (options instanceof Event) options = {};
     editingFoodId = options.editId || null;
     editingCatalogFoodId = options.catalogId || null;
+    foodEditorPrefill = options.prefillFood ? clone(options.prefillFood) : null;
     foodEditorReturnTarget = options.returnTarget || (modalIsOpen("library-modal") ? "library" : "food");
     const form = $("#food-editor-form");
     form.reset();
+    $("#food-editor-error").hidden = true;
     const item = editingCatalogFoodId
       ? catalogFoodForEditing(editingCatalogFoodId)
       : editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
+    const displayItem = item || foodEditorPrefill;
 
-    $("#food-editor-title").textContent = item ? "Editar alimento" : "Nuevo alimento";
+    $("#food-editor-title").textContent = item ? "Editar alimento" : foodEditorPrefill ? "Revisar alimento escaneado" : "Nuevo alimento";
     $("#food-editor-description").textContent = editingCatalogFoodId
       ? "Los cambios quedan solamente en tu cuenta."
       : item ? "Los cambios también recalculan las recetas que usan este alimento."
-      : "Guardalo una vez y reutilizalo en registros y recetas.";
+      : foodEditorPrefill ? "Revisá los datos antes de incorporarlo a tu biblioteca." : "Guardalo una vez y reutilizalo en registros y recetas.";
     $("#save-food-editor").textContent = item ? "Guardar cambios" : "Guardar alimento";
+    const sourceNote = $("#food-editor-source-note");
+    sourceNote.hidden = !options.sourceNote;
+    sourceNote.textContent = options.sourceNote || "";
 
-    if (item) {
-      const parsed = parseServingDefinition(item.serving);
-      form.elements.name.value = item.name;
-      form.elements.calories.value = roundEditorNumber(item.calories, 0);
-      form.elements.servingAmount.value = roundEditorNumber(item.servingAmount || item.metricQuantity || parsed.baseAmount, 2);
+    if (displayItem) {
+      const parsed = parseServingDefinition(displayItem.serving);
+      form.elements.name.value = displayItem.name || "";
+      form.elements.barcode.value = normalizeBarcode(displayItem.barcode);
+      form.elements.brand.value = displayItem.brand || "";
+      const editorCalories = toNumber(displayItem.calories, NaN);
+      form.elements.calories.value = Number.isFinite(editorCalories) ? roundEditorNumber(editorCalories, 0) : "";
+      form.elements.servingAmount.value = roundEditorNumber(displayItem.servingAmount || displayItem.metricQuantity || parsed.baseAmount, 2);
       setEditableUnitFields(
         form.elements.servingUnit,
         form.elements.servingUnitCustom,
-        item.servingUnit || parsed.unitKey,
-        item.servingUnitCustom || parsed.customUnit
+        displayItem.servingUnit || parsed.unitKey,
+        displayItem.servingUnitCustom || parsed.customUnit
       );
-      form.elements.protein.value = roundEditorNumber(item.protein, 1);
-      form.elements.fat.value = roundEditorNumber(item.fat, 1);
-      form.elements.carbs.value = roundEditorNumber(item.carbs, 1);
+      ["protein", "fat", "carbs"].forEach(key => {
+        const value = toNumber(displayItem[key], NaN);
+        form.elements[key].value = Number.isFinite(value) ? roundEditorNumber(value, 1) : "";
+      });
     } else {
       form.elements.servingAmount.value = 100;
       setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, "g");
@@ -2155,6 +2375,8 @@
     foodEditorReturnTarget = "";
     editingFoodId = null;
     editingCatalogFoodId = null;
+    foodEditorPrefill = null;
+    if (target === "food") $("#food-modal").hidden = false;
     if (target === "library") {
       renderLibraryManager();
       $("#library-modal").hidden = false;
@@ -2222,6 +2444,22 @@
     const form = event.currentTarget;
     const previous = editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
     const previousCatalog = editingCatalogFoodId ? catalogFoodForEditing(editingCatalogFoodId) : null;
+    const sourceData = previous || foodEditorPrefill || {};
+    const barcode = normalizeBarcode(form.elements.barcode.value);
+    const editorError = $("#food-editor-error");
+    editorError.hidden = true;
+    if (barcode && !validBarcode(barcode)) {
+      editorError.textContent = "El código de barras no es válido.";
+      editorError.hidden = false;
+      form.elements.barcode.focus();
+      return;
+    }
+    const duplicate = barcode && state.foods.find(food => food.id !== previous?.id && normalizeBarcode(food.barcode) === barcode);
+    if (duplicate) {
+      editorError.textContent = `Ese código ya pertenece a ${duplicate.name}.`;
+      editorError.hidden = false;
+      return;
+    }
     const unitData = editableUnitFromForm(form.elements.servingUnit, form.elements.servingUnitCustom);
     if (unitData.unit === "custom" && !unitData.customUnit) {
       form.elements.servingUnitCustom.focus();
@@ -2274,6 +2512,12 @@
       id: previous?.id || createId(),
       kind: "food",
       name: form.elements.name.value,
+      barcode,
+      brand: form.elements.brand.value,
+      source: sourceData.source || "",
+      sourceUrl: sourceData.sourceUrl || "",
+      sourceImportedAt: sourceData.sourceImportedAt || "",
+      imageUrl: sourceData.imageUrl || "",
       calories,
       serving: servingLabel(servingAmount, unitData.unit, unitData.customUnit),
       servingAmount,
@@ -2297,6 +2541,7 @@
     $("#food-editor-modal").hidden = true;
     editingFoodId = null;
     editingCatalogFoodId = null;
+    foodEditorPrefill = null;
     foodEditorReturnTarget = "";
 
     if (target === "recipe") {
@@ -2309,7 +2554,8 @@
     } else if (target === "library") {
       renderLibraryManager();
       $("#library-modal").hidden = false;
-    } else if (modalIsOpen("food-modal")) {
+    } else if (target === "food" || modalIsOpen("food-modal")) {
+      $("#food-modal").hidden = false;
       $("#food-search-input").value = item.name;
       updateFoodSearchDisplay();
       activeFoodSelection = { id: item.id, kind: "food" };
@@ -2412,7 +2658,7 @@
     button.dataset.selectRecipeIngredient = item.id;
     button.dataset.foodKind = item.kind;
     const originBadge = item.kind === "food"
-      ? '<span class="food-origin-badge food-origin-own">Propio</span>'
+      ? `<span class="food-origin-badge food-origin-own">${item.source === "openfoodfacts" ? "Escaneado" : "Propio"}</span>`
       : item.kind === "external" && item.userOverride
         ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
         : "";
@@ -4889,6 +5135,14 @@
     $$("[data-close-food]").forEach(element => element.addEventListener("click", closeFoodModal));
     $$("[data-food-mode]").forEach(button => button.addEventListener("click", () => switchFoodMode(button.dataset.foodMode)));
     $("#food-search-input").addEventListener("input", queueFoodSearch);
+    $("#scan-barcode-food").addEventListener("click", () => openBarcodeScanner("food"));
+    $("#scan-barcode-recipe").addEventListener("click", () => openBarcodeScanner("recipe"));
+    $("#close-barcode").addEventListener("click", () => closeBarcodeScanner(true));
+    $$('[data-close-barcode]').forEach(element => element.addEventListener("click", () => closeBarcodeScanner(true)));
+    $("#barcode-manual-form").addEventListener("submit", submitManualBarcode);
+    $("#barcode-torch").addEventListener("click", async () => {
+      try { await barcodeScannerControls?.switchTorch?.(); } catch (_) {}
+    });
     [$("#food-results"), $("#recent-food-results"), $("#frequent-food-results"), $("#recipe-results")].forEach(container => {
       container.addEventListener("click", handleFoodResultClick);
       container.addEventListener("submit", handleFoodResultSubmit);
@@ -5014,7 +5268,7 @@
       switchAppView("today", false);
       switchDiaryView("record");
       window.MASA_CLOUD.finishBoot();
-      loadExternalFoods();
+      externalFoodsLoadPromise = loadExternalFoods();
       const introOpened = maybeOpenTipsIntro();
       if (!introOpened) setTimeout(maybeOpenDailyCheckin, 180);
       registerServiceWorker();
