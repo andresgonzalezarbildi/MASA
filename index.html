@@ -9,13 +9,13 @@
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=25.2" rel="stylesheet"/>
-<link href="./css/auth.css?v=25.2" rel="stylesheet"/>
+<link href="./css/styles.css?v=25.3" rel="stylesheet"/>
+<link href="./css/auth.css?v=25.3" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=25.2"></script>
-<script defer="" src="./js/cloud.js?v=25.2"></script>
+<script defer="" src="./js/config.js?v=25.3"></script>
+<script defer="" src="./js/cloud.js?v=25.3"></script>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
-<script defer="" src="./js/app.js?v=25.2"></script>
+<script defer="" src="./js/app.js?v=25.3"></script>
 </head>
 <body>
 
@@ -609,7 +609,7 @@
 <div class="settings-header"><div><p class="eyebrow">CÓDIGO DE BARRAS</p><h2 id="barcode-title">Escanear producto</h2><p>La cámara lee el código y M.A.S.A. busca primero en tu biblioteca y luego en Open Food Facts.</p></div><button aria-label="Cerrar" class="close-button" id="close-barcode" type="button">×</button></div>
 <div class="barcode-camera"><video autoplay muted playsinline id="barcode-video"></video><div aria-hidden="true" class="barcode-guide"></div></div>
 <p class="barcode-status" id="barcode-status" role="status">Preparando cámara…</p>
-<div class="barcode-tools"><button class="secondary-action" hidden id="barcode-torch" type="button">Alternar linterna</button></div>
+<div class="barcode-tools"><button aria-pressed="false" class="secondary-action" hidden id="barcode-torch" type="button">Linterna</button></div>
 <form class="barcode-manual-form" id="barcode-manual-form"><label><span>Ingresar código manualmente</span><input autocomplete="off" inputmode="numeric" maxlength="14" name="barcode" placeholder="Ej.: 3017620422003" required type="text"/></label><button class="primary-action" type="submit">Buscar código</button></form>
 <p class="data-attribution">Datos de productos por <a href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts</a>.</p>
 </div></div>
@@ -618,9 +618,13 @@
 <div class="food-sheet small-sheet">
 <div class="settings-header">
 <div><p class="eyebrow">BIBLIOTECA PERSONAL</p><h2 id="food-editor-title">Nuevo alimento</h2><p id="food-editor-description">Guardalo una vez y reutilizalo en registros y recetas.</p></div>
+<div class="food-editor-header-actions">
 <button aria-label="Cerrar" class="close-button" id="close-food-editor" type="button">×</button>
+<button aria-label="Volver a escanear" class="rescan-icon-button" hidden id="rescan-food-editor" title="Volver a escanear" type="button">↻</button>
+</div>
 </div>
 <form class="form-grid editor-grid" id="food-editor-form">
+<div class="food-editor-scan-row full-field"><button class="secondary-action" id="scan-barcode-editor" type="button"><span aria-hidden="true">▥</span> Escanear código de barras</button></div>
 <label class="full-field"><span>Nombre</span><input name="name" required="" type="text"/></label>
 <label><span>Código de barras <small>(opcional)</small></span><input autocomplete="off" inputmode="numeric" maxlength="14" name="barcode" type="text"/></label>
 <label><span>Marca <small>(opcional)</small></span><input name="brand" type="text"/></label>

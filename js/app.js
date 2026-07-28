@@ -38,6 +38,7 @@
   let barcodeScannerControls = null;
   let barcodeReturnTarget = "food";
   let barcodeLookupBusy = false;
+  let barcodeTorchOn = false;
 
   const DEFAULT_PROFILE = {
     name: "",
@@ -1262,15 +1263,77 @@
     status.className = `barcode-status${type ? ` ${type}` : ""}`;
   }
 
+  function getBarcodeVideoTrack() {
+    const stream = $("#barcode-video")?.srcObject;
+    return stream?.getVideoTracks?.()[0] || null;
+  }
+
+  function updateBarcodeTorchButton() {
+    const button = $("#barcode-torch");
+    if (!button) return;
+    const track = getBarcodeVideoTrack();
+    let supported = false;
+    try { supported = Boolean(track?.getCapabilities?.().torch); } catch (_) {}
+    supported ||= typeof barcodeScannerControls?.switchTorch === "function";
+    button.hidden = !supported;
+    button.setAttribute("aria-pressed", String(barcodeTorchOn));
+    button.classList.toggle("active", barcodeTorchOn);
+  }
+
+  async function toggleBarcodeTorch() {
+    const track = getBarcodeVideoTrack();
+    const desiredState = !barcodeTorchOn;
+    let directError = null;
+    try {
+      let handled = false;
+      if (track?.applyConstraints) {
+        let capabilities = {};
+        try { capabilities = track.getCapabilities?.() || {}; } catch (_) {}
+        if (capabilities.torch) {
+          try {
+            await track.applyConstraints({ advanced: [{ torch: desiredState }] });
+            handled = true;
+          } catch (error) {
+            directError = error;
+          }
+        }
+      }
+      if (!handled && typeof barcodeScannerControls?.switchTorch === "function") {
+        await barcodeScannerControls.switchTorch();
+        handled = true;
+      }
+      if (!handled) throw directError || new Error("Torch unavailable");
+      barcodeTorchOn = desiredState;
+      updateBarcodeTorchButton();
+      setBarcodeStatus(desiredState ? "Linterna encendida. Apuntá al código de barras." : "Linterna apagada. Apuntá al código de barras.");
+    } catch (error) {
+      console.warn("No se pudo cambiar la linterna:", error);
+      barcodeTorchOn = false;
+      updateBarcodeTorchButton();
+      setBarcodeStatus("El navegador no permitió controlar la linterna de esta cámara.", "error");
+    }
+  }
+
   function stopBarcodeScanner() {
+    const track = getBarcodeVideoTrack();
+    if (track && barcodeTorchOn) {
+      try { track.applyConstraints?.({ advanced: [{ torch: false }] }).catch?.(() => {}); } catch (_) {}
+    }
+    barcodeTorchOn = false;
     try { barcodeScannerControls?.stop?.(); } catch (_) {}
     barcodeScannerControls = null;
     try { barcodeReader?.reset?.(); } catch (_) {}
     barcodeReader = null;
     const video = $("#barcode-video");
     const stream = video?.srcObject;
-    if (stream?.getTracks) stream.getTracks().forEach(track => track.stop());
+    if (stream?.getTracks) stream.getTracks().forEach(mediaTrack => mediaTrack.stop());
     if (video) video.srcObject = null;
+    const torchButton = $("#barcode-torch");
+    if (torchButton) {
+      torchButton.hidden = true;
+      torchButton.classList.remove("active");
+      torchButton.setAttribute("aria-pressed", "false");
+    }
   }
 
   async function startBarcodeScanner() {
@@ -1304,7 +1367,9 @@
           lookupBarcode(code);
         }
       );
-      $("#barcode-torch").hidden = typeof barcodeScannerControls?.switchTorch !== "function";
+      updateBarcodeTorchButton();
+      video.addEventListener("loadedmetadata", updateBarcodeTorchButton, { once: true });
+      setTimeout(updateBarcodeTorchButton, 350);
     } catch (error) {
       console.warn("No se pudo iniciar la cámara:", error);
       const messages = {
@@ -1318,8 +1383,9 @@
   }
 
   function openBarcodeScanner(target = "food") {
-    barcodeReturnTarget = target === "recipe" ? "recipe" : "food";
+    barcodeReturnTarget = target === "recipe" ? "recipe" : target === "food-editor" ? "food-editor" : "food";
     if (barcodeReturnTarget === "recipe") $("#recipe-modal").hidden = true;
+    else if (barcodeReturnTarget === "food-editor") $("#food-editor-modal").hidden = true;
     else $("#food-modal").hidden = true;
     $("#barcode-modal").hidden = false;
     $("#barcode-manual-form").reset();
@@ -1333,6 +1399,7 @@
     $("#barcode-modal").hidden = true;
     if (restore) {
       if (barcodeReturnTarget === "recipe") $("#recipe-modal").hidden = false;
+      else if (barcodeReturnTarget === "food-editor") $("#food-editor-modal").hidden = false;
       else $("#food-modal").hidden = false;
     }
     updateModalBodyState();
@@ -1341,7 +1408,19 @@
   function showBarcodeMatch(item) {
     const target = barcodeReturnTarget;
     closeBarcodeScanner(false);
-    if (target === "recipe") {
+    if (target === "food-editor") {
+      const returnTarget = foodEditorReturnTarget || "main";
+      const ownFood = item.kind === "food" ? state.foods.find(food => food.id === item.id) : null;
+      openFoodEditor({
+        returnTarget,
+        editId: ownFood?.id || null,
+        prefillFood: ownFood ? null : item,
+        sourceNote: ownFood
+          ? `Este código ya pertenece a “${ownFood.name}”. Podés revisar o actualizar sus datos.`
+          : `Encontramos “${item.name}” en tu catálogo. Revisá los datos antes de guardarlo en tu biblioteca.`,
+        sourceNoteType: "success"
+      });
+    } else if (target === "recipe") {
       $("#recipe-modal").hidden = false;
       $("#recipe-ingredient-search").value = item.name;
       activeRecipeIngredientSelection = { id: item.id, kind: item.kind };
@@ -1357,10 +1436,19 @@
     updateModalBodyState();
   }
 
-  function openScannedFoodEditor(prefill, note) {
+  function openScannedFoodEditor(prefill, note, options = {}) {
     const target = barcodeReturnTarget;
+    const returnTarget = target === "food-editor" ? (foodEditorReturnTarget || "main") : target;
     closeBarcodeScanner(false);
-    openFoodEditor({ returnTarget: target, prefillFood: prefill, sourceNote: note });
+    openFoodEditor({
+      returnTarget,
+      prefillFood: prefill,
+      sourceNote: note,
+      sourceNoteType: options.sourceNoteType || "",
+      allowRescan: Boolean(options.allowRescan),
+      title: options.title || "",
+      description: options.description || ""
+    });
   }
 
   function openFoodFactsProduct(product, code) {
@@ -1450,12 +1538,27 @@
       const data = await fetchOpenFoodFactsProduct(code, fields);
       const productFound = Boolean(data?.product) && (data.status === 1 || data.status === "success" || data.status === undefined);
       if (productFound) openFoodFactsProduct(data.product, code);
-      else openScannedFoodEditor({ barcode: code, servingAmount: 100, servingUnit: "g", serving: "100 g" }, "Ese código no está en Open Food Facts. Podés cargar los datos desde la etiqueta y guardarlo en tu biblioteca.");
+      else openScannedFoodEditor(
+        { barcode: code, servingAmount: 100, servingUnit: "g", serving: "100 g" },
+        `No encontramos un alimento asociado al código ${code}. Completá los datos de la etiqueta y guardalo; la próxima vez M.A.S.A. lo reconocerá.`,
+        {
+          allowRescan: true,
+          sourceNoteType: "warning",
+          title: "Alimento no encontrado",
+          description: "Solo pudimos leer el código de barras. Podés completar el alimento manualmente o volver a escanear."
+        }
+      );
     } catch (error) {
       console.warn("No se pudo consultar Open Food Facts:", error);
       openScannedFoodEditor(
         { barcode: code, servingAmount: 100, servingUnit: "g", serving: "100 g" },
-        "No se pudo consultar Open Food Facts. Completá los datos desde la etiqueta; el código quedará guardado para reconocerlo la próxima vez."
+        `No pudimos consultar Open Food Facts para el código ${code}. Completá los datos de la etiqueta o volvé a escanear.`,
+        {
+          allowRescan: true,
+          sourceNoteType: "warning",
+          title: "No se pudo comprobar el alimento",
+          description: "El código quedó cargado. Podés completar los datos manualmente o intentar el escaneo otra vez."
+        }
       );
     } finally {
       barcodeLookupBusy = false;
@@ -2372,15 +2475,19 @@
       : editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
     const displayItem = item || foodEditorPrefill;
 
-    $("#food-editor-title").textContent = item ? "Editar alimento" : foodEditorPrefill ? "Revisar alimento escaneado" : "Nuevo alimento";
-    $("#food-editor-description").textContent = editingCatalogFoodId
+    $("#food-editor-title").textContent = options.title || (item ? "Editar alimento" : foodEditorPrefill ? "Revisar alimento escaneado" : "Nuevo alimento");
+    $("#food-editor-description").textContent = options.description || (editingCatalogFoodId
       ? "Los cambios quedan solamente en tu cuenta."
       : item ? "Los cambios también recalculan las recetas que usan este alimento."
-      : foodEditorPrefill ? "Revisá los datos antes de incorporarlo a tu biblioteca." : "Guardalo una vez y reutilizalo en registros y recetas.";
+      : foodEditorPrefill ? "Revisá los datos antes de incorporarlo a tu biblioteca." : "Guardalo una vez y reutilizalo en registros y recetas.");
     $("#save-food-editor").textContent = item ? "Guardar cambios" : "Guardar alimento";
     const sourceNote = $("#food-editor-source-note");
     sourceNote.hidden = !options.sourceNote;
     sourceNote.textContent = options.sourceNote || "";
+    sourceNote.classList.toggle("warning", options.sourceNoteType === "warning");
+    sourceNote.classList.toggle("success", options.sourceNoteType === "success");
+    $("#rescan-food-editor").hidden = !options.allowRescan;
+    $(".food-editor-scan-row").hidden = Boolean(item || editingCatalogFoodId);
 
     if (displayItem) {
       const parsed = parseServingDefinition(displayItem.serving);
@@ -2420,6 +2527,8 @@
     editingFoodId = null;
     editingCatalogFoodId = null;
     foodEditorPrefill = null;
+    $("#rescan-food-editor").hidden = true;
+    $("#food-editor-source-note").classList.remove("warning", "success");
     if (target === "food") $("#food-modal").hidden = false;
     if (target === "library") {
       renderLibraryManager();
@@ -5181,12 +5290,12 @@
     $("#food-search-input").addEventListener("input", queueFoodSearch);
     $("#scan-barcode-food").addEventListener("click", () => openBarcodeScanner("food"));
     $("#scan-barcode-recipe").addEventListener("click", () => openBarcodeScanner("recipe"));
+    $("#scan-barcode-editor").addEventListener("click", () => openBarcodeScanner("food-editor"));
+    $("#rescan-food-editor").addEventListener("click", () => openBarcodeScanner("food-editor"));
     $("#close-barcode").addEventListener("click", () => closeBarcodeScanner(true));
     $$('[data-close-barcode]').forEach(element => element.addEventListener("click", () => closeBarcodeScanner(true)));
     $("#barcode-manual-form").addEventListener("submit", submitManualBarcode);
-    $("#barcode-torch").addEventListener("click", async () => {
-      try { await barcodeScannerControls?.switchTorch?.(); } catch (_) {}
-    });
+    $("#barcode-torch").addEventListener("click", toggleBarcodeTorch);
     [$("#food-results"), $("#recent-food-results"), $("#frequent-food-results"), $("#recipe-results")].forEach(container => {
       container.addEventListener("click", handleFoodResultClick);
       container.addEventListener("submit", handleFoodResultSubmit);
