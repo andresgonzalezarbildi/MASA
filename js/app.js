@@ -203,6 +203,12 @@
       : "—";
   }
 
+  function roundEditorNumber(value, digits = 0) {
+    const number = toNumber(value, 0);
+    const factor = 10 ** digits;
+    return Math.round((number + Number.EPSILON) * factor) / factor;
+  }
+
   function formatKg(value, digits = 1) {
     return Number.isFinite(Number(value)) ? `${formatNumber(value, digits)} kg` : "—";
   }
@@ -1863,7 +1869,7 @@
     const item = normalizeDiaryEntry({
       id: createId(),
       name: form.elements.name.value,
-      calories: form.elements.calories.value,
+      calories,
       protein: 0, fat: 0, carbs: 0,
       serving: "carga libre",
       meal: activeMeal
@@ -2096,17 +2102,17 @@
     if (item) {
       const parsed = parseServingDefinition(item.serving);
       form.elements.name.value = item.name;
-      form.elements.calories.value = item.calories;
-      form.elements.servingAmount.value = item.servingAmount || item.metricQuantity || parsed.baseAmount;
+      form.elements.calories.value = roundEditorNumber(item.calories, 0);
+      form.elements.servingAmount.value = roundEditorNumber(item.servingAmount || item.metricQuantity || parsed.baseAmount, 2);
       setEditableUnitFields(
         form.elements.servingUnit,
         form.elements.servingUnitCustom,
         item.servingUnit || parsed.unitKey,
         item.servingUnitCustom || parsed.customUnit
       );
-      form.elements.protein.value = item.protein;
-      form.elements.fat.value = item.fat;
-      form.elements.carbs.value = item.carbs;
+      form.elements.protein.value = roundEditorNumber(item.protein, 1);
+      form.elements.fat.value = roundEditorNumber(item.fat, 1);
+      form.elements.carbs.value = roundEditorNumber(item.carbs, 1);
     } else {
       form.elements.servingAmount.value = 100;
       setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, "g");
@@ -2198,21 +2204,25 @@
       form.elements.servingUnitCustom.focus();
       return;
     }
-    const servingAmount = Math.max(0.01, toNumber(form.elements.servingAmount.value, 1) || 1);
+    const servingAmount = Math.max(0.01, roundEditorNumber(form.elements.servingAmount.value, 2) || 1);
+    const calories = roundEditorNumber(form.elements.calories.value, 0);
+    const protein = roundEditorNumber(form.elements.protein.value, 1);
+    const fat = roundEditorNumber(form.elements.fat.value, 1);
+    const carbs = roundEditorNumber(form.elements.carbs.value, 1);
     if (editingCatalogFoodId && previousCatalog) {
       state.catalogOverrides ||= {};
       state.catalogOverrides[editingCatalogFoodId] = normalizeCatalogOverride({
         id: editingCatalogFoodId,
         hidden: false,
         name: form.elements.name.value,
-        calories: form.elements.calories.value,
+        calories,
         serving: servingLabel(servingAmount, unitData.unit, unitData.customUnit),
         servingAmount,
         servingUnit: unitData.unit,
         servingUnitCustom: unitData.customUnit,
-        protein: form.elements.protein.value,
-        fat: form.elements.fat.value,
-        carbs: form.elements.carbs.value
+        protein,
+        fat,
+        carbs
       });
       rebuildExternalFoodCatalog();
       const updated = catalogFoodForEditing(editingCatalogFoodId);
@@ -2241,14 +2251,14 @@
       id: previous?.id || createId(),
       kind: "food",
       name: form.elements.name.value,
-      calories: form.elements.calories.value,
+      calories,
       serving: servingLabel(servingAmount, unitData.unit, unitData.customUnit),
       servingAmount,
       servingUnit: unitData.unit,
       servingUnitCustom: unitData.customUnit,
-      protein: form.elements.protein.value,
-      fat: form.elements.fat.value,
-      carbs: form.elements.carbs.value,
+      protein,
+      fat,
+      carbs,
       uses: previous?.uses || 0,
       lastUsed: previous?.lastUsed || "",
       lastUsedAt: previous?.lastUsedAt || ""

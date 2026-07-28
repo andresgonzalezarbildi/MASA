@@ -2568,3 +2568,92 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   }
   #library-search-catalog { width: 100%; }
 }
+
+/* --- MASA v23: cabecera móvil y acciones de configuración en una fila --- */
+@media (max-width: 590px) {
+  .diary-heading {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding-bottom: 16px;
+  }
+  .diary-heading > div:first-child {
+    width: 100%;
+    min-width: 0;
+  }
+  .diary-date-nav {
+    width: 100%;
+    max-width: none;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+  }
+  .diary-date-button {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 10px;
+  }
+  .diary-date-button span {
+    font-size: 12px;
+    text-overflow: clip;
+  }
+  .diary-today-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .diary-heading-actions {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    margin: 0;
+  }
+  .diary-view-switch,
+  .add-intake-button {
+    width: 100%;
+    min-width: 0;
+  }
+  .diary-view-switch button {
+    min-width: 0;
+  }
+  .add-intake-button {
+    margin: 0;
+  }
+
+  #settings-profile .settings-sticky-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+  #settings-profile .settings-sticky-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Ajuste final v23: el encabezado móvil reserva su propio espacio. */
+@media (max-width: 720px) {
+  .diary-heading {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 12px;
+  }
+  .diary-heading > div:first-child,
+  .diary-heading-actions {
+    width: 100%;
+    min-width: 0;
+  }
+  .diary-date-nav {
+    width: 100%;
+    max-width: none;
+  }
+  .diary-heading-actions {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .diary-view-switch,
+  .add-intake-button {
+    width: 100%;
+    min-width: 0;
+  }
+}
