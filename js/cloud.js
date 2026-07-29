@@ -6,6 +6,7 @@
   const PAGE_SIZE = 1000;
   const BATCH_SIZE = 250;
   const SYNC_DELAY_MS = 700;
+  const OPERATION_TIMEOUT_MS = 12_000;
 
   let client = null;
   let session = null;
@@ -20,6 +21,11 @@
   let syncedSignatures = null;
   let syncedFoodMap = new Map();
   let syncedRecipeMap = new Map();
+  let authStorage = null;
+  let storageFailure = null;
+  let loadingWatchdog = null;
+  let authEventRevision = 0;
+  const memoryStorage = new Map();
   const sessionWaiters = [];
 
   const $ = selector => document.querySelector(selector);
@@ -37,13 +43,100 @@
     );
   }
 
+  function isNativeRuntime() {
+    try {
+      return Boolean(window.MASA_NATIVE?.isNative?.() || window.Capacitor?.isNativePlatform?.());
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function errorWithContext(source, kind, context, code = "") {
+    const message = source?.message || String(source || context);
+    const error = new Error(message, source instanceof Error ? { cause: source } : undefined);
+    error.name = source?.name || "Error";
+    error.code = source?.code || code || "";
+    error.status = source?.status;
+    error.masaKind = kind;
+    error.masaContext = context;
+    return error;
+  }
+
+  function logRealError(scope, context, error) {
+    console.error(`[MASA][${scope}] ${context}`, error);
+  }
+
+  function withTimeout(operation, context, timeoutMs = OPERATION_TIMEOUT_MS) {
+    let timer = null;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        reject(errorWithContext(
+          new Error(`${context} superó el tiempo máximo de ${Math.round(timeoutMs / 1000)} segundos.`),
+          "timeout",
+          context,
+          "MASA_TIMEOUT"
+        ));
+      }, timeoutMs);
+    });
+    return Promise.race([Promise.resolve(operation), timeout]).finally(() => clearTimeout(timer));
+  }
+
+  function noteStorageFailure(action, source) {
+    storageFailure = errorWithContext(source, "storage", `No se pudo ${action} el almacenamiento local`, "MASA_STORAGE");
+    logRealError("storage", storageFailure.masaContext, storageFailure);
+    if (appBooted) setSyncStatus("error", "Sesión no persistente");
+  }
+
+  function getAuthStorage() {
+    if (authStorage) return authStorage;
+    authStorage = {
+      getItem(key) {
+        try {
+          const value = window.localStorage.getItem(key);
+          if (value !== null) memoryStorage.set(key, value);
+          return value ?? memoryStorage.get(key) ?? null;
+        } catch (error) {
+          noteStorageFailure("leer", error);
+          return memoryStorage.get(key) ?? null;
+        }
+      },
+      setItem(key, value) {
+        memoryStorage.set(key, value);
+        try {
+          window.localStorage.setItem(key, value);
+        } catch (error) {
+          noteStorageFailure("guardar", error);
+        }
+      },
+      removeItem(key) {
+        memoryStorage.delete(key);
+        try {
+          window.localStorage.removeItem(key);
+        } catch (error) {
+          noteStorageFailure("borrar", error);
+        }
+      }
+    };
+    return authStorage;
+  }
+
   function getClient() {
     if (client) return client;
     if (!configIsValid(window.MASA_CONFIG)) {
-      throw new Error("Completá js/config.js con la URL y la Publishable key de Supabase.");
+      throw errorWithContext(
+        new Error("Completá js/config.js con la URL y la Publishable key de Supabase."),
+        "configuration",
+        "Configuración de Supabase",
+        "MASA_CONFIG"
+      );
     }
     if (!window.supabase?.createClient) {
-      throw new Error("No se pudo cargar el cliente de Supabase. Revisá la conexión a internet.");
+      throw errorWithContext(
+        new Error("El paquete de Supabase no está disponible en esta compilación."),
+        "configuration",
+        "Carga del cliente de Supabase",
+        "MASA_SUPABASE_MISSING"
+      );
     }
 
     client = window.supabase.createClient(
@@ -53,15 +146,16 @@
         auth: {
           persistSession: true,
           autoRefreshToken: true,
-          detectSessionInUrl: true
+          detectSessionInUrl: !isNativeRuntime(),
+          storage: getAuthStorage()
         }
       }
     );
     return client;
   }
 
-  function throwIfError(result, context) {
-    if (result?.error) throw new Error(`${context}: ${result.error.message}`);
+  function throwIfError(result, context, kind = "sync") {
+    if (result?.error) throw errorWithContext(result.error, kind, context);
     return result?.data;
   }
 
@@ -86,6 +180,7 @@
   }
 
   function showAuthMode(mode = "login") {
+    clearLoadingWatchdog();
     const login = mode === "login";
     $("#auth-login-form")?.toggleAttribute("hidden", !login);
     $("#auth-signup-form")?.toggleAttribute("hidden", login);
@@ -98,6 +193,7 @@
   }
 
   function showRecoveryMode() {
+    clearLoadingWatchdog();
     $("#auth-login-form")?.setAttribute("hidden", "");
     $("#auth-signup-form")?.setAttribute("hidden", "");
     $("#auth-recovery-form")?.removeAttribute("hidden");
@@ -106,31 +202,61 @@
     setAuthMessage("Elegí una contraseña nueva para tu cuenta.");
   }
 
+  function clearLoadingWatchdog() {
+    clearTimeout(loadingWatchdog);
+    loadingWatchdog = null;
+  }
+
+  function hideLoadingGate({ showForms = !session || recoveryMode, hideGate = Boolean(session && !recoveryMode) } = {}) {
+    clearLoadingWatchdog();
+    $("#auth-loading")?.setAttribute("hidden", "");
+    if (showForms) $("#auth-forms")?.removeAttribute("hidden");
+    if (hideGate) {
+      const gate = $("#auth-gate");
+      if (gate) gate.hidden = true;
+    }
+  }
+
   function showLoadingGate(text = "Cargando tus datos…") {
     const gate = $("#auth-gate");
     if (!gate) return;
+    clearLoadingWatchdog();
     gate.hidden = false;
     $("#auth-forms")?.setAttribute("hidden", "");
     $("#auth-loading")?.removeAttribute("hidden");
     const label = $("#auth-loading-text");
     if (label) label.textContent = text;
+    loadingWatchdog = setTimeout(() => {
+      const error = errorWithContext(
+        new Error("El cargador de autenticación alcanzó el tiempo máximo."),
+        "timeout",
+        "Pantalla de carga",
+        "MASA_LOADING_TIMEOUT"
+      );
+      logRealError("auth", "Se cerró un cargador bloqueado", error);
+      if (session && !recoveryMode) {
+        hideLoadingGate({ showForms: false, hideGate: true });
+      } else {
+        showAuthMode("login");
+        setAuthMessage("La operación demoró demasiado. Volvé a intentarlo.", true);
+      }
+    }, OPERATION_TIMEOUT_MS + 500);
   }
 
   function showFatalError(error) {
+    logRealError("startup", "No se pudo completar la inicialización", error);
     const gate = $("#auth-gate");
     if (gate) gate.hidden = false;
-    $("#auth-loading")?.setAttribute("hidden", "");
-    $("#auth-forms")?.removeAttribute("hidden");
     showAuthMode("login");
     setAuthMessage(humanizeAuthError(error), true);
   }
 
   function finishBoot() {
     appBooted = true;
-    const gate = $("#auth-gate");
-    if (gate) gate.hidden = true;
+    hideLoadingGate({ showForms: false, hideGate: true });
     document.body.classList.add("cloud-ready");
     updateAccountUI();
+    if (storageFailure) setSyncStatus("error", "Sesión no persistente");
   }
 
   function updateAccountUI() {
@@ -173,11 +299,38 @@
     const field = button.closest(".password-field");
     const input = field?.querySelector("input");
     if (!input) return;
-    const visible = input.type === "text";
-    input.type = visible ? "password" : "text";
-    button.setAttribute("aria-pressed", String(!visible));
-    button.setAttribute("aria-label", visible ? "Mostrar contraseña" : "Ocultar contraseña");
+
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
+    const selectionDirection = input.selectionDirection;
+    const nextVisible = input.type !== "text";
+
+    input.type = nextVisible ? "text" : "password";
+    button.setAttribute("aria-pressed", String(nextVisible));
+    button.setAttribute("aria-label", nextVisible ? "Ocultar contraseña" : "Mostrar contraseña");
     input.focus({ preventScroll: true });
+    if (selectionStart !== null && selectionEnd !== null) {
+      const restoreSelection = () => {
+        try { input.setSelectionRange(selectionStart, selectionEnd, selectionDirection || "none"); } catch (_) {}
+      };
+      restoreSelection();
+      requestAnimationFrame(restoreSelection);
+    }
+  }
+
+  function acceptSession(nextSession) {
+    if (!nextSession?.user) {
+      throw errorWithContext(
+        new Error("Supabase no devolvió una sesión válida."),
+        "auth",
+        "Inicio de sesión",
+        "MASA_NO_SESSION"
+      );
+    }
+    session = nextSession;
+    updateAccountUI();
+    resolveSessionWaiters();
+    if (!recoveryMode) hideLoadingGate({ showForms: false, hideGate: true });
   }
 
   function bindAuthUI() {
@@ -186,76 +339,107 @@
 
     $("#auth-mode-login")?.addEventListener("click", () => showAuthMode("login"));
     $("#auth-mode-signup")?.addEventListener("click", () => showAuthMode("signup"));
-    document.querySelectorAll("[data-password-toggle]").forEach(button => button.addEventListener("click", () => togglePasswordVisibility(button)));
+    document.querySelectorAll("[data-password-toggle]").forEach(button => {
+      button.type = "button";
+      button.addEventListener("click", () => togglePasswordVisibility(button));
+    });
 
     $("#auth-login-form")?.addEventListener("submit", async event => {
       event.preventDefault();
+      const form = event.currentTarget;
+      const emailInput = form.querySelector('input[name="email"]');
+      const passwordInput = form.querySelector('input[name="password"]');
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
       setAuthBusy(true);
       setAuthMessage("");
+      showLoadingGate("Iniciando sesión…");
       try {
-        const form = event.currentTarget;
-        const result = await getClient().auth.signInWithPassword({
-          email: form.elements.email.value.trim(),
-          password: form.elements.password.value
-        });
-        throwIfError(result, "No se pudo iniciar sesión");
-        session = result.data.session;
-        showLoadingGate();
-        updateAccountUI();
-        resolveSessionWaiters();
+        const result = await withTimeout(
+          getClient().auth.signInWithPassword({ email, password }),
+          "El inicio de sesión"
+        );
+        if (result.error) throw errorWithContext(result.error, "auth", "Inicio de sesión");
+        acceptSession(result.data?.session);
       } catch (error) {
+        logRealError("auth", "Falló el inicio de sesión", error);
+        if (session) return;
+        updateAccountUI();
+        showAuthMode("login");
         setAuthMessage(humanizeAuthError(error), true);
       } finally {
         setAuthBusy(false);
+        hideLoadingGate({ showForms: !session || recoveryMode, hideGate: Boolean(session && !recoveryMode) });
       }
     });
 
     $("#auth-signup-form")?.addEventListener("submit", async event => {
       event.preventDefault();
+      const form = event.currentTarget;
+      const emailInput = form.querySelector('input[name="email"]');
+      const passwordInput = form.querySelector('input[name="password"]');
+      const nameInput = form.querySelector('input[name="name"]');
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const name = nameInput.value.trim();
+
       setAuthBusy(true);
       setAuthMessage("");
+      showLoadingGate("Creando la cuenta…");
       try {
-        const form = event.currentTarget;
-        const password = form.elements.password.value;
-        if (password.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres.");
-        const result = await getClient().auth.signUp({
-          email: form.elements.email.value.trim(),
-          password,
-          options: {
-            data: { name: form.elements.name.value.trim() }
-          }
-        });
-        throwIfError(result, "No se pudo crear la cuenta");
-        if (result.data.session) {
-          session = result.data.session;
-          showLoadingGate();
-          resolveSessionWaiters();
+        if (password.length < 8) {
+          throw errorWithContext(
+            new Error("La contraseña debe tener al menos 8 caracteres."),
+            "validation",
+            "Registro",
+            "MASA_PASSWORD_LENGTH"
+          );
+        }
+        const result = await withTimeout(
+          getClient().auth.signUp({ email, password, options: { data: { name } } }),
+          "El registro de la cuenta"
+        );
+        if (result.error) throw errorWithContext(result.error, "auth", "Registro");
+
+        if (result.data?.session) {
+          acceptSession(result.data.session);
         } else {
           showAuthMode("login");
-          $("#auth-login-form").elements.email.value = form.elements.email.value.trim();
+          $("#auth-login-form").elements.email.value = email;
           setAuthMessage("Cuenta creada. Revisá tu correo para confirmarla y después iniciá sesión.");
         }
       } catch (error) {
+        logRealError("auth", "Falló el registro", error);
+        if (session) return;
+        showAuthMode("signup");
         setAuthMessage(humanizeAuthError(error), true);
       } finally {
         setAuthBusy(false);
+        hideLoadingGate({ showForms: !session || recoveryMode, hideGate: Boolean(session && !recoveryMode) });
       }
     });
 
     $("#forgot-password")?.addEventListener("click", async () => {
-      const email = $("#auth-login-form")?.elements.email.value.trim();
+      const emailInput = $("#auth-login-form")?.querySelector('input[name="email"]');
+      const email = emailInput?.value.trim() || "";
       if (!email) {
         setAuthMessage("Escribí tu correo antes de solicitar el enlace.", true);
-        $("#auth-login-form")?.elements.email.focus();
+        emailInput?.focus();
         return;
       }
       setAuthBusy(true);
+      setAuthMessage("");
       try {
-        const redirectTo = `${location.origin}${location.pathname}`;
-        const result = await getClient().auth.resetPasswordForEmail(email, { redirectTo });
-        throwIfError(result, "No se pudo enviar el enlace");
+        const redirectTo = window.MASA_CONFIG?.passwordResetUrl || `${location.origin}${location.pathname}`;
+        const result = await withTimeout(
+          getClient().auth.resetPasswordForEmail(email, { redirectTo }),
+          "El envío del enlace de recuperación"
+        );
+        if (result.error) throw errorWithContext(result.error, "auth", "Recuperación de contraseña");
         setAuthMessage("Te enviamos un enlace para cambiar la contraseña.");
       } catch (error) {
+        logRealError("auth", "Falló la recuperación de contraseña", error);
         setAuthMessage(humanizeAuthError(error), true);
       } finally {
         setAuthBusy(false);
@@ -264,29 +448,52 @@
 
     $("#auth-recovery-form")?.addEventListener("submit", async event => {
       event.preventDefault();
+      const form = event.currentTarget;
+      const passwordInput = form.querySelector('input[name="password"]');
+      const password = passwordInput.value;
+
       setAuthBusy(true);
+      setAuthMessage("");
+      showLoadingGate("Actualizando la contraseña…");
       try {
-        const password = event.currentTarget.elements.password.value;
-        if (password.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres.");
-        const result = await getClient().auth.updateUser({ password });
-        throwIfError(result, "No se pudo actualizar la contraseña");
+        if (password.length < 8) {
+          throw errorWithContext(
+            new Error("La contraseña debe tener al menos 8 caracteres."),
+            "validation",
+            "Cambio de contraseña",
+            "MASA_PASSWORD_LENGTH"
+          );
+        }
+        const result = await withTimeout(
+          getClient().auth.updateUser({ password }),
+          "La actualización de contraseña"
+        );
+        if (result.error) throw errorWithContext(result.error, "auth", "Cambio de contraseña");
         recoveryMode = false;
         setAuthMessage("Contraseña actualizada.");
-        showLoadingGate();
-        resolveSessionWaiters();
+        if (session) acceptSession(session);
       } catch (error) {
+        logRealError("auth", "Falló el cambio de contraseña", error);
+        showRecoveryMode();
         setAuthMessage(humanizeAuthError(error), true);
       } finally {
         setAuthBusy(false);
+        hideLoadingGate({ showForms: !session || recoveryMode, hideGate: Boolean(session && !recoveryMode) });
       }
     });
 
     $("#logout-button")?.addEventListener("click", async () => {
       try {
         setSyncStatus("saving", "Guardando…");
-        await flush();
-      } catch (_) {}
-      await getClient().auth.signOut();
+        await withTimeout(flush(), "El guardado antes de cerrar sesión");
+      } catch (error) {
+        logRealError("sync", "No se completó el guardado antes de salir", error);
+      }
+      try {
+        await withTimeout(getClient().auth.signOut({ scope: "local" }), "El cierre de sesión");
+      } catch (error) {
+        logRealError("auth", "Falló el cierre de sesión", error);
+      }
       location.reload();
     });
   }
@@ -296,72 +503,121 @@
     return /jwt|token.*(?:expired|invalid)|issued at future|session.*invalid|bad_jwt/i.test(message);
   }
 
+  function isNetworkError(error) {
+    const message = error?.message || error?.cause?.message || String(error || "");
+    return /network|fetch|offline|failed to fetch|load failed|internet disconnected/i.test(message);
+  }
+
   function humanizeAuthError(error) {
-    const message = error?.message || String(error);
-    if (/invalid login credentials/i.test(message)) return "Correo o contraseña incorrectos.";
-    if (/email not confirmed/i.test(message)) return "Primero confirmá la cuenta desde el correo que recibiste.";
-    if (/user already registered/i.test(message)) return "Ya existe una cuenta con ese correo.";
+    const message = error?.message || error?.cause?.message || String(error || "");
+    const code = String(error?.code || error?.cause?.code || "").toLowerCase();
+    const kind = error?.masaKind || "";
+
+    if (kind === "storage" || code === "masa_storage") {
+      return "No se pudo guardar la sesión en este dispositivo. El acceso puede funcionar, pero tendrás que iniciar sesión nuevamente al cerrar la aplicación.";
+    }
+    if (kind === "configuration" || code === "masa_supabase_missing") {
+      return message;
+    }
+    if (code === "invalid_credentials" || (kind === "auth" && /invalid login credentials/i.test(message))) {
+      return "Credenciales incorrectas";
+    }
+    if (code === "email_not_confirmed" || /email not confirmed/i.test(message)) {
+      return "Primero confirmá la cuenta desde el correo que recibiste.";
+    }
+    if (code === "user_already_exists" || /user already registered|already been registered/i.test(message)) {
+      return "Ya existe una cuenta con ese correo.";
+    }
+    if (code === "masa_password_length" || kind === "validation") return message;
     if (isInvalidSessionError(error)) return "La sesión guardada dejó de ser válida. Iniciá sesión de nuevo.";
-    if (/network|fetch|offline|failed to fetch/i.test(message)) return "No se pudo conectar. Revisá internet y volvé a intentar.";
-    return "No se pudo completar el acceso. Volvé a intentarlo.";
+    if (code === "masa_timeout" || code === "masa_loading_timeout" || kind === "timeout") {
+      return isNativeRuntime()
+        ? "Supabase no respondió dentro de 12 segundos en Android. Revisá la conexión del dispositivo y volvé a intentar."
+        : "Supabase no respondió dentro de 12 segundos. Volvé a intentarlo.";
+    }
+    if (isNetworkError(error)) {
+      return isNativeRuntime()
+        ? "Android no pudo comunicarse con Supabase. Revisá la conexión del dispositivo; el detalle real quedó registrado en la consola de la aplicación."
+        : "No se pudo comunicar con Supabase. Revisá tu conexión y volvé a intentar.";
+    }
+    if (kind === "auth") return `Supabase rechazó la operación: ${message}`;
+    return message || "No se pudo completar el acceso.";
+  }
+
+  function handleAuthStateChange(event, nextSession) {
+    session = nextSession;
+    updateAccountUI();
+
+    if (event === "PASSWORD_RECOVERY") {
+      recoveryMode = true;
+      const gate = $("#auth-gate");
+      if (gate) gate.hidden = false;
+      showRecoveryMode();
+      return;
+    }
+
+    if (nextSession) {
+      resolveSessionWaiters();
+      if (!recoveryMode && appBooted) hideLoadingGate({ showForms: false, hideGate: true });
+      return;
+    }
+
+    if (event === "SIGNED_OUT") handleSignedOut();
   }
 
   async function startAuth() {
     if (authStarted) return session;
     authStarted = true;
     bindAuthUI();
+    showLoadingGate("Comprobando la sesión…");
 
     try {
       const supabaseClient = getClient();
       supabaseClient.auth.onAuthStateChange((event, nextSession) => {
-        session = nextSession;
-        updateAccountUI();
-        if (event === "PASSWORD_RECOVERY") {
-          recoveryMode = true;
-          const gate = $("#auth-gate");
-          if (gate) gate.hidden = false;
-          showRecoveryMode();
-          return;
-        }
-        if (nextSession) resolveSessionWaiters();
-        else if (event === "SIGNED_OUT") handleSignedOut();
+        authEventRevision += 1;
+        handleAuthStateChange(event, nextSession);
       });
 
-      const result = await supabaseClient.auth.getSession();
-      throwIfError(result, "No se pudo recuperar la sesión");
-      session = result.data.session;
-      if (session) {
-        const validation = await supabaseClient.auth.getUser();
-        if (validation?.error) {
-          await supabaseClient.auth.signOut({ scope: "local" }).catch(() => {});
-          session = null;
-          setAuthMessage(humanizeAuthError(validation.error), true);
-        }
+      const revisionBeforeGetSession = authEventRevision;
+      const result = await withTimeout(supabaseClient.auth.getSession(), "La recuperación de la sesión");
+      if (result.error) throw errorWithContext(result.error, "auth", "Recuperación de sesión");
+      if (authEventRevision === revisionBeforeGetSession) {
+        session = result.data?.session || null;
       }
       updateAccountUI();
-      return session;
-    } catch (error) {
-      if (isInvalidSessionError(error)) {
-        await getClient().auth.signOut({ scope: "local" }).catch(() => {});
-        session = null;
-        updateAccountUI();
+
+      if (session && recoveryMode) {
         const gate = $("#auth-gate");
         if (gate) gate.hidden = false;
+        showRecoveryMode();
+      } else if (session) {
+        resolveSessionWaiters();
+      } else {
         showAuthMode("login");
-        setAuthMessage("La sesión guardada venció. Iniciá sesión de nuevo.", true);
-        return null;
       }
-      showFatalError(error);
-      throw error;
+      return session;
+    } catch (error) {
+      logRealError("startup", "Falló la recuperación inicial de la sesión", error);
+      if (isInvalidSessionError(error)) {
+        try {
+          await withTimeout(getClient().auth.signOut({ scope: "local" }), "La limpieza de la sesión inválida");
+        } catch (signOutError) {
+          logRealError("storage", "No se pudo limpiar la sesión inválida", signOutError);
+        }
+      }
+      session = null;
+      updateAccountUI();
+      showAuthMode("login");
+      setAuthMessage(humanizeAuthError(error), true);
+      return null;
+    } finally {
+      hideLoadingGate({ showForms: !session || recoveryMode, hideGate: Boolean(session && !recoveryMode) });
     }
   }
 
   async function requireSession() {
     const current = await startAuth();
-    if (current && !recoveryMode) {
-      showLoadingGate();
-      return current;
-    }
+    if (current && !recoveryMode) return current;
     if (current && recoveryMode) {
       const gate = $("#auth-gate");
       if (gate) gate.hidden = false;
@@ -382,14 +638,17 @@
   function cacheState(state) {
     try {
       localStorage.setItem(cacheKey(), JSON.stringify(state));
-    } catch (_) {}
+    } catch (error) {
+      noteStorageFailure("guardar", error);
+    }
   }
 
   function readCachedState() {
     try {
       const raw = localStorage.getItem(cacheKey());
       return raw ? JSON.parse(raw) : null;
-    } catch (_) {
+    } catch (error) {
+      noteStorageFailure("leer", error);
       return null;
     }
   }
@@ -406,74 +665,102 @@
     return rows;
   }
 
-  async function loadUserState() {
+  async function loadUserStateFromRemote() {
     const user = currentUser();
-    setSyncStatus("loading", "Cargando…");
+    const [profileResult, weighRows, foodRows, recipeRows, ingredientRows, diaryRows] = await Promise.all([
+      getClient().from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
+      fetchPaged("weigh_ins", "*", query => query.eq("user_id", user.id).order("logged_on")),
+      fetchPaged("foods", "*", query => query.eq("owner_id", user.id).order("name")),
+      fetchPaged("recipes", "*", query => query.eq("user_id", user.id).order("name")),
+      fetchPaged("recipe_ingredients", "*", query => query.eq("user_id", user.id).order("position")),
+      fetchPaged("diary_entries", "*", query => query.eq("user_id", user.id).order("entry_date").order("created_at"))
+    ]);
 
+    const profileRow = throwIfError(profileResult, "No se pudo cargar el perfil");
+    const profileData = decodeProfileData(profileRow?.profile_data);
+    const ingredientsByRecipe = new Map();
+    ingredientRows.forEach(row => {
+      if (!ingredientsByRecipe.has(row.recipe_id)) ingredientsByRecipe.set(row.recipe_id, []);
+      ingredientsByRecipe.get(row.recipe_id).push(ingredientFromRow(row));
+    });
+
+    const state = {
+      version: profileRow?.schema_version || SCHEMA_VERSION,
+      configured: Boolean(profileRow?.configured),
+      profile: profileData.profile,
+      weighIns: weighRows.map(row => ({
+        ...(plainObject(row.metadata) ? row.metadata : {}),
+        id: row.legacy_id || row.id,
+        date: row.logged_on,
+        weight: Number(row.weight_kg)
+      })),
+      foods: foodRows.map(foodFromRow),
+      recipes: recipeRows.map(row => recipeFromRow(row, ingredientsByRecipe.get(row.id) || [])),
+      diary: diaryFromRows(diaryRows),
+      completedDays: profileData.completedDays,
+      foodUsage: profileData.foodUsage,
+      catalogOverrides: profileData.catalogOverrides,
+      calibrationHistory: profileData.calibrationHistory,
+      lastCheckinDate: profileData.lastCheckinDate
+    };
+
+    const hasData = Boolean(
+      state.configured ||
+      weighRows.length || foodRows.length || recipeRows.length || diaryRows.length ||
+      Object.keys(state.profile || {}).length
+    );
+    return {
+      state,
+      hasData,
+      fromCache: false,
+      signatures: stateSignatures(state),
+      foodMap: new Map(foodRows.map(row => [String(row.legacy_id || row.id), row.id])),
+      recipeMap: new Map(recipeRows.map(row => [String(row.legacy_id || row.id), row.id]))
+    };
+  }
+
+  async function loadUserState() {
+    setSyncStatus("loading", "Cargando datos…");
     try {
-      const [profileResult, weighRows, foodRows, recipeRows, ingredientRows, diaryRows] = await Promise.all([
-        getClient().from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
-        fetchPaged("weigh_ins", "*", query => query.eq("user_id", user.id).order("logged_on")),
-        fetchPaged("foods", "*", query => query.eq("owner_id", user.id).order("name")),
-        fetchPaged("recipes", "*", query => query.eq("user_id", user.id).order("name")),
-        fetchPaged("recipe_ingredients", "*", query => query.eq("user_id", user.id).order("position")),
-        fetchPaged("diary_entries", "*", query => query.eq("user_id", user.id).order("entry_date").order("created_at"))
-      ]);
-
-      const profileRow = throwIfError(profileResult, "No se pudo cargar el perfil");
-      const profileData = decodeProfileData(profileRow?.profile_data);
-      const ingredientsByRecipe = new Map();
-      ingredientRows.forEach(row => {
-        if (!ingredientsByRecipe.has(row.recipe_id)) ingredientsByRecipe.set(row.recipe_id, []);
-        ingredientsByRecipe.get(row.recipe_id).push(ingredientFromRow(row));
-      });
-
-      const state = {
-        version: profileRow?.schema_version || SCHEMA_VERSION,
-        configured: Boolean(profileRow?.configured),
-        profile: profileData.profile,
-        weighIns: weighRows.map(row => ({
-          ...(plainObject(row.metadata) ? row.metadata : {}),
-          id: row.legacy_id || row.id,
-          date: row.logged_on,
-          weight: Number(row.weight_kg)
-        })),
-        foods: foodRows.map(foodFromRow),
-        recipes: recipeRows.map(row => recipeFromRow(row, ingredientsByRecipe.get(row.id) || [])),
-        diary: diaryFromRows(diaryRows),
-        completedDays: profileData.completedDays,
-        foodUsage: profileData.foodUsage,
-        catalogOverrides: profileData.catalogOverrides,
-        calibrationHistory: profileData.calibrationHistory,
-        lastCheckinDate: profileData.lastCheckinDate
-      };
-
-      const hasData = Boolean(
-        state.configured ||
-        weighRows.length || foodRows.length || recipeRows.length || diaryRows.length ||
-        Object.keys(state.profile || {}).length
-      );
-      syncedSignatures = stateSignatures(state);
-      syncedFoodMap = new Map(foodRows.map(row => [String(row.legacy_id || row.id), row.id]));
-      syncedRecipeMap = new Map(recipeRows.map(row => [String(row.legacy_id || row.id), row.id]));
-      cacheState(state);
+      const result = await withTimeout(loadUserStateFromRemote(), "La carga de datos del usuario");
+      syncedSignatures = result.signatures;
+      syncedFoodMap = result.foodMap;
+      syncedRecipeMap = result.recipeMap;
+      cacheState(result.state);
       setSyncStatus("saved", "Guardado");
-      return { state, hasData, fromCache: false };
+      return result;
     } catch (error) {
+      logRealError("sync", "Falló la carga de datos del usuario", error);
       if (isInvalidSessionError(error)) {
-        await getClient().auth.signOut({ scope: "local" }).catch(() => {});
+        try {
+          await withTimeout(getClient().auth.signOut({ scope: "local" }), "La limpieza de la sesión inválida");
+        } catch (signOutError) {
+          logRealError("auth", "No se pudo limpiar la sesión inválida", signOutError);
+        }
         session = null;
-        const safeError = new Error("La sesión guardada dejó de ser válida. Iniciá sesión de nuevo.");
-        safeError.code = "INVALID_SESSION";
+        const safeError = errorWithContext(
+          error,
+          "auth",
+          "Sesión inválida",
+          "INVALID_SESSION"
+        );
         throw safeError;
       }
+
       const cached = readCachedState();
       if (cached) {
-        setSyncStatus("offline", "Sin conexión · caché local");
+        const offline = !navigator.onLine || isNetworkError(error);
+        setSyncStatus(offline ? "offline" : "error", offline ? "Sin conexión · datos locales" : "Datos locales · error de sincronización");
         return { state: cached, hasData: true, fromCache: true, error };
       }
-      setSyncStatus("error", "Error de carga");
-      throw new Error("No se pudieron cargar tus datos. Revisá la conexión y volvé a intentar.");
+
+      setSyncStatus("error", "No se pudieron cargar los datos");
+      throw errorWithContext(
+        error,
+        "sync",
+        "Carga de datos del usuario",
+        error?.code || "MASA_SYNC_LOAD"
+      );
     }
   }
 
@@ -580,7 +867,7 @@
     }, {});
   }
 
-  async function loadGlobalFoods() {
+  async function loadGlobalFoodsFromRemote() {
     const rows = await fetchPaged(
       "foods",
       "id,external_id,source,name,brand,serving_text,serving_amount,serving_unit,serving_unit_custom,calories,protein,fat,carbs,metadata",
@@ -588,6 +875,10 @@
     );
 
     return rows.map(globalFoodFromRow).filter(Boolean);
+  }
+
+  async function loadGlobalFoods() {
+    return withTimeout(loadGlobalFoodsFromRemote(), "La carga del catálogo general");
   }
 
   function globalFoodFromRow(row) {
@@ -643,7 +934,7 @@
     pendingState = null;
     setSyncStatus("saving", "Guardando…");
 
-    syncInFlight = syncState(snapshot)
+    syncInFlight = withTimeout(syncState(snapshot), "La sincronización con Supabase")
       .then(() => {
         lastSyncError = null;
         cacheState(snapshot);
@@ -962,6 +1253,7 @@
     cacheState,
     readCachedState,
     isAuthenticated,
+    hasPendingChanges: () => Boolean(pendingState || syncInFlight),
     finishBoot,
     showFatalError,
     setSyncStatus,

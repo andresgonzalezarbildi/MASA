@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MASA</string>
+    <string name="title_activity_main">MASA</string>
+    <string name="package_name">uy.com.andresgonzalez.masa</string>
+    <string name="custom_url_scheme">uy.com.andresgonzalez.masa</string>
+</resources>

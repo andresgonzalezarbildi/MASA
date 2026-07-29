@@ -102,6 +102,7 @@
   };
 
   let state;
+  let stateRevision = 0;
   let settingsRequired = false;
   let importMode = "history";
   let chartPayload = null;
@@ -713,6 +714,7 @@
 
   function saveState(next = state) {
     state = normalizeState(next);
+    stateRevision += 1;
     if (externalFoodCatalog.length) rebuildExternalFoodCatalog();
     if (window.MASA_CLOUD?.isAuthenticated()) {
       window.MASA_CLOUD.scheduleStateSync(state);
@@ -5727,12 +5729,30 @@
     } catch (_) {}
   }
 
-  async function init() {
-    try {
-      await window.MASA_CLOUD.requireSession();
-      const cloudResult = await window.MASA_CLOUD.loadUserState();
-      let initialState = normalizeState(cloudResult.state || emptyState());
+  function renderInitialApplication(initialState) {
+    state = normalizeState(initialState || emptyState());
+    window.MASA_CLOUD.cacheState(state);
+    bindEvents();
+    $$(".help-dot[data-tooltip]").forEach(button => { button.title = button.dataset.tooltip; });
+    bindHelpTooltips();
+    render();
+    switchAppView("today", false);
+    switchDiaryView("record");
+    window.MASA_CLOUD.finishBoot();
+    externalFoodsLoadPromise = loadExternalFoods();
+    registerServiceWorker();
+  }
 
+  async function refreshCloudStateAfterBoot() {
+    const revisionAtStart = stateRevision;
+    try {
+      const cloudResult = await window.MASA_CLOUD.loadUserState();
+      if (stateRevision !== revisionAtStart || window.MASA_CLOUD.hasPendingChanges()) {
+        console.info("[MASA][sync] Se conservó el estado local porque hubo cambios mientras se cargaban los datos remotos.");
+        return;
+      }
+
+      let refreshedState = normalizeState(cloudResult.state || emptyState());
       if (!cloudResult.hasData) {
         const legacyState = loadLegacyState();
         if (hasMeaningfulState(legacyState)) {
@@ -5740,29 +5760,44 @@
             "Encontramos datos de la versión local de MASA en este dispositivo. ¿Querés importarlos a esta cuenta?"
           );
           if (importLocal) {
-            initialState = legacyState;
+            refreshedState = legacyState;
+            state = normalizeState(refreshedState);
+            window.MASA_CLOUD.cacheState(state);
+            render();
             window.MASA_CLOUD.setSyncStatus("saving", "Importando datos locales…");
-            await window.MASA_CLOUD.replaceState(initialState);
-            clearLegacyState();
+            try {
+              await window.MASA_CLOUD.replaceState(state);
+              clearLegacyState();
+            } catch (error) {
+              console.error("[MASA][sync] No se pudieron importar los datos locales:", error);
+              window.MASA_CLOUD.setSyncStatus("error", "Importación pendiente");
+            }
+            return;
           }
         }
       }
 
-      state = normalizeState(initialState);
+      state = normalizeState(refreshedState);
       window.MASA_CLOUD.cacheState(state);
-      bindEvents();
-      $$(".help-dot[data-tooltip]").forEach(button => { button.title = button.dataset.tooltip; });
-      bindHelpTooltips();
       render();
-      switchAppView("today", false);
-      switchDiaryView("record");
-      window.MASA_CLOUD.finishBoot();
-      externalFoodsLoadPromise = loadExternalFoods();
-      const introOpened = maybeOpenTipsIntro();
-      if (!introOpened) setTimeout(maybeOpenDailyCheckin, 180);
-      registerServiceWorker();
     } catch (error) {
-      console.error("No se pudo iniciar MASA:", error);
+      console.error("[MASA][sync] La aplicación quedó disponible, pero falló la carga remota:", error);
+      window.MASA_CLOUD.setSyncStatus("error", "Error de sincronización");
+    }
+  }
+
+  async function init() {
+    try {
+      await window.MASA_CLOUD.requireSession();
+      const cachedState = window.MASA_CLOUD.readCachedState();
+      renderInitialApplication(cachedState || emptyState());
+
+      refreshCloudStateAfterBoot().finally(() => {
+        const introOpened = maybeOpenTipsIntro();
+        if (!introOpened) setTimeout(maybeOpenDailyCheckin, 180);
+      });
+    } catch (error) {
+      console.error("[MASA][startup] No se pudo iniciar MASA:", error);
       window.MASA_CLOUD?.showFatalError(error);
     }
   }

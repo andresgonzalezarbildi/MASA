@@ -1,7 +1,7 @@
 {
   "name": "masa",
   "private": true,
-  "version": "27.0.0",
+  "version": "28.0.0",
   "type": "module",
   "scripts": {
     "mobile:prepare": "node tools/prepare-mobile.mjs",
@@ -9,7 +9,10 @@
     "android:sync": "npm run mobile:prepare && npm run android:assets && npx cap sync android && node tools/configure-android.mjs",
     "android:open": "npm run android:sync && npx cap open android",
     "android:apk": "node tools/build-android.mjs",
-    "android:assets": "npx @capacitor/assets generate --android --assetPath resources --iconBackgroundColor '#15181d' --iconBackgroundColorDark '#15181d' --splashBackgroundColor '#f2efe7' --splashBackgroundColorDark '#15181d'"
+    "android:assets": "npx @capacitor/assets generate --android --assetPath resources --iconBackgroundColor '#15181d' --iconBackgroundColorDark '#15181d' --splashBackgroundColor '#f2efe7' --splashBackgroundColorDark '#15181d'",
+    "test:auth": "node tools/test-auth-flow.mjs",
+    "test:mobile-html": "node tools/test-mobile-html.mjs",
+    "test": "npm run test:auth && npm run test:mobile-html"
   },
   "dependencies": {
     "@capacitor/android": "8.4.2",

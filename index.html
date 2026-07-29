@@ -10,13 +10,13 @@
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="assets/icon-192.png" rel="apple-touch-icon"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=27.0" rel="stylesheet"/>
-<link href="./css/auth.css?v=27.0" rel="stylesheet"/>
+<link href="./css/styles.css?v=28.0" rel="stylesheet"/>
+<link href="./css/auth.css?v=28.0" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=27.0"></script>
-<script defer="" src="./js/cloud.js?v=27.0"></script>
+<script defer="" src="./js/config.js?v=28.0"></script>
+<script defer="" src="./js/cloud.js?v=28.0"></script>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
-<script defer="" src="./js/app.js?v=27.0"></script>
+<script defer="" src="./js/app.js?v=28.0"></script>
 </head>
 <body>
 
@@ -37,14 +37,14 @@
 <button id="auth-mode-signup" type="button">Crear cuenta</button>
 </nav>
 <form class="auth-form" id="auth-login-form">
-<label><span>Correo</span><input autocomplete="email" name="email" required="" type="email"/></label>
+<label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email" name="email" required="" spellcheck="false" type="email"/></label>
 <label><span>Contraseña</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="password" required="" type="password"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <button class="primary-action" type="submit">Entrar</button>
 <button class="text-action auth-forgot" id="forgot-password" type="button">Olvidé mi contraseña</button>
 </form>
 <form class="auth-form" hidden="" id="auth-signup-form">
 <label><span>Nombre <small>opcional</small></span><input autocomplete="name" maxlength="60" name="name" type="text"/></label>
-<label><span>Correo</span><input autocomplete="email" name="email" required="" type="email"/></label>
+<label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email" name="email" required="" spellcheck="false" type="email"/></label>
 <label><span>Contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="password" required="" type="password"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <button class="primary-action" type="submit">Crear cuenta</button>
 </form>

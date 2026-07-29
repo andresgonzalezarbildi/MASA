@@ -2,6 +2,7 @@ import { build } from "esbuild";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { transformMobileHtml } from "./mobile-html.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const webDir = join(root, "www");
@@ -15,12 +16,10 @@ for (const item of ["index.html", "css", "js", "assets", "data", "manifest.webma
 await rm(join(webDir, "js", "app.js.backup-catalogo"), { force: true });
 await rm(join(webDir, "js", "config.example.js"), { force: true });
 
+const packageData = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+const assetVersion = String(packageData.version || "1.0.0").split(".").slice(0, 2).join(".");
 let html = await readFile(join(webDir, "index.html"), "utf8");
-html = html
-  .replace('<script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>', '')
-  .replace('<script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>', '')
-  .replace('<base href="/masa/"/>', '<base href="./"/>')
-  .replace('<script defer="" src="./js/config.js?v=26.0"></script>', '<script defer src="./vendor/masa-vendor.js?v=26.0"></script>\n<script defer src="./js/config.js?v=26.0"></script>');
+html = transformMobileHtml(html, assetVersion);
 await writeFile(join(webDir, "index.html"), html);
 
 await mkdir(join(webDir, "vendor"), { recursive: true });
