@@ -74,7 +74,8 @@ if (await exists(appGradle)) {
       if (closeBrace > openBrace) {
         let body = source.slice(openBrace + 1, closeBrace)
           .replace(/minifyEnabled\s+false/, "minifyEnabled true")
-          .replace(/shrinkResources\s+false/, "shrinkResources true");
+          .replace(/shrinkResources\s+false/, "shrinkResources true")
+          .replace(/\s+$/, "");
         if (!/minifyEnabled\s+true/.test(body)) body += "\n            minifyEnabled true";
         if (!/shrinkResources\s+true/.test(body)) body += "\n            shrinkResources true";
         if (!/signingConfig\s+signingConfigs\.release/.test(body)) body += "\n            signingConfig signingConfigs.release";
@@ -88,7 +89,90 @@ if (await exists(appGradle)) {
 const mainActivityDir = join(androidRoot, "app", "src", "main", "java", ...appId.split("."));
 const mainActivity = join(mainActivityDir, "MainActivity.java");
 await mkdir(mainActivityDir, { recursive: true });
-await writeFile(mainActivity, `package ${appId};\n\nimport android.os.Bundle;\nimport android.view.WindowInsets;\nimport android.view.WindowInsetsController;\nimport com.getcapacitor.BridgeActivity;\n\npublic class MainActivity extends BridgeActivity {\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        hideStatusBar();\n    }\n\n    @Override\n    public void onWindowFocusChanged(boolean hasFocus) {\n        super.onWindowFocusChanged(hasFocus);\n        if (hasFocus) hideStatusBar();\n    }\n\n    private void hideStatusBar() {\n        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {\n            WindowInsetsController controller = getWindow().getInsetsController();\n            if (controller != null) controller.hide(WindowInsets.Type.statusBars());\n        } else {\n            getWindow().setFlags(\n                android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN,\n                android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN\n            );\n        }\n    }\n}\n`);
+await writeFile(mainActivity, `package uy.com.andresgonzalez.masa;
+
+import android.os.Bundle;
+import android.view.Window;
+import androidx.activity.OnBackPressedCallback;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {
+    private int lastTopCss = 0;
+    private int lastBottomCss = 0;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        hideStatusBar();
+        configureWebInsets();
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                dispatchBackToWeb();
+            }
+        });
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            hideStatusBar();
+            applyWebInsetsToDocument();
+        }
+    }
+
+    private void hideStatusBar() {
+        Window window = getWindow();
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, window.getDecorView());
+        controller.hide(WindowInsetsCompat.Type.statusBars());
+        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+    }
+
+    private void configureWebInsets() {
+        if (bridge == null || bridge.getWebView() == null) return;
+        ViewCompat.setOnApplyWindowInsetsListener(bridge.getWebView(), (view, windowInsets) -> {
+            Insets topInsets = windowInsets.getInsets(
+                WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.displayCutout()
+            );
+            Insets bottomInsets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
+            float density = getResources().getDisplayMetrics().density;
+            lastTopCss = Math.round(topInsets.top / density);
+            lastBottomCss = Math.round(bottomInsets.bottom / density);
+            applyWebInsetsToDocument();
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(bridge.getWebView());
+    }
+
+    private void applyWebInsetsToDocument() {
+        if (bridge == null || bridge.getWebView() == null) return;
+        String script = "document.documentElement.style.setProperty('--android-safe-top','" + lastTopCss
+            + "px');document.documentElement.style.setProperty('--android-safe-bottom','" + lastBottomCss + "px');";
+        Runnable applyInsets = () -> bridge.getWebView().evaluateJavascript(script, null);
+        bridge.getWebView().post(applyInsets);
+        bridge.getWebView().postDelayed(applyInsets, 250);
+        bridge.getWebView().postDelayed(applyInsets, 1000);
+    }
+
+    private void dispatchBackToWeb() {
+        if (bridge == null || bridge.getWebView() == null) {
+            finish();
+            return;
+        }
+        String script = "(function(){try{return !!(window.MASAHandleAndroidBack&&window.MASAHandleAndroidBack());}catch(e){return false;}})();";
+        bridge.getWebView().evaluateJavascript(script, handled -> {
+            if (!"true".equals(handled)) finish();
+        });
+    }
+}
+`);
 
 const styles = join(androidRoot, "app", "src", "main", "res", "values", "styles.xml");
 if (await exists(styles)) {

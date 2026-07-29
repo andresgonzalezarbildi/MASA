@@ -3031,7 +3031,6 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
 }
 .history-heading .eyebrow { margin-bottom: 4px; }
 .history-heading h3 { font-size: 23px; }
-.history-collapse { min-height: 36px; padding: 0 11px; }
 .history-date-picker {
   display: grid;
   gap: 6px;
@@ -3087,7 +3086,6 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .data-tool p { min-height: 0; }
   .history-heading { top: 33px; gap: 8px; }
   .history-heading h3 { font-size: 20px; }
-  .history-collapse { min-height: 34px; padding-inline: 8px; font-size: 9px; }
   .history-row { grid-template-columns: 1fr 1fr; }
   .history-trend { align-self: end; }
   .history-delete { text-align: right; }
@@ -3155,3 +3153,117 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .about-formulas code { font-size: 10px; }
 }
 
+
+
+/* --- MASA v29: navegación Android, cabeceras persistentes y áreas seguras reales --- */
+:root {
+  --android-safe-top: 0px;
+  --android-safe-bottom: 0px;
+  --app-safe-top: max(env(safe-area-inset-top), var(--android-safe-top));
+  --app-safe-bottom: max(env(safe-area-inset-bottom), var(--android-safe-bottom));
+}
+
+body { padding-bottom: var(--app-safe-bottom); }
+
+/* La navegación principal permanece disponible durante todo el desplazamiento. */
+.site-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 80;
+  padding-top: max(8px, var(--app-safe-top));
+  background: rgba(242,239,230,.97);
+  backdrop-filter: blur(14px);
+}
+
+/* Ajustes usa una única cabecera fija: título, cierre y pestañas se mueven juntos. */
+.settings-sheet {
+  --settings-safe-left: max(var(--settings-sheet-side), env(safe-area-inset-left));
+  --settings-safe-right: max(var(--settings-sheet-side), env(safe-area-inset-right));
+  padding-top: 0;
+  padding-right: var(--settings-safe-right);
+  padding-left: var(--settings-safe-left);
+}
+.settings-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin-right: calc(var(--settings-safe-right) * -1);
+  margin-left: calc(var(--settings-safe-left) * -1);
+  padding: max(10px, var(--app-safe-top)) var(--settings-safe-right) 0 var(--settings-safe-left);
+  background: var(--paper);
+  box-shadow: 0 1px 0 rgba(23,26,33,.16);
+}
+.settings-topbar .settings-header {
+  position: relative;
+  padding-bottom: 10px;
+  background: var(--paper);
+}
+.settings-topbar .settings-tabs,
+.settings-sheet.is-scrolled .settings-topbar .settings-tabs {
+  position: static !important;
+  margin: 8px 0 0;
+  box-shadow: none;
+}
+.settings-topbar .settings-tabs::before { display: none; }
+.settings-sheet.is-scrolled .settings-topbar {
+  box-shadow: 0 7px 16px rgba(23,26,33,.14);
+}
+.settings-sheet.is-scrolled .settings-topbar .settings-header {
+  padding-bottom: 7px;
+}
+.settings-sheet.is-scrolled .settings-topbar .settings-tabs {
+  margin-top: 6px;
+}
+
+/* Las acciones inferiores quedan por encima de la barra Inicio/Atrás de Android. */
+.settings-sticky-actions {
+  padding-bottom: calc(10px + var(--app-safe-bottom));
+}
+.settings-sheet.is-scrolled .settings-sticky-actions {
+  padding-bottom: calc(6px + var(--app-safe-bottom));
+}
+#settings-weights {
+  padding-bottom: calc(var(--settings-sheet-side) + var(--app-safe-bottom));
+}
+.site-footer {
+  padding-bottom: calc(28px + var(--app-safe-bottom));
+}
+
+/* Los modales centrados tampoco pueden terminar debajo de la navegación del sistema. */
+.centered-modal-sheet,
+.about-sheet,
+.food-sheet,
+.confirm-card {
+  max-height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 20px);
+}
+#food-modal .food-sheet {
+  height: min(780px, calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 20px));
+}
+#recipe-modal .recipe-sheet {
+  height: min(860px, calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 16px));
+}
+#recipe-modal .recipe-save-actions {
+  padding-bottom: calc(10px + var(--app-safe-bottom));
+}
+.barcode-sheet {
+  max-height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 12px);
+}
+.confirm-card { overflow-y: auto; }
+
+@media (max-width: 720px) {
+  .site-header {
+    padding-top: max(8px, var(--app-safe-top));
+  }
+  .settings-topbar {
+    padding-top: max(8px, var(--app-safe-top));
+  }
+  #food-modal .food-sheet {
+    height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 10px);
+  }
+  #recipe-modal .recipe-sheet {
+    height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 8px);
+  }
+  .site-footer {
+    padding-bottom: calc(14px + var(--app-safe-bottom));
+  }
+}

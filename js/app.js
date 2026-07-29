@@ -3509,8 +3509,11 @@
     const first = weighIns[0];
     const latest = weighIns.at(-1);
     const latestTrend = trends.at(-1)?.trend;
-    const observedWeekly = regressionRatePerWeek(weighIns);
     const plan = calculatePlan(profile, weighIns);
+    const adaptiveRateData = automaticAdjustmentData(profile, plan, weighIns);
+    const observedWeekly = Number.isFinite(adaptiveRateData.observedWeekly)
+      ? adaptiveRateData.observedWeekly
+      : expenditureRatePerWeek(weighIns, 60);
     const person = profile.name ? profile.name.trim() : "";
     const hasCalories = Number.isFinite(plan.targetCalories);
     const hasMaintenance = Number.isFinite(plan.maintenance);
@@ -3895,16 +3898,10 @@
     if (!summary || !facts || !button) return suggestion;
     summary.textContent = automaticAdjustmentSummary(suggestion);
     facts.innerHTML = `<div><span>Gasto adaptativo</span><b>${suggestion.ready ? `${formatNumber(Math.round(suggestion.adaptiveMaintenance))} kcal` : "Aprendiendo"}</b></div><div><span>Confianza</span><b>${suggestion.confidenceLabel}</b></div><div><span>Datos útiles</span><b>${suggestion.intakeDays || 0} d · ${suggestion.weighInCount || 0} p</b></div><div><span>Próxima revisión</span><b>${!suggestion.ready ? "Al completar datos" : suggestion.reviewDue ? "Disponible" : suggestion.calendarDue ? "Faltan datos nuevos" : formatDate(suggestion.nextReviewDate)}</b></div>`;
-    button.disabled = !suggestion.ready || !suggestion.reviewDue;
-    button.textContent = !suggestion.ready
-      ? `Aprendiendo · ${suggestion.progress}%`
-      : !suggestion.calendarDue
-        ? `Próxima revisión ${formatDate(suggestion.nextReviewDate)}`
-        : !suggestion.hasNewData
-          ? "Faltan registros nuevos"
-        : suggestion.meaningful
-          ? "Aplicar reajuste"
-          : "Registrar revisión sin cambios";
+    const actionAvailable = Boolean(suggestion.ready && suggestion.reviewDue);
+    button.hidden = !actionAvailable;
+    button.disabled = false;
+    if (actionAvailable) button.textContent = suggestion.meaningful ? "Aplicar reajuste" : "Registrar revisión";
     return suggestion;
   }
   function applyAutomaticAdjustment(suggestion, profile = state.profile) {
@@ -4011,16 +4008,10 @@
     note.textContent = data.ready
       ? `La corrección mezcla el gasto anterior con el observado usando β = ${formatNumber(data.alpha, 2)}. Las revisiones se separan por ${EXPENDITURE_CONFIG.reviewIntervalDays} días y exigen al menos ${EXPENDITURE_CONFIG.minNewIntakeDays} días de ingesta y ${EXPENDITURE_CONFIG.minNewWeighIns} pesajes posteriores a la revisión anterior.`
       : "El cálculo necesita suficiente distancia entre fechas, días de ingesta y pesajes comparables; no reacciona a un peso aislado.";
-    button.disabled = !recalibrationSuggestion;
-    button.textContent = !data.ready
-      ? `Aprendiendo · ${data.progress}%`
-      : !data.calendarDue
-        ? `Próxima revisión ${formatDate(data.nextReviewDate)}`
-        : !data.hasNewData
-          ? "Faltan registros nuevos"
-        : data.meaningful
-          ? "Aplicar reajuste"
-          : "Registrar revisión";
+    const actionAvailable = Boolean(recalibrationSuggestion);
+    button.hidden = !actionAvailable;
+    button.disabled = false;
+    if (actionAvailable) button.textContent = data.meaningful ? "Aplicar reajuste" : "Registrar revisión";
   }
   function applyRecalibration() {
     if (!recalibrationSuggestion) return;
@@ -4030,20 +4021,31 @@
     render();
   }
 
-  function latestChartDate(payload) {
-    const dates = [
+  function chartDataDates(payload) {
+    return [
       ...payload.weighIns.map(item => item.date),
       ...Object.keys(state.diary || {})
     ].map(parseDate).filter(Boolean);
+  }
+
+  function latestChartDate(payload) {
+    const dates = chartDataDates(payload);
     return dates.length ? new Date(Math.max(...dates.map(date => date.getTime()))) : parseDate(todayISO());
+  }
+
+  function earliestChartDate(payload) {
+    const dates = chartDataDates(payload);
+    return dates.length ? new Date(Math.min(...dates.map(date => date.getTime()))) : null;
   }
 
   function chartBounds(payload, includeFuture = false) {
     if (chartRange === "all") return { start: null, end: null };
     const months = { "1m": 1, "3m": 3, "6m": 6 }[chartRange] || 3;
     const latest = latestChartDate(payload);
+    const earliest = earliestChartDate(payload);
+    const requestedStart = addMonths(latest, -months);
     return {
-      start: addMonths(latest, -months),
+      start: earliest && requestedStart < earliest ? earliest : requestedStart,
       end: includeFuture ? addMonths(latest, months) : latest
     };
   }
@@ -5411,6 +5413,7 @@
 
   function closeConfirm() {
     $("#confirm-modal").hidden = true;
+    updateModalBodyState();
   }
 
   async function resetAll() {
@@ -5576,13 +5579,6 @@
       selectedHistoryId = event.currentTarget.value;
       render();
     });
-    $("#collapse-history-manager").addEventListener("click", () => {
-      const button = $("#toggle-history-manager");
-      button.setAttribute("aria-expanded", "false");
-      button.querySelector("i").textContent = "＋";
-      $("#history-manager").hidden = true;
-      button.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    });
     $("#history-list").addEventListener("change", updateHistoryRow);
     $("#history-list").addEventListener("click", deleteHistoryRow);
     $("#import-library").addEventListener("click", () => openImport("library"));
@@ -5699,6 +5695,28 @@
       if (activeDiaryView === "chart") drawCalorieChart(calculatePlan());
     }, 100));
   }
+
+  function handleAndroidBack() {
+    if (modalIsOpen("barcode-modal")) { closeBarcodeScanner(true); return true; }
+    if (modalIsOpen("food-editor-modal")) { closeFoodEditor(); return true; }
+    if (modalIsOpen("recipe-modal")) { closeRecipeEditor(); return true; }
+    if (modalIsOpen("library-modal")) { closeLibraryManager(); return true; }
+    if (modalIsOpen("food-modal")) { closeFoodModal(); return true; }
+    if (modalIsOpen("meal-picker-modal")) { closeMealPicker(); return true; }
+    if (modalIsOpen("confirm-modal")) { closeConfirm(); return true; }
+    if (modalIsOpen("about-modal")) { closeAboutModal(); return true; }
+    if (modalIsOpen("tips-modal")) { closeTipsModal(); return true; }
+    if (modalIsOpen("daily-checkin-modal")) { finishDailyCheckin(); return true; }
+    if (modalIsOpen("settings-modal")) {
+      if (!settingsRequired) closeSettings();
+      return true;
+    }
+    if (editingDiaryEntryId) { closeDiaryEntryEditor(); return true; }
+    if (activeAppView === "progress") { switchAppView("today"); return true; }
+    return false;
+  }
+
+  window.MASAHandleAndroidBack = handleAndroidBack;
 
   function debounce(fn, delay) {
     let timer;

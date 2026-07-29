@@ -10,13 +10,13 @@
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="assets/icon-192.png" rel="apple-touch-icon"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=28.0" rel="stylesheet"/>
-<link href="./css/auth.css?v=28.0" rel="stylesheet"/>
+<link href="./css/styles.css?v=29.0" rel="stylesheet"/>
+<link href="./css/auth.css?v=29.0" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=28.0"></script>
-<script defer="" src="./js/cloud.js?v=28.0"></script>
+<script defer="" src="./js/config.js?v=29.0"></script>
+<script defer="" src="./js/cloud.js?v=29.0"></script>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
-<script defer="" src="./js/app.js?v=28.0"></script>
+<script defer="" src="./js/app.js?v=29.0"></script>
 </head>
 <body>
 
@@ -260,7 +260,7 @@
 <div aria-label="Progreso del modelo adaptativo" class="recalibration-progress"><i id="recalibration-progress-fill"></i></div>
 <small id="recalibration-note">El cálculo usa el consumo realmente registrado y la tendencia observada del peso.</small>
 </div>
-<button class="primary-action" disabled="" id="apply-recalibration" type="button">Reuniendo datos</button>
+<button class="primary-action" hidden id="apply-recalibration" type="button">Aplicar reajuste</button>
 </section><section class="progress-section">
 <article class="chart-module">
 <div class="chart-title-row progress-chart-title-row">
@@ -395,6 +395,7 @@
 <div aria-labelledby="settings-title" aria-modal="true" class="modal" hidden="" id="settings-modal" role="dialog">
 <div class="modal-backdrop" data-close-settings=""></div>
 <div class="settings-sheet">
+<div class="settings-topbar">
 <div class="settings-header">
 <div>
 <p class="eyebrow">CONFIGURACIÓN PERSONAL</p>
@@ -410,6 +411,7 @@
 <button class="active" data-settings-tab="profile" type="button">Perfil y plan</button>
 <button data-settings-tab="weights" type="button">Mis datos</button>
 </nav>
+</div>
 <section class="settings-view" id="settings-profile">
 
 <form id="profile-form" novalidate="">
@@ -485,7 +487,7 @@
 <p id="automatic-adjustment-summary">M.A.S.A. necesita varias semanas de datos para estimar tu gasto real.</p>
 </div>
 <div class="automatic-adjustment-facts" id="automatic-adjustment-facts"><div><span>Gasto adaptativo</span><b>Aprendiendo</b></div><div><span>Confianza</span><b>Inicial</b></div><div><span>Datos útiles</span><b>0 d · 0 p</b></div><div><span>Próxima revisión</span><b>—</b></div></div>
-<button class="primary-action" disabled="" id="run-auto-adjustment" type="button">Reuniendo datos</button>
+<button class="primary-action" hidden id="run-auto-adjustment" type="button">Aplicar reajuste</button>
 <small>Usa hasta 42 días, una tendencia exponencial del peso, regresión lineal y correcciones de hasta 250 kcal. Los días completos aumentan la confianza. Después de cada revisión exige al menos 3 días de ingesta y 2 pesajes nuevos.</small>
 <p class="feedback" id="automatic-adjustment-feedback" role="status"></p>
 </div>
