@@ -1,0 +1,12 @@
+{
+  "appId": "uy.com.andresgonzalez.masa",
+  "appName": "MASA",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true
+  }
+}

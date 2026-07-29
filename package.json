@@ -1,5 +1,26 @@
 {
   "name": "masa",
   "private": true,
-  "version": "25.3.0"
+  "version": "25.3.0",
+  "type": "module",
+  "scripts": {
+    "mobile:prepare": "node tools/prepare-mobile.mjs",
+    "android:init": "npm run mobile:prepare && npx cap add android && npm run android:assets && node tools/configure-android.mjs && npx cap sync android",
+    "android:sync": "npm run mobile:prepare && npm run android:assets && npx cap sync android && node tools/configure-android.mjs",
+    "android:open": "npm run android:sync && npx cap open android",
+    "android:apk": "node tools/build-android.mjs",
+    "android:assets": "npx @capacitor/assets generate --android --assetPath resources --iconBackgroundColor '#15181d' --iconBackgroundColorDark '#15181d' --splashBackgroundColor '#f2efe7' --splashBackgroundColorDark '#15181d'"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.4.2",
+    "@capacitor/barcode-scanner": "3.1.0",
+    "@capacitor/core": "8.4.2",
+    "@supabase/supabase-js": "2.110.9",
+    "@zxing/browser": "0.2.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.2",
+    "esbuild": "0.28.1",
+    "@capacitor/assets": "3.0.5"
+  }
 }
