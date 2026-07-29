@@ -6,6 +6,20 @@
   const LEGACY_KEYS = ["masa-state-v9", "masa-state-v8", "masa-state-v7", "masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
   const DAY_MS = 86_400_000;
   const KG_KCAL = 7700;
+  // MASA_ADAPTIVE_EXPENDITURE_V1
+  const EXPENDITURE_CONFIG = Object.freeze({
+    emaAlpha: 0.10,
+    windowDays: 42,
+    minIntakeDays: 14,
+    minSpanDays: 18,
+    minWeighIns: 8,
+    reviewIntervalDays: 7,
+    minNewIntakeDays: 3,
+    minNewWeighIns: 2,
+    maxAdjustment: 250,
+    minMeaningfulAdjustment: 30
+  });
+  const MEAL_USAGE_KEYS = ["breakfast", "lunch", "snack", "dinner", "extras"];
   const EXTERNAL_FOOD_CATALOG_URL = new URL(
     "../data/opennutrition-es-general.json",
     document.currentScript?.src || window.location.href
@@ -388,6 +402,52 @@
         lastUsedAt: normalizeTimestamp(usage?.lastUsedAt || usage?.lastUsed)
       };
     });
+    // MASA_MEAL_USAGE_NORMALIZATION_V1
+    const legacyMealUsageKeys = new Set();
+    Object.entries(foodUsage).forEach(([sourceId, usage]) => {
+      const rawUsage = input.foodUsage?.[sourceId] || {};
+      const byMeal = {};
+      MEAL_USAGE_KEYS.forEach(meal => {
+        const mealUsage = rawUsage?.byMeal?.[meal] || usage?.byMeal?.[meal];
+        const mealAmount = toNumber(mealUsage?.amount, NaN);
+        const mealUses = Math.max(0, Math.round(toNumber(mealUsage?.uses, 0)));
+        if (!mealUsage || (!Number.isFinite(mealAmount) && mealUses <= 0)) return;
+        byMeal[meal] = {
+          amount: Number.isFinite(mealAmount) && mealAmount > 0 ? mealAmount : toNumber(usage?.amount, 1),
+          unit: String(mealUsage?.unit || usage?.unit || "").trim(),
+          uses: mealUses,
+          lastUsed: normalizeDate(mealUsage?.lastUsed),
+          lastUsedAt: normalizeTimestamp(mealUsage?.lastUsedAt || mealUsage?.lastUsed)
+        };
+      });
+      if (!Object.keys(byMeal).length) legacyMealUsageKeys.add(sourceId);
+      usage.byMeal = byMeal;
+    });
+    if (legacyMealUsageKeys.size) {
+      Object.entries(diary).forEach(([date, entries]) => {
+        entries.forEach((entry, index) => {
+          const sourceId = String(entry?.sourceId || "").trim();
+          const meal = MEAL_USAGE_KEYS.includes(entry?.meal) ? entry.meal : "extras";
+          if (!sourceId || !legacyMealUsageKeys.has(sourceId) || !foodUsage[sourceId]) return;
+          const usage = foodUsage[sourceId];
+          const previous = usage.byMeal[meal] || {};
+          const entryAmount = toNumber(entry?.quantity, usage.amount);
+          const entryUnit = String(entry?.quantityUnit || usage.unit || "").trim();
+          const parsedDate = parseDate(date);
+          const usedAt = parsedDate
+            ? new Date(parsedDate.getTime() + index * 1000).toISOString()
+            : `${date}T12:00:00.000Z`;
+          const isLatest = !previous.lastUsedAt || usedAt > previous.lastUsedAt;
+          usage.byMeal[meal] = {
+            amount: isLatest && entryAmount > 0 ? entryAmount : toNumber(previous.amount, usage.amount),
+            unit: isLatest && entryUnit ? entryUnit : String(previous.unit || usage.unit || ""),
+            uses: Math.max(0, Math.round(toNumber(previous.uses, 0))) + 1,
+            lastUsed: isLatest ? date : previous.lastUsed,
+            lastUsedAt: isLatest ? usedAt : previous.lastUsedAt
+          };
+        });
+      });
+    }
 
     const catalogOverrides = {};
     const rawCatalogOverrides = input.catalogOverrides || input.externalFoodOverrides || {};
@@ -398,7 +458,7 @@
 
     const configured = profileIsComplete(profile, sorted);
     return {
-      version: 19,
+      version: 20,
       configured,
       profile,
       weighIns: sorted,
@@ -689,16 +749,40 @@
     });
   }
 
-  function regressionRatePerWeek(values = state.weighIns, limit = 21) {
+  function regressionRatePerWeek(values = state.weighIns, limit = 21, valueKey = "weight") {
     const points = sortedWeighIns(values).slice(-limit);
     if (points.length < 3) return null;
     const origin = parseDate(points[0].date);
-    const data = points.map(item => ({ x: daysBetween(origin, parseDate(item.date)), y: item.weight }));
+    const data = points.map(item => ({
+      x: daysBetween(origin, parseDate(item.date)),
+      y: toNumber(item[valueKey], NaN)
+    })).filter(item => Number.isFinite(item.x) && Number.isFinite(item.y));
+    if (data.length < 3) return null;
     const meanX = data.reduce((sum, item) => sum + item.x, 0) / data.length;
     const meanY = data.reduce((sum, item) => sum + item.y, 0) / data.length;
     const numerator = data.reduce((sum, item) => sum + (item.x - meanX) * (item.y - meanY), 0);
     const denominator = data.reduce((sum, item) => sum + (item.x - meanX) ** 2, 0);
     return denominator ? (numerator / denominator) * 7 : null;
+  }
+  function exponentialWeightTrend(values = state.weighIns, alpha = EXPENDITURE_CONFIG.emaAlpha) {
+    const sorted = sortedWeighIns(values);
+    let trend = null;
+    let previousDate = null;
+    return sorted.map(item => {
+      const date = parseDate(item.date);
+      if (!Number.isFinite(trend)) {
+        trend = item.weight;
+      } else {
+        const elapsedDays = Math.max(1, Math.round(daysBetween(previousDate, date)));
+        const effectiveAlpha = 1 - (1 - alpha) ** elapsedDays;
+        trend += effectiveAlpha * (item.weight - trend);
+      }
+      previousDate = date;
+      return { ...item, trend };
+    });
+  }
+  function expenditureRatePerWeek(values = state.weighIns, limit = 60) {
+    return regressionRatePerWeek(exponentialWeightTrend(values), limit, "trend");
   }
 
   function ageFromBirthDate(value) {
@@ -1728,7 +1812,10 @@
   function foodUsageFor(item) {
     return state.foodUsage?.[foodUsageKey(item)] || null;
   }
-
+  function foodUsageForMeal(item, meal = activeMeal) {
+    const usage = foodUsageFor(item);
+    return usage?.byMeal?.[meal] || usage || null;
+  }
   function foodStats(item) {
     const usage = foodUsageFor(item);
     const lastUsed = String(usage?.lastUsed || item?.lastUsed || "");
@@ -1741,7 +1828,15 @@
       lastUsedAt
     };
   }
-
+  function mealFoodStats(item, meal = activeMeal) {
+    const usage = foodUsageFor(item)?.byMeal?.[meal];
+    const lastUsed = String(usage?.lastUsed || "");
+    return {
+      uses: Math.max(0, toNumber(usage?.uses, 0)),
+      lastUsed,
+      lastUsedAt: String(usage?.lastUsedAt || (lastUsed ? `${lastUsed}T12:00:00.000Z` : ""))
+    };
+  }
   function compareFoodPriority(a, b) {
     const aStats = foodStats(a);
     const bStats = foodStats(b);
@@ -1754,19 +1849,32 @@
     if (aLocal !== bLocal) return bLocal - aLocal;
     return String(a.name || "").localeCompare(String(b.name || ""), "es");
   }
-
+  function compareMealFoodPriority(a, b, meal = activeMeal) {
+    const aMeal = mealFoodStats(a, meal);
+    const bMeal = mealFoodStats(b, meal);
+    return bMeal.uses - aMeal.uses
+      || bMeal.lastUsedAt.localeCompare(aMeal.lastUsedAt)
+      || compareFoodPriority(a, b);
+  }
   function compareRecentFoods(a, b) {
+    const aMeal = mealFoodStats(a);
+    const bMeal = mealFoodStats(b);
     const aStats = foodStats(a);
     const bStats = foodStats(b);
-    return bStats.lastUsedAt.localeCompare(aStats.lastUsedAt)
+    return bMeal.lastUsedAt.localeCompare(aMeal.lastUsedAt)
+      || bMeal.uses - aMeal.uses
+      || bStats.lastUsedAt.localeCompare(aStats.lastUsedAt)
       || bStats.uses - aStats.uses
       || String(a.name || "").localeCompare(String(b.name || ""), "es");
   }
-
   function compareFrequentFoods(a, b) {
+    const aMeal = mealFoodStats(a);
+    const bMeal = mealFoodStats(b);
     const aStats = foodStats(a);
     const bStats = foodStats(b);
-    return bStats.uses - aStats.uses
+    return bMeal.uses - aMeal.uses
+      || bMeal.lastUsedAt.localeCompare(aMeal.lastUsedAt)
+      || bStats.uses - aStats.uses
       || bStats.lastUsedAt.localeCompare(aStats.lastUsedAt)
       || String(a.name || "").localeCompare(String(b.name || ""), "es");
   }
@@ -1856,7 +1964,9 @@
     if (!query) return;
     const localMatches = localLibraryFoods().filter(item => foodSearchText(item).includes(query));
     const selected = [...localMatches, ...searchExternalFoods(query, 45)];
-    const unique = [...new Map(selected.map(item => [item.id, item])).values()].slice(0, 35);
+    const unique = [...new Map(selected.map(item => [item.id, item])).values()]
+      .sort((a, b) => compareMealFoodPriority(a, b, activeMeal))
+      .slice(0, 35);
 
     if (!unique.length) {
       if (externalFoodsStatus !== "loading") {
@@ -1897,7 +2007,7 @@
       container.innerHTML = '<p class="empty-message">Todavía no guardaste recetas.</p>';
       return;
     }
-    [...state.recipes].sort(compareFoodPriority).forEach(item => container.appendChild(foodResultButton(item)));
+    [...state.recipes].sort((a, b) => compareMealFoodPriority(a, b, activeMeal)).forEach(item => container.appendChild(foodResultButton(item)));
   }
 
   const COMMON_UNIT_NAMES = {
@@ -2058,7 +2168,7 @@
 
   function defaultFoodQuantity(item) {
     const options = foodQuantityOptions(item);
-    const usage = foodUsageFor(item);
+    const usage = foodUsageForMeal(item, activeMeal);
     const savedOption = options.find(option => option.value === usage?.unit);
 
     if (usage && savedOption && toNumber(usage.amount, 0) > 0) {
@@ -2256,12 +2366,23 @@
     state.diary[selectedDiaryDate] = [...todayDiary(), entry];
     state.foodUsage ||= {};
     const previousUsage = state.foodUsage[sourceId] || {};
+    const previousMealUsage = previousUsage.byMeal?.[activeMeal] || {};
     state.foodUsage[sourceId] = {
       amount,
       unit: option.value,
       uses: Math.max(0, Math.round(toNumber(previousUsage.uses, 0))) + 1,
       lastUsed: selectedDiaryDate,
-      lastUsedAt: usedAt
+      lastUsedAt: usedAt,
+      byMeal: {
+        ...(previousUsage.byMeal || {}),
+        [activeMeal]: {
+          amount,
+          unit: option.value,
+          uses: Math.max(0, Math.round(toNumber(previousMealUsage.uses, 0))) + 1,
+          lastUsed: selectedDiaryDate,
+          lastUsedAt: usedAt
+        }
+      }
     };
 
     if (item.kind !== "external") {
@@ -3549,7 +3670,39 @@
       : "Todavía no hay pesajes suficientes.";
   }
 
+  function latestAutomaticReview() {
+    return [...(state.calibrationHistory || [])]
+      .filter(item => normalizeDate(item?.date))
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+      .at(-1) || null;
+  }
+  function automaticReviewTiming() {
+    const latestReview = latestAutomaticReview();
+    const lastReviewDate = normalizeDate(latestReview?.date);
+    const nextReviewDate = lastReviewDate
+      ? toISODate(addDays(parseDate(lastReviewDate), EXPENDITURE_CONFIG.reviewIntervalDays))
+      : "";
+    const reviewDue = !nextReviewDate || parseDate(todayISO()) >= parseDate(nextReviewDate);
+    return { latestReview, lastReviewDate, nextReviewDate, reviewDue };
+  }
+  function expenditureProgress(intakeDays = 0, spanDays = 0, weighInCount = 0) {
+    const intake = clamp(intakeDays / EXPENDITURE_CONFIG.minIntakeDays, 0, 1);
+    const span = clamp(spanDays / EXPENDITURE_CONFIG.minSpanDays, 0, 1);
+    const weigh = clamp(weighInCount / EXPENDITURE_CONFIG.minWeighIns, 0, 1);
+    return Math.round((intake + span + weigh) / 3 * 100);
+  }
+  function expenditureConfidence({ intakeDays, completedDays, weighInCount, spanDays }) {
+    const intakeDepth = clamp((intakeDays - EXPENDITURE_CONFIG.minIntakeDays) / 14, 0, 1);
+    const weighDepth = clamp((weighInCount - EXPENDITURE_CONFIG.minWeighIns) / 8, 0, 1);
+    const spanDepth = clamp((spanDays - EXPENDITURE_CONFIG.minSpanDays) / 17, 0, 1);
+    const completionRatio = clamp(completedDays / Math.max(1, intakeDays), 0, 1);
+    const score = clamp(0.25 + intakeDepth * 0.25 + weighDepth * 0.20 + spanDepth * 0.20 + completionRatio * 0.10, 0.25, 1);
+    const alpha = clamp(0.15 + score * 0.35, 0.20, 0.50);
+    const label = score >= 0.72 ? "Alta" : score >= 0.45 ? "Media" : "Baja";
+    return { score, alpha, label };
+  }
   function automaticAdjustmentData(profile = state.profile, plan = calculatePlan(profile, state.weighIns), weighIns = state.weighIns) {
+    const timing = automaticReviewTiming();
     const allLogged = Object.keys(state.diary || {}).sort().map(iso => {
       const totals = diaryTotalsForDate(iso);
       return {
@@ -3561,163 +3714,224 @@
       };
     }).filter(day => day.date && day.hasEntries && Number.isFinite(day.calories) && day.calories > 0);
 
+    const base = {
+      ready: false,
+      status: "learning",
+      intakeDays: 0,
+      completedDays: 0,
+      weighInCount: 0,
+      spanDays: 0,
+      progress: 0,
+      confidenceLabel: "Inicial",
+      confidenceScore: 0,
+      alpha: 0,
+      calendarDue: timing.reviewDue,
+      reviewDue: timing.reviewDue,
+      hasNewData: !timing.lastReviewDate,
+      newIntakeDays: 0,
+      newWeighIns: 0,
+      nextReviewDate: timing.nextReviewDate,
+      lastReviewDate: timing.lastReviewDate,
+      currentTarget: plan.targetCalories,
+      currentMaintenance: plan.maintenance
+    };
+
     if (!allLogged.length) {
-      return { ready: false, reason: "Todavía no hay ingestas registradas.", intakeDays: 0, weighInCount: weighIns.length };
+      return { ...base, reason: "Todavía no hay ingestas registradas. El gasto adaptativo empieza a aprender cuando registrás comidas y pesajes." };
     }
 
     const latestDate = allLogged.at(-1).date;
-    const recentStart = addDays(latestDate, -41);
+    const recentStart = addDays(latestDate, -(EXPENDITURE_CONFIG.windowDays - 1));
     const recentLogged = allLogged.filter(day => day.date >= recentStart && day.date <= latestDate);
     const recentCompleted = recentLogged.filter(day => day.completed);
-    const used = recentCompleted.length >= 14 ? recentCompleted : recentLogged;
-    const completedOnly = recentCompleted.length >= 14;
+    const completedOnly = recentCompleted.length >= EXPENDITURE_CONFIG.minIntakeDays;
+    const used = completedOnly ? recentCompleted : recentLogged;
+    const firstDate = used[0]?.date;
+    const lastDate = used.at(-1)?.date;
+    const spanDays = firstDate && lastDate ? Math.round(daysBetween(firstDate, lastDate)) + 1 : 0;
+    const relatedWeighIns = firstDate && lastDate
+      ? [...weighIns].filter(item => {
+          const date = parseDate(item.date);
+          return date && date >= addDays(firstDate, -3) && date <= addDays(lastDate, 3);
+        }).sort((a, b) => a.date.localeCompare(b.date))
+      : [];
+    const newIntakeDays = timing.lastReviewDate
+      ? used.filter(day => day.iso > timing.lastReviewDate).length
+      : used.length;
+    const newWeighIns = timing.lastReviewDate
+      ? relatedWeighIns.filter(item => item.date > timing.lastReviewDate).length
+      : relatedWeighIns.length;
+    const hasNewData = !timing.lastReviewDate
+      || (newIntakeDays >= EXPENDITURE_CONFIG.minNewIntakeDays
+        && newWeighIns >= EXPENDITURE_CONFIG.minNewWeighIns);
+    const progress = expenditureProgress(used.length, spanDays, relatedWeighIns.length);
+    const common = {
+      ...base,
+      calendarDue: timing.reviewDue,
+      reviewDue: timing.reviewDue && hasNewData,
+      hasNewData,
+      newIntakeDays,
+      newWeighIns,
+      intakeDays: used.length,
+      completedDays: recentCompleted.length,
+      completedOnly,
+      weighInCount: relatedWeighIns.length,
+      spanDays,
+      progress,
+      firstDate,
+      lastDate
+    };
 
-    if (used.length < 14) {
+    if (used.length < EXPENDITURE_CONFIG.minIntakeDays) {
       return {
-        ready: false,
-        reason: `Faltan ${14 - used.length} días de ingestas para una primera estimación.`,
-        intakeDays: used.length,
-        completedDays: recentCompleted.length,
-        weighInCount: weighIns.length
+        ...common,
+        reason: `Faltan ${EXPENDITURE_CONFIG.minIntakeDays - used.length} días de ingestas para la primera estimación.`
+      };
+    }
+    if (spanDays < EXPENDITURE_CONFIG.minSpanDays) {
+      return {
+        ...common,
+        reason: `Los registros cubren ${spanDays} días. Se necesitan ${EXPENDITURE_CONFIG.minSpanDays} para separar el ruido diario de la tendencia.`
+      };
+    }
+    if (relatedWeighIns.length < EXPENDITURE_CONFIG.minWeighIns) {
+      return {
+        ...common,
+        reason: `Hay ${relatedWeighIns.length} pesajes comparables en el período. Se necesitan ${EXPENDITURE_CONFIG.minWeighIns}.`
       };
     }
 
-    const firstDate = used[0].date;
-    const lastDate = used.at(-1).date;
-    const spanDays = Math.round(daysBetween(firstDate, lastDate)) + 1;
-    if (spanDays < 18) {
-      return {
-        ready: false,
-        reason: `Los registros todavía cubren solo ${spanDays} días. Se necesitan al menos 18 para separar ruido de tendencia.`,
-        intakeDays: used.length,
-        completedDays: recentCompleted.length,
-        weighInCount: weighIns.length,
-        spanDays
-      };
-    }
-
-    const relatedWeighIns = [...weighIns].filter(item => {
-      const date = parseDate(item.date);
-      return date && date >= addDays(firstDate, -3) && date <= addDays(lastDate, 3);
-    }).sort((a, b) => a.date.localeCompare(b.date));
-
-    if (relatedWeighIns.length < 8) {
-      return {
-        ready: false,
-        reason: `Hay ${relatedWeighIns.length} pesajes en el período. Se necesitan al menos 8.`,
-        intakeDays: used.length,
-        completedDays: recentCompleted.length,
-        weighInCount: relatedWeighIns.length,
-        spanDays
-      };
-    }
-
-    const observedWeekly = regressionRatePerWeek(relatedWeighIns, 60);
-    if (!Number.isFinite(observedWeekly) || !Number.isFinite(plan.targetCalories) || !Number.isFinite(plan.dailyAdjustment)) {
-      return {
-        ready: false,
-        reason: "No se pudo calcular una tendencia estable con los datos actuales.",
-        intakeDays: used.length,
-        completedDays: recentCompleted.length,
-        weighInCount: relatedWeighIns.length,
-        spanDays
-      };
+    const trendedWeighIns = exponentialWeightTrend(relatedWeighIns);
+    const observedWeekly = regressionRatePerWeek(trendedWeighIns, 60, "trend");
+    if (!Number.isFinite(observedWeekly) || !Number.isFinite(plan.targetCalories) || !Number.isFinite(plan.dailyAdjustment) || !Number.isFinite(plan.maintenance)) {
+      return { ...common, reason: "No se pudo calcular una tendencia estable con los datos actuales." };
     }
 
     const averageCalories = used.reduce((sum, day) => sum + day.calories, 0) / used.length;
     const observedMaintenance = averageCalories - observedWeekly * KG_KCAL / 7;
     if (!Number.isFinite(observedMaintenance) || observedMaintenance < 1000 || observedMaintenance > 6000) {
       return {
-        ready: false,
-        reason: "Los datos producen un mantenimiento fuera de un rango plausible. Revisá que los días estén completos y que los pesajes sean correctos.",
-        intakeDays: used.length,
-        completedDays: recentCompleted.length,
-        weighInCount: relatedWeighIns.length,
-        spanDays
+        ...common,
+        reason: "Los datos producen un gasto fuera de un rango plausible. Revisá días incompletos, cantidades y pesajes."
       };
     }
-    const recommendedTarget = observedMaintenance + plan.dailyAdjustment;
+
+    const confidence = expenditureConfidence({
+      intakeDays: used.length,
+      completedDays: recentCompleted.length,
+      weighInCount: relatedWeighIns.length,
+      spanDays
+    });
+    const adaptiveMaintenance = plan.maintenance * (1 - confidence.alpha) + observedMaintenance * confidence.alpha;
+    const recommendedTarget = adaptiveMaintenance + plan.dailyAdjustment;
     const rawChange = recommendedTarget - plan.targetCalories;
-    const limitedChange = clamp(Math.round(rawChange), -250, 250);
+    const limitedChange = clamp(Math.round(rawChange), -EXPENDITURE_CONFIG.maxAdjustment, EXPENDITURE_CONFIG.maxAdjustment);
     const currentOffset = toNumber(profile.calibrationOffset, 0);
     const newOffset = clamp(currentOffset + limitedChange, -900, 900);
     const appliedChange = newOffset - currentOffset;
-    const trends = rollingTrend(relatedWeighIns, profile.trendWindow);
-    const latestTrend = trends.at(-1)?.trend ?? relatedWeighIns.at(-1)?.weight;
+    const meaningful = Math.abs(appliedChange) >= EXPENDITURE_CONFIG.minMeaningfulAdjustment;
+    const status = !timing.reviewDue
+      ? "waiting"
+      : !hasNewData
+        ? "waiting-data"
+        : meaningful ? "ready" : "stable";
+    const latestTrend = trendedWeighIns.at(-1)?.trend ?? relatedWeighIns.at(-1)?.weight;
 
     return {
+      ...common,
       ready: true,
-      intakeDays: used.length,
-      completedDays: recentCompleted.length,
-      completedOnly,
-      weighInCount: relatedWeighIns.length,
-      spanDays,
-      firstDate,
-      lastDate,
+      status,
+      progress: 100,
       averageCalories,
       observedWeekly,
       observedMaintenance,
-      currentTarget: plan.targetCalories,
+      adaptiveMaintenance,
+      currentMaintenance: plan.maintenance,
+      confidenceLabel: confidence.label,
+      confidenceScore: confidence.score,
+      alpha: confidence.alpha,
       recommendedTarget,
       rawChange,
       appliedChange,
       newOffset,
+      meaningful,
       latest: relatedWeighIns.at(-1),
       latestTrend,
-      limited: Math.abs(rawChange) > 250
+      limited: Math.abs(rawChange) > EXPENDITURE_CONFIG.maxAdjustment
     };
   }
-
   function buildRecalibrationSuggestion(profile, plan, weighIns) {
     const suggestion = automaticAdjustmentData(profile, plan, weighIns);
-    if (!suggestion.ready || Math.abs(suggestion.appliedChange) < 50) return null;
-    return suggestion;
+    return suggestion.ready && suggestion.reviewDue ? suggestion : null;
   }
-
   function automaticAdjustmentSummary(suggestion) {
     if (!suggestion?.ready) return suggestion?.reason || "Todavía no hay datos suficientes.";
-    const direction = suggestion.observedWeekly < 0 ? "bajando" : suggestion.observedWeekly > 0 ? "subiendo" : "estable";
-    const changeText = Math.abs(suggestion.appliedChange) < 30
-      ? "El objetivo actual ya está suficientemente cerca de lo observado."
-      : `El objetivo pasaría de ${formatNumber(Math.round(suggestion.currentTarget))} a ${formatNumber(Math.round(suggestion.currentTarget + suggestion.appliedChange))} kcal por día (${suggestion.appliedChange > 0 ? "+" : ""}${formatNumber(suggestion.appliedChange)}).`;
+    const direction = suggestion.observedWeekly < -0.01 ? "bajando" : suggestion.observedWeekly > 0.01 ? "subiendo" : "estable";
     const sourceText = suggestion.completedOnly
       ? `${suggestion.intakeDays} días terminados`
-      : `${suggestion.intakeDays} días con ingestas; completar los días mejora la confianza`;
-    return `Con ${sourceText} y ${suggestion.weighInCount} pesajes, consumiste ${formatNumber(Math.round(suggestion.averageCalories))} kcal en promedio y el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. El mantenimiento observado es de aproximadamente ${formatNumber(Math.round(suggestion.observedMaintenance))} kcal. ${changeText}${suggestion.limited ? " Por seguridad, MASA limita cada ajuste automático a 250 kcal." : ""}`;
+      : `${suggestion.intakeDays} días con ingestas; cerrar días completos aumenta la confianza`;
+    const modelText = `El gasto observado es ${formatNumber(Math.round(suggestion.observedMaintenance))} kcal y el gasto adaptativo usado por M.A.S.A. queda en ${formatNumber(Math.round(suggestion.adaptiveMaintenance))} kcal, con confianza ${suggestion.confidenceLabel.toLowerCase()}.`;
+    if (!suggestion.calendarDue) {
+      return `Con ${sourceText} y ${suggestion.weighInCount} pesajes, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} La próxima revisión corresponde el ${formatDate(suggestion.nextReviewDate)}.`;
+    }
+    if (!suggestion.hasNewData) {
+      const missingIntakes = Math.max(0, EXPENDITURE_CONFIG.minNewIntakeDays - suggestion.newIntakeDays);
+      const missingWeights = Math.max(0, EXPENDITURE_CONFIG.minNewWeighIns - suggestion.newWeighIns);
+      return `La fecha mínima de revisión ya llegó, pero M.A.S.A. espera datos nuevos para no recalcular con el mismo período. Faltan ${missingIntakes} días de ingesta y ${missingWeights} pesajes posteriores a la última revisión.`;
+    }
+    if (!suggestion.meaningful) {
+      return `Con ${sourceText} y ${suggestion.weighInCount} pesajes, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} El objetivo actual está suficientemente cerca y no necesita cambiar.`;
+    }
+    const nextTarget = suggestion.currentTarget + suggestion.appliedChange;
+    return `Con ${sourceText} y ${suggestion.weighInCount} pesajes, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} El objetivo pasaría de ${formatNumber(Math.round(suggestion.currentTarget))} a ${formatNumber(Math.round(nextTarget))} kcal por día (${suggestion.appliedChange > 0 ? "+" : ""}${formatNumber(suggestion.appliedChange)}).${suggestion.limited ? ` Por seguridad, cada revisión se limita a ${EXPENDITURE_CONFIG.maxAdjustment} kcal.` : ""}`;
   }
-
   function renderAutomaticAdjustmentPreview(profile, plan, weighIns = state.weighIns) {
     const suggestion = automaticAdjustmentData(profile, plan, weighIns);
     const summary = $("#automatic-adjustment-summary");
     const facts = $("#automatic-adjustment-facts");
     const button = $("#run-auto-adjustment");
-    if (!summary || !facts || !button) return;
+    if (!summary || !facts || !button) return suggestion;
     summary.textContent = automaticAdjustmentSummary(suggestion);
-    facts.innerHTML = `<div><span>Ingestas útiles</span><b>${suggestion.intakeDays || 0} días</b></div><div><span>Pesajes útiles</span><b>${suggestion.weighInCount || 0}</b></div><div><span>Período</span><b>${suggestion.spanDays || 0} días</b></div>`;
-    button.disabled = !suggestion.ready || Math.abs(suggestion.appliedChange) < 30;
-    button.textContent = suggestion.ready && Math.abs(suggestion.appliedChange) < 30 ? "Sin ajuste necesario" : "Ajustar automáticamente";
+    facts.innerHTML = `<div><span>Gasto adaptativo</span><b>${suggestion.ready ? `${formatNumber(Math.round(suggestion.adaptiveMaintenance))} kcal` : "Aprendiendo"}</b></div><div><span>Confianza</span><b>${suggestion.confidenceLabel}</b></div><div><span>Datos útiles</span><b>${suggestion.intakeDays || 0} d · ${suggestion.weighInCount || 0} p</b></div><div><span>Próxima revisión</span><b>${!suggestion.ready ? "Al completar datos" : suggestion.reviewDue ? "Disponible" : suggestion.calendarDue ? "Faltan datos nuevos" : formatDate(suggestion.nextReviewDate)}</b></div>`;
+    button.disabled = !suggestion.ready || !suggestion.reviewDue;
+    button.textContent = !suggestion.ready
+      ? `Aprendiendo · ${suggestion.progress}%`
+      : !suggestion.calendarDue
+        ? `Próxima revisión ${formatDate(suggestion.nextReviewDate)}`
+        : !suggestion.hasNewData
+          ? "Faltan registros nuevos"
+        : suggestion.meaningful
+          ? "Aplicar reajuste"
+          : "Registrar revisión sin cambios";
     return suggestion;
   }
-
   function applyAutomaticAdjustment(suggestion, profile = state.profile) {
-    if (!suggestion?.ready || Math.abs(suggestion.appliedChange) < 30) return false;
-    profile.calibrationOffset = suggestion.newOffset;
-    profile.planStartDate = suggestion.latest?.date || todayISO();
-    profile.planStartWeight = Number(toNumber(suggestion.latestTrend, suggestion.latest?.weight).toFixed(2));
+    if (!suggestion?.ready || !suggestion.reviewDue) return null;
+    const adjusted = Boolean(suggestion.meaningful);
+    if (adjusted) {
+      profile.calibrationOffset = suggestion.newOffset;
+      profile.planStartDate = suggestion.latest?.date || todayISO();
+      profile.planStartWeight = Number(toNumber(suggestion.latestTrend, suggestion.latest?.weight).toFixed(2));
+    }
     state.calibrationHistory = [...(state.calibrationHistory || []), {
       date: todayISO(),
       intakeDays: suggestion.intakeDays,
+      completedDays: suggestion.completedDays,
       weighInCount: suggestion.weighInCount,
+      spanDays: suggestion.spanDays,
       averageCalories: Math.round(suggestion.averageCalories),
       observedWeekly: Number(suggestion.observedWeekly.toFixed(3)),
       observedMaintenance: Math.round(suggestion.observedMaintenance),
+      adaptiveMaintenance: Math.round(suggestion.adaptiveMaintenance),
+      confidence: Number(suggestion.confidenceScore.toFixed(3)),
+      alpha: Number(suggestion.alpha.toFixed(3)),
       previousTarget: Math.round(suggestion.currentTarget),
-      targetChange: suggestion.appliedChange,
-      newOffset: suggestion.newOffset
-    }].slice(-20);
-    return true;
+      targetChange: adjusted ? suggestion.appliedChange : 0,
+      newOffset: adjusted ? suggestion.newOffset : toNumber(profile.calibrationOffset, 0),
+      reviewOnly: !adjusted
+    }].slice(-30);
+    return { adjusted };
   }
-
   function runAutomaticAdjustment() {
     const form = $("#profile-form");
     const currentWeight = toNumber(form.elements.currentWeight.value, NaN);
@@ -3729,7 +3943,7 @@
     const feedback = $("#automatic-adjustment-feedback");
     const validationError = validateProfile(draft, currentWeight);
     if (validationError) {
-      setFeedback(feedback, `Antes de ajustar: ${validationError.message}`, true);
+      setFeedback(feedback, `Antes de revisar: ${validationError.message}`, true);
       focusProfileField(validationError.field);
       return;
     }
@@ -3738,36 +3952,78 @@
       setFeedback(feedback, suggestion.reason, true);
       return;
     }
-    if (Math.abs(suggestion.appliedChange) < 30) {
-      setFeedback(feedback, "El objetivo actual ya está suficientemente cerca de lo observado.");
+    if (!suggestion.calendarDue) {
+      setFeedback(feedback, `La próxima revisión corresponde el ${formatDate(suggestion.nextReviewDate)}.`);
       return;
     }
-    const nextTarget = Math.round(suggestion.currentTarget + suggestion.appliedChange);
-    const accepted = window.confirm(`MASA propone llevar el objetivo diario a ${formatNumber(nextTarget)} kcal. El cálculo usa ${suggestion.intakeDays} días de ingestas y ${suggestion.weighInCount} pesajes. ¿Aplicar el ajuste?`);
-    if (!accepted) return;
+    if (!suggestion.hasNewData) {
+      setFeedback(feedback, `La fecha mínima ya llegó, pero se necesitan al menos ${EXPENDITURE_CONFIG.minNewIntakeDays} días de ingesta y ${EXPENDITURE_CONFIG.minNewWeighIns} pesajes posteriores a la última revisión.`);
+      return;
+    }
+    const nextTarget = Math.round(suggestion.currentTarget + (suggestion.meaningful ? suggestion.appliedChange : 0));
+    const prompt = suggestion.meaningful
+      ? `M.A.S.A. propone llevar el objetivo diario a ${formatNumber(nextTarget)} kcal. La corrección es gradual y usa ${suggestion.intakeDays} días de ingestas, ${suggestion.weighInCount} pesajes y confianza ${suggestion.confidenceLabel.toLowerCase()}. ¿Aplicar el reajuste?`
+      : "La revisión semanal no encontró una diferencia suficiente para cambiar el objetivo. ¿Registrar la revisión sin cambios?";
+    if (!window.confirm(prompt)) return;
     state.weighIns = temporaryWeighIns;
     state.profile = draft;
-    applyAutomaticAdjustment(suggestion, state.profile);
+    const result = applyAutomaticAdjustment(suggestion, state.profile);
+    if (!result) return;
     state.configured = true;
     saveState(state);
     fillProfileForm();
     updateProfilePreview();
-    setFeedback(feedback, `Ajuste aplicado. Nuevo objetivo aproximado: ${formatNumber(nextTarget)} kcal por día.`);
+    setFeedback(feedback, result.adjusted
+      ? `Reajuste aplicado. Nuevo objetivo aproximado: ${formatNumber(nextTarget)} kcal por día.`
+      : `Revisión registrada. El objetivo se mantiene; la próxima revisión será el ${formatDate(toISODate(addDays(parseDate(todayISO()), EXPENDITURE_CONFIG.reviewIntervalDays)))}.`);
     render();
   }
-
   function renderRecalibration(profile, plan, weighIns) {
+    const data = automaticAdjustmentData(profile, plan, weighIns);
     recalibrationSuggestion = buildRecalibrationSuggestion(profile, plan, weighIns);
     const panel = $("#recalibration-panel");
-    panel.hidden = !recalibrationSuggestion;
-    if (!recalibrationSuggestion) return;
-    $("#recalibration-title").textContent = `${profile.name ? `${profile.name}, tus` : "Tus"} registros permiten recalibrar el objetivo.`;
-    $("#recalibration-text").textContent = automaticAdjustmentSummary(recalibrationSuggestion);
+    if (!panel) return;
+    panel.hidden = false;
+    panel.dataset.state = data.status;
+    const title = $("#recalibration-title");
+    const text = $("#recalibration-text");
+    const facts = $("#recalibration-facts");
+    const note = $("#recalibration-note");
+    const progress = $("#recalibration-progress-fill");
+    const button = $("#apply-recalibration");
+    $("#recalibration-kicker").textContent = data.status === "ready" ? "REAJUSTE DISPONIBLE" : "GASTO ADAPTATIVO";
+    if (!data.ready) {
+      title.textContent = "M.A.S.A. está aprendiendo de tus registros.";
+    } else if (!data.calendarDue) {
+      title.textContent = `Próxima revisión: ${formatDate(data.nextReviewDate)}.`;
+    } else if (!data.hasNewData) {
+      title.textContent = "La fecha llegó; faltan registros nuevos.";
+    } else if (data.meaningful) {
+      title.textContent = `${profile.name ? `${profile.name}, hay` : "Hay"} un reajuste listo para revisar.`;
+    } else {
+      title.textContent = "Revisión completa: el objetivo sigue bien calibrado.";
+    }
+    text.textContent = automaticAdjustmentSummary(data);
+    facts.innerHTML = `<div><span>Gasto estimado</span><b>${data.ready ? `${formatNumber(Math.round(data.adaptiveMaintenance))} kcal` : `${formatNumber(Math.round(plan.maintenance))} kcal iniciales`}</b></div><div><span>Confianza</span><b>${data.confidenceLabel}</b></div><div><span>Datos reunidos</span><b>${data.intakeDays || 0}/${EXPENDITURE_CONFIG.minIntakeDays} días · ${data.weighInCount || 0}/${EXPENDITURE_CONFIG.minWeighIns} pesajes</b></div><div><span>Estado</span><b>${data.ready ? data.reviewDue ? "Revisión lista" : data.calendarDue ? "Esperando datos nuevos" : `Espera hasta ${formatDate(data.nextReviewDate)}` : `${data.progress}% aprendido`}</b></div>`;
+    progress.style.width = `${data.progress}%`;
+    note.textContent = data.ready
+      ? `La corrección mezcla el gasto anterior con el observado usando β = ${formatNumber(data.alpha, 2)}. Las revisiones se separan por ${EXPENDITURE_CONFIG.reviewIntervalDays} días y exigen al menos ${EXPENDITURE_CONFIG.minNewIntakeDays} días de ingesta y ${EXPENDITURE_CONFIG.minNewWeighIns} pesajes posteriores a la revisión anterior.`
+      : "El cálculo necesita suficiente distancia entre fechas, días de ingesta y pesajes comparables; no reacciona a un peso aislado.";
+    button.disabled = !recalibrationSuggestion;
+    button.textContent = !data.ready
+      ? `Aprendiendo · ${data.progress}%`
+      : !data.calendarDue
+        ? `Próxima revisión ${formatDate(data.nextReviewDate)}`
+        : !data.hasNewData
+          ? "Faltan registros nuevos"
+        : data.meaningful
+          ? "Aplicar reajuste"
+          : "Registrar revisión";
   }
-
   function applyRecalibration() {
     if (!recalibrationSuggestion) return;
-    if (!applyAutomaticAdjustment(recalibrationSuggestion, state.profile)) return;
+    const result = applyAutomaticAdjustment(recalibrationSuggestion, state.profile);
+    if (!result) return;
     saveState(state);
     render();
   }
@@ -3825,7 +4081,7 @@
       const date = parseDate(item.date);
       return date >= addDays(firstDate, -4) && date <= addDays(lastDate, 4);
     });
-    const observedWeekly = regressionRatePerWeek(relatedWeighIns, 100);
+    const observedWeekly = expenditureRatePerWeek(relatedWeighIns, 100);
     const estimatedMaintenance = Number.isFinite(observedWeekly)
       ? average - observedWeekly * KG_KCAL / 7
       : null;

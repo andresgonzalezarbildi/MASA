@@ -3092,3 +3092,66 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .history-trend { align-self: end; }
   .history-delete { text-align: right; }
 }
+
+/* MASA_ADAPTIVE_EXPENDITURE_V1: gasto adaptativo y fórmulas transparentes */
+.recalibration-panel { align-items: start; }
+.recalibration-content { min-width: 0; }
+.recalibration-panel[data-state="learning"] { background: var(--paper); }
+.recalibration-panel[data-state="waiting"],
+.recalibration-panel[data-state="waiting-data"] { background: var(--cyan); }
+.recalibration-panel[data-state="stable"] { background: var(--acid); }
+.recalibration-panel[data-state="ready"] { background: var(--yellow); }
+.recalibration-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 12px;
+}
+.recalibration-facts > div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--ink);
+  background: rgba(255,255,255,.42);
+}
+.recalibration-facts span,
+.recalibration-facts b { display: block; }
+.recalibration-facts span { margin-bottom: 5px; font-family: var(--font-mono); font-size: 8px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.recalibration-facts b { overflow-wrap: anywhere; font-size: 13px; line-height: 1.25; }
+.recalibration-progress { height: 8px; margin-bottom: 10px; overflow: hidden; border: 1px solid var(--ink); background: rgba(255,255,255,.4); }
+.recalibration-progress i { display: block; width: 0; height: 100%; background: var(--violet); transition: width .25s ease; }
+.about-math {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--ink);
+  background: rgba(255,255,255,.42);
+}
+.about-math > p { margin: 0; }
+.about-formulas { display: grid; gap: 9px; }
+.about-formulas article { padding: 12px; border-left: 4px solid var(--violet); background: var(--paper); }
+.about-formulas b,
+.about-formulas code,
+.about-formulas p { display: block; }
+.about-formulas code {
+  margin: 7px 0;
+  padding: 7px 9px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  background: var(--night);
+  color: var(--acid);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.about-formulas p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.about-reference { padding-top: 2px; font-size: 12px; }
+@media (max-width: 900px) {
+  .recalibration-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 590px) {
+  .recalibration-panel { gap: 13px; }
+  .recalibration-facts { grid-template-columns: 1fr; }
+  .recalibration-panel button { width: 100%; }
+  .about-formulas code { font-size: 10px; }
+}
+

@@ -10,13 +10,13 @@
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="assets/icon-192.png" rel="apple-touch-icon"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=26.0" rel="stylesheet"/>
-<link href="./css/auth.css?v=26.0" rel="stylesheet"/>
+<link href="./css/styles.css?v=27.0" rel="stylesheet"/>
+<link href="./css/auth.css?v=27.0" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=26.0"></script>
-<script defer="" src="./js/cloud.js?v=26.0"></script>
+<script defer="" src="./js/config.js?v=27.0"></script>
+<script defer="" src="./js/cloud.js?v=27.0"></script>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
-<script defer="" src="./js/app.js?v=26.0"></script>
+<script defer="" src="./js/app.js?v=27.0"></script>
 </head>
 <body>
 
@@ -250,15 +250,17 @@
 </div>
 <span class="signal" id="goal-status">—</span>
 <p class="guidance" id="goal-guidance"></p>
-</section></article></section><section class="recalibration-panel" hidden="" id="recalibration-panel">
+</section></article></section><section class="recalibration-panel" data-state="learning" id="recalibration-panel">
 <div aria-hidden="true" class="recalibration-symbol">Δ</div>
-<div>
-<p class="eyebrow">RECALIBRACIÓN SUGERIDA</p>
-<h2 id="recalibration-title">La tendencia se alejó de la proyección.</h2>
+<div class="recalibration-content">
+<p class="eyebrow" id="recalibration-kicker">GASTO ADAPTATIVO</p>
+<h2 id="recalibration-title">M.A.S.A. está aprendiendo de tus registros.</h2>
 <p id="recalibration-text">—</p>
-<small>El cálculo usa el consumo realmente registrado y la tendencia observada del peso; no supone que hayas cumplido el objetivo anterior.</small>
+<div class="recalibration-facts" id="recalibration-facts"></div>
+<div aria-label="Progreso del modelo adaptativo" class="recalibration-progress"><i id="recalibration-progress-fill"></i></div>
+<small id="recalibration-note">El cálculo usa el consumo realmente registrado y la tendencia observada del peso.</small>
 </div>
-<button class="primary-action" id="apply-recalibration" type="button">Ajustar cálculo</button>
+<button class="primary-action" disabled="" id="apply-recalibration" type="button">Reuniendo datos</button>
 </section><section class="progress-section">
 <article class="chart-module">
 <div class="chart-title-row progress-chart-title-row">
@@ -329,7 +331,7 @@
 <span>MASA</span>
 <p>Una herramienta para entender las cuentas detrás del peso. No reemplaza una evaluación clínica individual.</p>
 <div class="footer-actions">
-<button class="footer-about-button" id="open-about" type="button">Misión, historia y créditos</button>
+<button class="footer-about-button" id="open-about" type="button">Acerca de M.A.S.A.</button>
 <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">Datos: OpenNutrition ↗</a>
 <a href="https://andresgonzalez.netlify.app/" rel="noopener" target="_blank">Más herramientas ↗</a>
 </div>
@@ -362,6 +364,21 @@
 <p>La aplicación parte de una estimación inicial y la compara con tus registros reales de comidas, ejercicio y peso. A medida que incorporás información, detecta si tu evolución se está alejando de lo previsto y reajusta las estimaciones para adaptarse mejor a tu cuerpo y a tu rutina.</p>
 <p>La idea nació como una planilla personal. Registrando calorías y peso, y realizando pequeños ajustes sobre la marcha, fue posible anticipar con bastante precisión la evolución del peso durante varios meses y perder <strong>4,2 kg en tres meses</strong> sin realizar cambios extremos en la alimentación.</p>
 <div class="about-mission"><p class="eyebrow inverted">MISIÓN</p><p>Transformar ese método en una herramienta simple, clara y adaptable, que permita tomar decisiones basadas en datos reales en lugar de depender únicamente de fórmulas generales.</p></div>
+<section class="about-math" aria-labelledby="about-math-title">
+<p class="eyebrow" id="about-math-title">MATEMÁTICAS DEL MODELO</p>
+<p>M.A.S.A. usa dos capas: una estimación inicial basada en fórmulas poblacionales y un gasto adaptativo que aprende de la relación entre tus ingestas y la tendencia del peso. Ningún pesaje aislado modifica el objetivo.</p>
+<div class="about-formulas">
+<article><b>1. Metabolismo en reposo</b><code>Mifflin: 10·P + 6,25·H − 5·E + S</code><code>Harris (M): 88,362 + 13,397·P + 4,799·H − 5,677·E</code><code>Harris (F): 447,593 + 9,247·P + 3,098·H − 4,330·E</code><code>Cunningham: 500 + 22·masa libre de grasa</code><p>P es el peso en kg, H la altura en cm, E la edad y S vale +5 o −161 en Mifflin. Cunningham requiere una estimación de grasa corporal; sin ella se usa Mifflin.</p></article>
+<article><b>2. Mantenimiento y meta inicial</b><code>Mantenimiento = RMR · factor de actividad + calibración</code><code>Objetivo = mantenimiento + (Δkg/sem · 7700 / 7)</code><p>El signo de Δkg/sem depende de si se busca bajar, mantener o subir. El valor de 7700 kcal/kg es una aproximación energética de trabajo, no una equivalencia exacta para cada persona.</p></article>
+<article><b>3. Tendencia del peso</b><code>Tₙ = (1 − α) · Tₙ₋₁ + α · Pₙ; α base = 0,10</code><p>El peso medido se suaviza con una media exponencial. Cuando faltan días, α se ajusta por el tiempo transcurrido para no tratar dos pesajes separados como días consecutivos.</p></article>
+<article><b>4. Ritmo observado</b><code>r = pendiente de la regresión lineal sobre T</code><p>La velocidad de cambio no se obtiene restando solamente el primer y último pesaje: se estima usando todos los puntos de la tendencia del período.</p></article>
+<article><b>5. Gasto observado</b><code>Gₒ = ingesta media − r · 7700 / 7</code><p>Con r expresado en kg por semana, el sistema infiere el gasto que mejor explica simultáneamente lo registrado y el cambio de peso.</p></article>
+<article><b>6. Gasto adaptativo</b><code>Gₐ = (1 − β) · G anterior + β · Gₒ</code><p>β aumenta con más días útiles, más pesajes, mayor duración y más días marcados como completos. Esto permite aprender sin reemplazar bruscamente la estimación previa.</p></article>
+<article><b>7. Revisión semanal</b><code>Objetivo nuevo = Gₐ + ajuste por meta</code><p>La app muestra el progreso, la confianza y la próxima fecha de revisión. Los cambios requieren confirmación, se separan por siete días y se limitan a ±250 kcal por revisión. Para volver a revisar exige al menos tres días de ingesta y dos pesajes nuevos.</p></article>
+<article><b>8. Macronutrientes</b><code>Proteína y carbohidratos: 4 kcal/g · Grasas: 9 kcal/g</code><p>El modo balanceado reparte 20% proteína, 30% grasas y 50% carbohidratos. El modo atlético fija proteína y grasas según el peso, y asigna a carbohidratos la energía restante.</p></article>
+</div>
+<p class="about-reference">El suavizado se inspira en <a href="https://www.fourmilab.ch/hackdiet/online/hdo.html" rel="noopener" target="_blank">The Hacker's Diet</a>. El enfoque de gasto inferido a partir de ingesta y peso también está relacionado con la metodología pública de <a href="https://macrofactor.com/expenditure-v3/" rel="noopener" target="_blank">MacroFactor</a>. Las reglas de confianza, los límites y la implementación son propios de M.A.S.A.</p>
+</section>
 <section class="about-credits" aria-labelledby="about-credits-title">
 <p class="eyebrow" id="about-credits-title">CRÉDITOS DE DATOS</p>
 <p>La biblioteca de alimentos incluida en M.A.S.A. fue elaborada a partir de <a href="https://www.opennutrition.app/" rel="noopener" target="_blank"><strong>OpenNutrition Foods</strong></a>. Para integrarla a la aplicación se adaptaron nombres, unidades y estructura de búsqueda. Parte de los datos de OpenNutrition procede de <a href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts contributors</a>.</p>
@@ -460,16 +477,16 @@
 <div class="explanation-box" id="macro-explanation"></div>
 </section>
 <section class="form-block automatic-adjustment-block">
-<div class="form-block-title"><span>05</span><div><h3>Ajuste automático</h3><p>Recalibra el mantenimiento y el objetivo usando solamente tus ingestas y pesajes registrados.</p></div></div>
+<div class="form-block-title"><span>05</span><div><h3>Gasto adaptativo</h3><p>Compara ingestas y tendencia de peso, y habilita una revisión gradual cada siete días.</p></div></div>
 <div class="automatic-adjustment-card">
 <div class="automatic-adjustment-copy">
 <p class="eyebrow">MODELO OBSERVADO</p>
-<h4>Que la fórmula sea el punto de partida, no la última palabra.</h4>
-<p id="automatic-adjustment-summary">MASA necesita varias semanas de datos para proponer un ajuste.</p>
+<h4>La fórmula inicia el cálculo; tus resultados reales lo corrigen.</h4>
+<p id="automatic-adjustment-summary">M.A.S.A. necesita varias semanas de datos para estimar tu gasto real.</p>
 </div>
-<div class="automatic-adjustment-facts" id="automatic-adjustment-facts"><div><span>Ingestas útiles</span><b>0 días</b></div><div><span>Pesajes útiles</span><b>0</b></div><div><span>Período</span><b>0 días</b></div></div>
-<button class="primary-action" disabled="" id="run-auto-adjustment" type="button">Ajustar automáticamente</button>
-<small>Usa hasta 42 días recientes, prioriza días terminados, requiere al menos 14 días de ingestas y 8 pesajes, y limita cada corrección a 250 kcal.</small>
+<div class="automatic-adjustment-facts" id="automatic-adjustment-facts"><div><span>Gasto adaptativo</span><b>Aprendiendo</b></div><div><span>Confianza</span><b>Inicial</b></div><div><span>Datos útiles</span><b>0 d · 0 p</b></div><div><span>Próxima revisión</span><b>—</b></div></div>
+<button class="primary-action" disabled="" id="run-auto-adjustment" type="button">Reuniendo datos</button>
+<small>Usa hasta 42 días, una tendencia exponencial del peso, regresión lineal y correcciones de hasta 250 kcal. Los días completos aumentan la confianza. Después de cada revisión exige al menos 3 días de ingesta y 2 pesajes nuevos.</small>
 <p class="feedback" id="automatic-adjustment-feedback" role="status"></p>
 </div>
 </section>
@@ -523,6 +540,7 @@
 <div class="history-manager" hidden="" id="history-manager">
 <div class="history-heading">
 <div><p class="eyebrow">GESTIONAR PESAJES</p><h3>Corregir o eliminar un registro</h3></div>
+<button class="secondary-action history-collapse" id="collapse-history-manager" type="button">Minimizar</button>
 </div>
 <label class="history-date-picker"><span>Fecha ingresada</span><select id="history-date-select" aria-label="Elegir pesaje por fecha"></select></label>
 <div class="history-list" id="history-list"></div>

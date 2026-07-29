@@ -40,6 +40,21 @@ if (await exists(appGradle)) {
   if (!source.includes("signingConfigs {\n        release")) {
     source = source.replace(/android\s*\{/, `android {\n    signingConfigs {\n        release {\n            keyAlias masaKeystoreProperties['keyAlias']\n            keyPassword masaKeystoreProperties['keyPassword']\n            storeFile rootProject.file(masaKeystoreProperties['storeFile'])\n            storePassword masaKeystoreProperties['storePassword']\n        }\n    }`);
   }
+  // MASA_GSON_R8_DEPENDENCY: mantener idempotente para cada cap sync.
+  const gsonDependency = 'implementation "com.google.code.gson:gson:2.11.0"';
+  const gsonPattern = /implementation\s+["']com\.google\.code\.gson:gson:[^"']+["']/;
+  if (gsonPattern.test(source)) {
+    source = source.replace(gsonPattern, gsonDependency);
+  } else {
+    const dependenciesMatch = /dependencies\s*\{/.exec(source);
+    if (!dependenciesMatch) {
+      throw new Error("No se encontró el bloque dependencies en android/app/build.gradle");
+    }
+    const dependencyBrace = source.indexOf("{", dependenciesMatch.index);
+    source = source.slice(0, dependencyBrace + 1)
+      + `\n    ${gsonDependency}`
+      + source.slice(dependencyBrace + 1);
+  }
 
   const buildTypesMatch = /buildTypes\s*\{/.exec(source);
   if (buildTypesMatch) {
