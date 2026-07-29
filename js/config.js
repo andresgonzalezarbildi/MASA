@@ -2,5 +2,6 @@
 // Nunca coloques aquí la service_role key.
 window.MASA_CONFIG = Object.freeze({
   supabaseUrl: "https://plkicsnxrjmnnwhjgobe.supabase.co",
+  passwordResetUrl: "https://andresgonzalez.netlify.app/masa/",
   supabaseKey: "sb_publishable_89uUOLFGMxVxQiPNqSk2iw_q0AwGynd"
 });

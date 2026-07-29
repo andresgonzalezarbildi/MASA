@@ -89,7 +89,7 @@
 
   let state;
   let settingsRequired = false;
-  let importMode = "profile";
+  let importMode = "history";
   let chartPayload = null;
   let chartRange = "3m";
   let activeProgressChart = "weight";
@@ -103,6 +103,7 @@
   let weightEditorForced = false;
   let editingDiaryEntryId = null;
   let selectedDiaryDate = todayISO();
+  let selectedHistoryId = null;
 
   const $ = selector => document.querySelector(selector);
   const $$ = selector => Array.from(document.querySelectorAll(selector));
@@ -1336,10 +1337,45 @@
     }
   }
 
+  function nativeBarcodeValue(result) {
+    return normalizeBarcode(
+      result?.ScanResult
+      || result?.scanResult
+      || result?.content
+      || result?.value
+      || result?.text
+      || ""
+    );
+  }
+
   async function startBarcodeScanner() {
     stopBarcodeScanner();
     const video = $("#barcode-video");
     if (!video) return;
+
+    if (window.MASA_NATIVE?.isNative?.() && typeof window.MASA_NATIVE.scanBarcode === "function") {
+      setBarcodeStatus("Abriendo el lector de códigos de barras…", "loading");
+      try {
+        const result = await window.MASA_NATIVE.scanBarcode();
+        const code = nativeBarcodeValue(result);
+        if (!code) {
+          setBarcodeStatus("Escaneo cancelado. También podés ingresar el código manualmente.");
+          return;
+        }
+        if (!validBarcode(code)) {
+          setBarcodeStatus("El código leído no tiene un formato EAN/UPC válido.", "error");
+          return;
+        }
+        lookupBarcode(code);
+      } catch (error) {
+        console.warn("No se pudo iniciar el lector nativo:", error);
+        const cancelled = /cancel/i.test(String(error?.message || error || ""));
+        setBarcodeStatus(cancelled
+          ? "Escaneo cancelado. También podés ingresar el código manualmente."
+          : "No se pudo abrir la cámara. Revisá el permiso de cámara o ingresá el código manualmente.", cancelled ? "" : "error");
+      }
+      return;
+    }
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
       setBarcodeStatus("La cámara requiere abrir M.A.S.A. desde una dirección HTTPS. Podés ingresar el código manualmente.", "error");
       return;
@@ -1451,17 +1487,66 @@
     });
   }
 
+  function parseProductMeasure(value) {
+    const raw = String(value || "").trim().toLowerCase().replace(",", ".");
+    if (!raw) return null;
+    const match = raw.match(/(\d+(?:\.\d+)?)\s*(ml|millilit(?:er|re|ro)s?|cl|l|lit(?:er|re|ro)s?|g|gr|gram(?:o|me|s)?s?|kg|kilogram(?:o|me|s)?s?)(?:\b|$)/i);
+    if (!match) return null;
+    let amount = Number(match[1]);
+    let unit = match[2].toLowerCase();
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+    if (unit === "cl") { amount *= 10; unit = "ml"; }
+    else if (/^l|^lit/.test(unit)) unit = "l";
+    else if (/^ml|^millilit/.test(unit)) unit = "ml";
+    else if (/^kg|^kilogram/.test(unit)) unit = "kg";
+    else unit = "g";
+    return { amount, unit };
+  }
+
+  function productServingDefinition(product) {
+    const packageCandidates = [
+      product?.quantity,
+      product?.product_quantity && product?.product_quantity_unit
+        ? `${product.product_quantity} ${product.product_quantity_unit}`
+        : ""
+    ];
+    const packageMeasure = packageCandidates.map(parseProductMeasure).find(Boolean) || null;
+    const labelMeasure = parseProductMeasure(product?.serving_size);
+    const selected = packageMeasure || labelMeasure || { amount: 1, unit: "unit" };
+    const directServingMatches = Boolean(
+      labelMeasure
+      && labelMeasure.unit === selected.unit
+      && Math.abs(labelMeasure.amount - selected.amount) < 0.001
+    );
+    return { ...selected, useDirectServing: !packageMeasure || directServingMatches };
+  }
+
   function openFoodFactsProduct(product, code) {
     const nutriments = product?.nutriments || {};
-    let calories = toNumber(nutriments["energy-kcal_100g"], NaN);
-    if (!Number.isFinite(calories)) {
+    let caloriesPer100 = toNumber(nutriments["energy-kcal_100g"], NaN);
+    if (!Number.isFinite(caloriesPer100)) {
       const energyKj = toNumber(nutriments["energy-kj_100g"] ?? nutriments.energy_100g, NaN);
-      if (Number.isFinite(energyKj)) calories = energyKj / 4.184;
+      if (Number.isFinite(energyKj)) caloriesPer100 = energyKj / 4.184;
     }
-    const protein = toNumber(nutriments.proteins_100g, NaN);
-    const fat = toNumber(nutriments.fat_100g, NaN);
-    const carbs = toNumber(nutriments.carbohydrates_100g, NaN);
+    const proteinPer100 = toNumber(nutriments.proteins_100g, NaN);
+    const fatPer100 = toNumber(nutriments.fat_100g, NaN);
+    const carbsPer100 = toNumber(nutriments.carbohydrates_100g, NaN);
+    const serving = productServingDefinition(product);
+    const metricFactor = ["g", "ml"].includes(serving.unit)
+      ? serving.amount / 100
+      : serving.unit === "kg" || serving.unit === "l" ? serving.amount * 10 : 1;
+    const servingCalories = toNumber(nutriments["energy-kcal_serving"], NaN);
+    const servingProtein = toNumber(nutriments.proteins_serving, NaN);
+    const servingFat = toNumber(nutriments.fat_serving, NaN);
+    const servingCarbs = toNumber(nutriments.carbohydrates_serving, NaN);
+    const valueForServing = (per100, direct) => serving.useDirectServing && Number.isFinite(direct)
+      ? direct
+      : Number.isFinite(per100) ? per100 * metricFactor : "";
     const name = String(product.product_name_es || product.product_name || product.generic_name_es || product.generic_name || "").trim();
+    const calories = valueForServing(caloriesPer100, servingCalories);
+    const protein = valueForServing(proteinPer100, servingProtein);
+    const fat = valueForServing(fatPer100, servingFat);
+    const carbs = valueForServing(carbsPer100, servingCarbs);
     const complete = Boolean(name) && [calories, protein, fat, carbs].every(Number.isFinite);
     openScannedFoodEditor({
       name,
@@ -1471,16 +1556,16 @@
       protein: Number.isFinite(protein) ? protein : "",
       fat: Number.isFinite(fat) ? fat : "",
       carbs: Number.isFinite(carbs) ? carbs : "",
-      serving: "100 g",
-      servingAmount: 100,
-      servingUnit: "g",
+      serving: servingLabel(serving.amount, serving.unit),
+      servingAmount: serving.amount,
+      servingUnit: serving.unit,
       source: "openfoodfacts",
       sourceUrl: `https://world.openfoodfacts.org/product/${code}`,
       sourceImportedAt: new Date().toISOString(),
       imageUrl: String(product.image_front_small_url || product.image_front_url || "")
     }, complete
-      ? "Producto encontrado en Open Food Facts. Revisá los datos antes de guardarlo."
-      : "El producto existe, pero faltan datos. Completá lo que figure en la etiqueta antes de guardarlo.");
+      ? "Producto encontrado en Open Food Facts. Revisá la cantidad original del envase y los datos antes de guardarlo."
+      : "El producto existe, pero faltan datos. Completá lo que figure en la etiqueta antes de guardarlo.", { allowRescan: true });
   }
 
   async function fetchOpenFoodFactsProduct(code, fields) {
@@ -1534,12 +1619,12 @@
     barcodeLookupBusy = true;
     setBarcodeStatus(`Buscando ${code} en Open Food Facts…`, "loading");
     try {
-      const fields = ["code","product_name","product_name_es","generic_name","generic_name_es","brands","quantity","serving_size","nutriments","image_front_small_url","image_front_url"].join(",");
+      const fields = ["code","product_name","product_name_es","generic_name","generic_name_es","brands","quantity","serving_size","product_quantity","product_quantity_unit","nutriments","image_front_small_url","image_front_url"].join(",");
       const data = await fetchOpenFoodFactsProduct(code, fields);
       const productFound = Boolean(data?.product) && (data.status === 1 || data.status === "success" || data.status === undefined);
       if (productFound) openFoodFactsProduct(data.product, code);
       else openScannedFoodEditor(
-        { barcode: code, servingAmount: 100, servingUnit: "g", serving: "100 g" },
+        { barcode: code, servingAmount: 1, servingUnit: "unit", serving: "1 unidad" },
         `No encontramos un alimento asociado al código ${code}. Completá los datos de la etiqueta y guardalo; la próxima vez M.A.S.A. lo reconocerá.`,
         {
           allowRescan: true,
@@ -1551,7 +1636,7 @@
     } catch (error) {
       console.warn("No se pudo consultar Open Food Facts:", error);
       openScannedFoodEditor(
-        { barcode: code, servingAmount: 100, servingUnit: "g", serving: "100 g" },
+        { barcode: code, servingAmount: 1, servingUnit: "unit", serving: "1 unidad" },
         `No pudimos consultar Open Food Facts para el código ${code}. Completá los datos de la etiqueta o volvé a escanear.`,
         {
           allowRescan: true,
@@ -2487,6 +2572,7 @@
     sourceNote.classList.toggle("warning", options.sourceNoteType === "warning");
     sourceNote.classList.toggle("success", options.sourceNoteType === "success");
     $("#rescan-food-editor").hidden = !options.allowRescan;
+    $("#close-food-editor").hidden = Boolean(options.allowRescan);
     $(".food-editor-scan-row").hidden = Boolean(item || editingCatalogFoodId);
 
     if (displayItem) {
@@ -2508,8 +2594,8 @@
         form.elements[key].value = Number.isFinite(value) ? roundEditorNumber(value, 1) : "";
       });
     } else {
-      form.elements.servingAmount.value = 100;
-      setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, "g");
+      form.elements.servingAmount.value = 1;
+      setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, "unit");
       if (options.prefillName) form.elements.name.value = options.prefillName;
     }
 
@@ -2528,6 +2614,7 @@
     editingCatalogFoodId = null;
     foodEditorPrefill = null;
     $("#rescan-food-editor").hidden = true;
+    $("#close-food-editor").hidden = false;
     $("#food-editor-source-note").classList.remove("warning", "success");
     if (target === "food") $("#food-modal").hidden = false;
     if (target === "library") {
@@ -4302,21 +4389,35 @@
 
   function renderHistory(trends) {
     const list = $("#history-list");
+    const select = $("#history-date-select");
     list.innerHTML = "";
     const rows = [...trends].reverse();
     $("#history-empty").hidden = rows.length > 0;
-    $("#history-count").textContent = `${rows.length} ${rows.length === 1 ? "registro" : "registros"}`;
+    $("#history-count").textContent = `${rows.length} ${rows.length === 1 ? "registro" : "registros"} · elegir por fecha`;
+    select.hidden = rows.length === 0;
+    select.innerHTML = "";
+    if (!rows.length) {
+      selectedHistoryId = null;
+      return;
+    }
+    if (!selectedHistoryId || !rows.some(item => item.id === selectedHistoryId)) selectedHistoryId = rows[0].id;
     rows.forEach(item => {
-      const row = document.createElement("article");
-      row.className = "history-row";
-      row.dataset.id = item.id;
-      row.innerHTML = `
-        <label><span>Fecha</span><input class="date-input" data-field="date" type="text" inputmode="numeric" maxlength="10" value="${displayDate(item.date)}" aria-label="Fecha del pesaje"></label>
-        <label><span>Peso</span><input data-field="weight" type="number" min="20" max="400" step="0.1" value="${item.weight}" aria-label="Peso en kg"></label>
-        <div class="history-trend"><span>Tendencia</span><b>${formatKg(item.trend, 2)}</b></div>
-        <button class="history-delete" type="button" data-delete-weight="${item.id}">Eliminar</button>`;
-      list.appendChild(row);
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${formatDate(item.date)} · ${formatKg(item.weight)}`;
+      select.appendChild(option);
     });
+    select.value = selectedHistoryId;
+    const item = rows.find(entry => entry.id === selectedHistoryId) || rows[0];
+    const row = document.createElement("article");
+    row.className = "history-row";
+    row.dataset.id = item.id;
+    row.innerHTML = `
+      <label><span>Fecha</span><input class="date-input" data-field="date" type="text" inputmode="numeric" maxlength="10" value="${displayDate(item.date)}" aria-label="Fecha del pesaje"></label>
+      <label><span>Peso</span><input data-field="weight" type="number" min="20" max="400" step="0.1" value="${item.weight}" aria-label="Peso en kg"></label>
+      <div class="history-trend"><span>Tendencia</span><b>${formatKg(item.trend, 2)}</b></div>
+      <button class="history-delete" type="button" data-delete-weight="${item.id}">Eliminar</button>`;
+    list.appendChild(row);
   }
 
   function updateSettingsScrollState() {
@@ -4376,7 +4477,6 @@
     form.elements.proteinPct.value = profile.macroMode === "custom" ? Math.round(profile.proteinPct) : 20;
     form.elements.fatPct.value = profile.macroMode === "custom" ? Math.round(profile.fatPct) : 30;
     form.elements.carbPct.value = profile.macroMode === "custom" ? Math.round(profile.carbPct) : 50;
-    $("#profile-import-callout").hidden = state.configured;
     syncNativeDatePickers();
     setTimeout(() => { fillingProfileForm = false; }, 0);
   }
@@ -4606,6 +4706,7 @@
     const button = event.target.closest("[data-delete-weight]");
     if (!button) return;
     state.weighIns = state.weighIns.filter(item => item.id !== button.dataset.deleteWeight);
+    if (selectedHistoryId === button.dataset.deleteWeight) selectedHistoryId = null;
     saveState(state);
     render();
     if (!state.configured) openSettings(true, "profile");
@@ -4812,7 +4913,7 @@
     importMode = mode;
     const input = $("#import-file");
     input.value = "";
-    input.accept = ["profile", "library"].includes(mode)
+    input.accept = mode === "library"
       ? ".json,application/json"
       : ".xlsx,.xls,.csv,.tsv,.txt,.json";
     input.click();
@@ -4823,7 +4924,6 @@
     if (!file) return;
     try {
       if (/\.(xlsx|xls)$/i.test(file.name)) {
-        if (importMode === "profile") throw new Error("El perfil completo se importa desde un archivo JSON exportado por MASA.");
         if (importMode === "library") throw new Error("La biblioteca de recetas y alimentos se importa desde un archivo JSON exportado por MASA.");
         const weights = parseWeightRows(await spreadsheetRows(file, ["Pesajes"]));
         if (!weights.length) throw new Error("No se encontraron columnas de fecha y peso en la planilla.");
@@ -4854,17 +4954,6 @@
           return;
         }
         const imported = normalizeState(parsed);
-        if (importMode === "profile") {
-          if (!profileIsComplete(imported.profile, imported.weighIns)) {
-            throw new Error("El archivo no contiene un perfil completo válido de MASA.");
-          }
-          state = saveState({ ...imported, configured: true });
-          settingsRequired = false;
-          $("#settings-modal").hidden = true;
-          document.body.classList.remove("modal-open");
-          render();
-          return;
-        }
         if (imported.weighIns.length) {
           state.weighIns = mergeWeighIns(state.weighIns, imported.weighIns);
           state.configured = profileIsComplete(state.profile, state.weighIns);
@@ -5045,25 +5134,6 @@
     return { foods: incoming.foods.length, recipes: incoming.recipes.length, catalog: Object.keys(incoming.catalogOverrides || {}).length };
   }
 
-  function fullProfileExportPayload() {
-    return {
-      ...clone(state),
-      format: "masa-full-profile",
-      version: 19,
-      exportedAt: new Date().toISOString(),
-      foods: clone(state.foods || []),
-      recipes: clone(state.recipes || [])
-    };
-  }
-
-  function exportHistory() {
-    downloadText("datos-masa.json", JSON.stringify(fullProfileExportPayload(), null, 2), "application/json");
-  }
-
-  function exportBackup() {
-    downloadText(`perfil-completo-masa-${todayISO()}.json`, JSON.stringify(fullProfileExportPayload(), null, 2), "application/json");
-  }
-
   function downloadText(filename, content, type) {
     const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
@@ -5212,7 +5282,6 @@
     $("#accept-tips").addEventListener("click", closeTipsModal);
     $$('[data-close-tips]').forEach(element => element.addEventListener("click", closeTipsModal));
     $("#begin-setup").addEventListener("click", () => openSettings(true, "profile"));
-    $("#welcome-import").addEventListener("click", () => openImport("profile"));
     $("#open-profile").addEventListener("click", () => openSettings(false, "profile"));
     $("#brand-home").addEventListener("click", () => switchAppView("today"));
     $$('[data-app-view]').forEach(button => button.addEventListener("click", () => switchAppView(button.dataset.appView)));
@@ -5245,11 +5314,19 @@
       button.querySelector("i").textContent = expanded ? "＋" : "−";
       $("#history-manager").hidden = expanded;
     });
+    $("#history-date-select").addEventListener("change", event => {
+      selectedHistoryId = event.currentTarget.value;
+      render();
+    });
+    $("#collapse-history-manager").addEventListener("click", () => {
+      const button = $("#toggle-history-manager");
+      button.setAttribute("aria-expanded", "false");
+      button.querySelector("i").textContent = "＋";
+      $("#history-manager").hidden = true;
+      button.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
     $("#history-list").addEventListener("change", updateHistoryRow);
     $("#history-list").addEventListener("click", deleteHistoryRow);
-    $("#profile-import").addEventListener("click", () => openImport("profile"));
-    $("#import-full-profile").addEventListener("click", () => openImport("profile"));
-    $("#export-full-profile").addEventListener("click", exportBackup);
     $("#import-library").addEventListener("click", () => openImport("library"));
     $("#export-library").addEventListener("click", exportLibrary);
     $("#import-history").addEventListener("click", () => openImport("history"));
@@ -5387,7 +5464,10 @@
         return isOldRootRegistration ? registration.unregister() : Promise.resolve(false);
       }));
 
-      await navigator.serviceWorker.register("/masa/service-worker.js", { scope: "/masa/" });
+      if (location.protocol === "capacitor:" || location.hostname === "localhost") return;
+      const basePath = new URL(document.baseURI).pathname;
+      const serviceWorkerUrl = new URL("service-worker.js", document.baseURI).href;
+      await navigator.serviceWorker.register(serviceWorkerUrl, { scope: basePath });
     } catch (_) {}
   }
 

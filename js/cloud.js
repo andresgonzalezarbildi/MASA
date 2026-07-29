@@ -122,7 +122,7 @@
     $("#auth-loading")?.setAttribute("hidden", "");
     $("#auth-forms")?.removeAttribute("hidden");
     showAuthMode("login");
-    setAuthMessage(error?.message || String(error), true);
+    setAuthMessage(humanizeAuthError(error), true);
   }
 
   function finishBoot() {
@@ -169,12 +169,24 @@
     }
   }
 
+  function togglePasswordVisibility(button) {
+    const field = button.closest(".password-field");
+    const input = field?.querySelector("input");
+    if (!input) return;
+    const visible = input.type === "text";
+    input.type = visible ? "password" : "text";
+    button.setAttribute("aria-pressed", String(!visible));
+    button.setAttribute("aria-label", visible ? "Mostrar contraseña" : "Ocultar contraseña");
+    input.focus({ preventScroll: true });
+  }
+
   function bindAuthUI() {
     if (authBound) return;
     authBound = true;
 
     $("#auth-mode-login")?.addEventListener("click", () => showAuthMode("login"));
     $("#auth-mode-signup")?.addEventListener("click", () => showAuthMode("signup"));
+    document.querySelectorAll("[data-password-toggle]").forEach(button => button.addEventListener("click", () => togglePasswordVisibility(button)));
 
     $("#auth-login-form")?.addEventListener("submit", async event => {
       event.preventDefault();
@@ -279,12 +291,19 @@
     });
   }
 
+  function isInvalidSessionError(error) {
+    const message = error?.message || String(error || "");
+    return /jwt|token.*(?:expired|invalid)|issued at future|session.*invalid|bad_jwt/i.test(message);
+  }
+
   function humanizeAuthError(error) {
     const message = error?.message || String(error);
     if (/invalid login credentials/i.test(message)) return "Correo o contraseña incorrectos.";
     if (/email not confirmed/i.test(message)) return "Primero confirmá la cuenta desde el correo que recibiste.";
     if (/user already registered/i.test(message)) return "Ya existe una cuenta con ese correo.";
-    return message;
+    if (isInvalidSessionError(error)) return "La sesión guardada dejó de ser válida. Iniciá sesión de nuevo.";
+    if (/network|fetch|offline|failed to fetch/i.test(message)) return "No se pudo conectar. Revisá internet y volvé a intentar.";
+    return "No se pudo completar el acceso. Volvé a intentarlo.";
   }
 
   async function startAuth() {
@@ -311,9 +330,27 @@
       const result = await supabaseClient.auth.getSession();
       throwIfError(result, "No se pudo recuperar la sesión");
       session = result.data.session;
+      if (session) {
+        const validation = await supabaseClient.auth.getUser();
+        if (validation?.error) {
+          await supabaseClient.auth.signOut({ scope: "local" }).catch(() => {});
+          session = null;
+          setAuthMessage(humanizeAuthError(validation.error), true);
+        }
+      }
       updateAccountUI();
       return session;
     } catch (error) {
+      if (isInvalidSessionError(error)) {
+        await getClient().auth.signOut({ scope: "local" }).catch(() => {});
+        session = null;
+        updateAccountUI();
+        const gate = $("#auth-gate");
+        if (gate) gate.hidden = false;
+        showAuthMode("login");
+        setAuthMessage("La sesión guardada venció. Iniciá sesión de nuevo.", true);
+        return null;
+      }
       showFatalError(error);
       throw error;
     }
@@ -423,13 +460,20 @@
       setSyncStatus("saved", "Guardado");
       return { state, hasData, fromCache: false };
     } catch (error) {
+      if (isInvalidSessionError(error)) {
+        await getClient().auth.signOut({ scope: "local" }).catch(() => {});
+        session = null;
+        const safeError = new Error("La sesión guardada dejó de ser válida. Iniciá sesión de nuevo.");
+        safeError.code = "INVALID_SESSION";
+        throw safeError;
+      }
       const cached = readCachedState();
       if (cached) {
         setSyncStatus("offline", "Sin conexión · caché local");
         return { state: cached, hasData: true, fromCache: true, error };
       }
       setSyncStatus("error", "Error de carga");
-      throw error;
+      throw new Error("No se pudieron cargar tus datos. Revisá la conexión y volvé a intentar.");
     }
   }
 

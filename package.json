@@ -1,7 +1,7 @@
 {
   "name": "masa",
   "private": true,
-  "version": "25.3.0",
+  "version": "26.0.0",
   "type": "module",
   "scripts": {
     "mobile:prepare": "node tools/prepare-mobile.mjs",
@@ -15,8 +15,7 @@
     "@capacitor/android": "8.4.2",
     "@capacitor/barcode-scanner": "3.1.0",
     "@capacitor/core": "8.4.2",
-    "@supabase/supabase-js": "2.110.9",
-    "@zxing/browser": "0.2.1"
+    "@supabase/supabase-js": "2.110.9"
   },
   "devDependencies": {
     "@capacitor/cli": "8.4.2",

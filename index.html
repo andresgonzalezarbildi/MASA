@@ -3,20 +3,20 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/><base href="./"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/><base href="/masa/"/>
 <meta content="#10131a" name="theme-color"/>
 <meta content="Calorías, macros, objetivos y seguimiento de peso con fórmulas transparentes y calibración por tendencia real." name="description"/>
 <title>MASA · registros y progreso por números</title>
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="assets/icon-192.png" rel="apple-touch-icon"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=25.3" rel="stylesheet"/>
-<link href="./css/auth.css?v=25.3" rel="stylesheet"/>
+<link href="./css/styles.css?v=26.0" rel="stylesheet"/>
+<link href="./css/auth.css?v=26.0" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=25.3"></script>
-<script defer="" src="./js/cloud.js?v=25.3"></script>
+<script defer="" src="./js/config.js?v=26.0"></script>
+<script defer="" src="./js/cloud.js?v=26.0"></script>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
-<script defer="" src="./js/app.js?v=25.3"></script>
+<script defer="" src="./js/app.js?v=26.0"></script>
 </head>
 <body>
 
@@ -24,7 +24,7 @@
 <article class="auth-card">
 <div class="auth-brand">
 <span aria-hidden="true" class="brand-mark"><b>P</b><i>=</i><strong>m·g</strong></span>
-<div><p class="eyebrow">M.A.S.A. ONLINE</p><h1>Tus datos, en tu cuenta.</h1></div>
+<div><p class="eyebrow">M.A.S.A.</p><h1>Tus datos, en tu cuenta.</h1></div>
 </div>
 <p class="auth-intro">Iniciá sesión para acceder a tus pesajes, registros, alimentos propios y recetas desde cualquier dispositivo.</p>
 <div id="auth-loading" hidden="">
@@ -38,18 +38,18 @@
 </nav>
 <form class="auth-form" id="auth-login-form">
 <label><span>Correo</span><input autocomplete="email" name="email" required="" type="email"/></label>
-<label><span>Contraseña</span><input autocomplete="current-password" minlength="8" name="password" required="" type="password"/></label>
+<label><span>Contraseña</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="password" required="" type="password"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <button class="primary-action" type="submit">Entrar</button>
 <button class="text-action auth-forgot" id="forgot-password" type="button">Olvidé mi contraseña</button>
 </form>
 <form class="auth-form" hidden="" id="auth-signup-form">
 <label><span>Nombre <small>opcional</small></span><input autocomplete="name" maxlength="60" name="name" type="text"/></label>
 <label><span>Correo</span><input autocomplete="email" name="email" required="" type="email"/></label>
-<label><span>Contraseña</span><input autocomplete="new-password" minlength="8" name="password" required="" type="password"/></label>
+<label><span>Contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="password" required="" type="password"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <button class="primary-action" type="submit">Crear cuenta</button>
 </form>
 <form class="auth-form" hidden="" id="auth-recovery-form">
-<label><span>Nueva contraseña</span><input autocomplete="new-password" minlength="8" name="password" required="" type="password"/></label>
+<label><span>Nueva contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="password" required="" type="password"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <button class="primary-action" type="submit">Guardar contraseña</button>
 </form>
 <p aria-live="polite" class="auth-message" id="auth-message"></p>
@@ -66,8 +66,8 @@
 <span class="brand-name"><b>MASA</b><small>objetivos por números</small></span>
 </button>
 <nav aria-label="Secciones principales" class="app-nav">
-<button class="active" data-app-view="today" type="button">Registros</button>
-<button data-app-view="progress" type="button">Progreso</button>
+<button class="active primary-view" data-app-view="today" type="button"><strong>Registros</strong><small>Principal</small></button>
+<button class="secondary-view" data-app-view="progress" type="button"><strong>Progreso</strong><small>Análisis</small></button>
 </nav><div class="header-actions">
 <div class="account-area" hidden="" id="account-area"><span class="sync-status" data-status="loading" id="sync-status">Cargando…</span><span class="account-email" id="account-email"></span></div>
 <button aria-label="Abrir ajustes" class="settings-trigger" id="open-profile" type="button">
@@ -79,11 +79,10 @@
 <section class="welcome-stage" hidden="" id="empty-state">
 <div aria-hidden="true" class="welcome-code">OBJETIVO = DATOS + TIEMPO</div>
 <p class="eyebrow">PRIMER INGRESO</p>
-<h1>Empezá con tus datos o recuperá un perfil anterior.</h1>
-<p class="welcome-copy">La herramienta necesita altura, edad, peso y objetivo para calcular una referencia inicial. Si ya tenés una copia de MASA, podés importarla antes de completar nada.</p>
+<h1>Empezá configurando tus datos.</h1>
+<p class="welcome-copy">La herramienta necesita altura, edad, peso y objetivo para calcular una referencia inicial. Después, tus cambios quedan vinculados a tu cuenta.</p>
 <div class="welcome-actions">
-<button class="primary-action" id="welcome-import" type="button">Ya tengo un perfil</button>
-<button class="secondary-action" id="begin-setup" type="button">Crear perfil nuevo</button>
+<button class="primary-action" id="begin-setup" type="button">Configurar M.A.S.A.</button>
 </div>
 </section>
 <section hidden="" id="dashboard"><section class="app-view" id="today-view"><section class="diary-section" id="daily-diary">
@@ -395,10 +394,7 @@
 <button data-settings-tab="weights" type="button">Mis datos</button>
 </nav>
 <section class="settings-view" id="settings-profile">
-<div class="profile-import-callout" hidden="" id="profile-import-callout">
-<div><b>¿Ya tenés un perfil?</b><span>Importá la copia JSON antes de llenar los campos.</span></div>
-<button class="secondary-action" id="profile-import" type="button">Importar perfil</button>
-</div>
+
 <form id="profile-form" novalidate="">
 <section class="form-block">
 <div class="form-block-title"><span>01</span><div><h3>Datos base</h3><p>Lo mínimo para calcular una referencia inicial.</p></div></div>
@@ -502,15 +498,8 @@
 </div>
 <a class="text-link" download="" href="plantilla-pesajes.xlsx">Descargar plantilla Excel</a>
 </article>
-<article class="data-tool">
-<span>02</span><h3>Perfil completo</h3><p>Importá o exportá un JSON con perfil, objetivo, pesajes, alimentos propios, recetas, uso reciente y registros diarios.</p>
-<div class="data-tool-actions">
-<button class="secondary-action" id="import-full-profile" type="button">Importar perfil</button>
-<button class="secondary-action" id="export-full-profile" type="button">Exportar perfil</button>
-</div>
-</article>
 <article class="data-tool intake-data-tool">
-<span>03</span>
+<span>02</span>
 <h3>Consumo de calorías</h3>
 <p>Exportá o importá el diario en Excel. Incluye una hoja con cada ingesta y otra con el resumen por día.</p>
 <div class="data-tool-actions">
@@ -520,7 +509,7 @@
 <a class="text-link" download="" href="plantilla-ingestas.xlsx">Descargar plantilla de ingestas</a>
 </article>
 <article class="data-tool library-data-tool">
-<span>04</span><h3>Recetas y alimentos propios</h3><p>Guardá o recuperá en JSON las recetas y los cambios que hiciste en tu biblioteca, sin importar el resto del perfil.</p>
+<span>03</span><h3>Recetas y alimentos propios</h3><p>Guardá o recuperá en JSON las recetas y los cambios que hiciste en tu biblioteca, sin importar el resto del perfil.</p>
 <div class="data-tool-actions">
 <button class="secondary-action" id="import-library" type="button">Importar biblioteca</button>
 <button class="secondary-action" id="export-library" type="button">Exportar biblioteca</button>
@@ -533,8 +522,10 @@
 </button>
 <div class="history-manager" hidden="" id="history-manager">
 <div class="history-heading">
-<div><p class="eyebrow">GESTIONAR PESAJES</p><h3>Corregir o eliminar registros</h3></div>
+<div><p class="eyebrow">GESTIONAR PESAJES</p><h3>Corregir o eliminar un registro</h3></div>
+<button class="secondary-action history-collapse" id="collapse-history-manager" type="button">Minimizar</button>
 </div>
+<label class="history-date-picker"><span>Fecha ingresada</span><select id="history-date-select" aria-label="Elegir pesaje por fecha"></select></label>
 <div class="history-list" id="history-list"></div>
 <p class="empty-message" hidden="" id="history-empty">No hay pesajes cargados.</p>
 </div>
@@ -627,11 +618,11 @@
 <form class="form-grid editor-grid" id="food-editor-form">
 <div class="food-editor-scan-row full-field"><button class="secondary-action" id="scan-barcode-editor" type="button"><span aria-hidden="true">▥</span> Escanear código de barras</button></div>
 <label class="full-field"><span>Nombre</span><input name="name" required="" type="text"/></label>
-<label><span>Código de barras <small>(opcional)</small></span><input autocomplete="off" inputmode="numeric" maxlength="14" name="barcode" type="text"/></label>
+<input name="barcode" type="hidden"/>
 <label><span>Marca <small>(opcional)</small></span><input name="brand" type="text"/></label>
 <p class="explanation-box full-field" hidden id="food-editor-source-note"></p>
 <label><span>Calorías</span><div class="unit-input"><input min="0" name="calories" required="" step="1" type="number"/><i>kcal</i></div></label>
-<label><span>Cantidad base</span><input inputmode="decimal" min="0.01" name="servingAmount" required="" step="any" type="number" value="100"/></label>
+<label><span>Cantidad base</span><input inputmode="decimal" min="0.01" name="servingAmount" required="" step="any" type="number" value="1"/></label>
 <label><span>Unidad</span><select name="servingUnit" required>
 <option value="g">gramos (g)</option>
 <option value="kg">kilogramos (kg)</option>

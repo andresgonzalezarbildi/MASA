@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { BrowserMultiFormatReader } from "@zxing/browser";
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -11,7 +10,6 @@ import {
 const isNative = () => Boolean(window.Capacitor?.isNativePlatform?.());
 
 window.supabase = { createClient };
-window.ZXingBrowser = { BrowserMultiFormatReader };
 window.MASA_NATIVE = {
   isNative,
   async scanBarcode() {

@@ -85,3 +85,56 @@
   .header-actions .account-area { display: none !important; }
   .settings-trigger b { display: inline; }
 }
+
+
+/* --- MASA v26: acceso móvil y contraseña visible --- */
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+.password-field input { padding-right: 52px; }
+.password-toggle {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 48px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+.password-toggle::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 16px;
+  width: 18px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-radius: 70% 30% / 70% 30%;
+  transform: rotate(45deg);
+}
+.password-toggle::after {
+  content: "";
+  position: absolute;
+  left: 21px;
+  top: 20px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.password-toggle[aria-pressed="true"] { background: rgba(141,124,255,.12); }
+.password-toggle:focus-visible { outline: 3px solid rgba(141,124,255,.35); outline-offset: -3px; }
+
+@media (max-width: 590px) {
+  .auth-gate {
+    align-items: start;
+    padding-top: max(18px, env(safe-area-inset-top));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+}
