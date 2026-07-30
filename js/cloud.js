@@ -547,20 +547,22 @@
       button.addEventListener("click", () => togglePasswordVisibility(button));
     });
 
-    $("#auth-google")?.addEventListener("click", async () => {
-      setAuthBusy(true);
-      setAuthMessage("");
-      try {
-        await signInWithGoogle();
-        if (isNativeRuntime()) {
-          setAuthMessage("Completá el acceso con Google y volverás automáticamente a M.A.S.A.");
+    document.querySelectorAll("[data-auth-google]").forEach(button => {
+      button.addEventListener("click", async () => {
+        setAuthBusy(true);
+        setAuthMessage("");
+        try {
+          await signInWithGoogle();
+          if (isNativeRuntime()) {
+            setAuthMessage("Completá el acceso con Google y volverás automáticamente a M.A.S.A.");
+          }
+        } catch (error) {
+          logRealError("auth", "Falló el inicio con Google", error);
+          setAuthMessage(humanizeAuthError(error), true);
+        } finally {
+          setAuthBusy(false);
         }
-      } catch (error) {
-        logRealError("auth", "Falló el inicio con Google", error);
-        setAuthMessage(humanizeAuthError(error), true);
-      } finally {
-        setAuthBusy(false);
-      }
+      });
     });
 
     $("#auth-login-form")?.addEventListener("submit", async event => {

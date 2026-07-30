@@ -35,7 +35,7 @@
   align-items: center;
   justify-content: center;
   gap: 11px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
   border: 1px solid var(--ink);
   background: #fff;
   color: var(--ink);
@@ -45,7 +45,7 @@
 .auth-google:hover { background: rgba(141,124,255,.08); }
 .auth-google:disabled { opacity: .58; cursor: progress; }
 .auth-google svg { width: 21px; height: 21px; flex: 0 0 auto; }
-.auth-divider { display: flex; align-items: center; gap: 10px; margin: 2px 0 16px; color: var(--muted); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.auth-divider { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--muted); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
 .auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
 .auth-divider span { white-space: nowrap; }
 

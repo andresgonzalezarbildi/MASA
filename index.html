@@ -10,13 +10,13 @@
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="assets/icon-192.png" rel="apple-touch-icon"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=30.2" rel="stylesheet"/>
-<link href="./css/auth.css?v=30.2" rel="stylesheet"/>
+<link href="./css/styles.css?v=30.3" rel="stylesheet"/>
+<link href="./css/auth.css?v=30.3" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=30.2"></script>
-<script defer="" src="./js/cloud.js?v=30.2"></script>
+<script defer="" src="./js/config.js?v=30.3"></script>
+<script defer="" src="./js/cloud.js?v=30.3"></script>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
-<script defer="" src="./js/app.js?v=30.2"></script>
+<script defer="" src="./js/app.js?v=30.3"></script>
 </head>
 <body>
 
@@ -36,18 +36,23 @@
 <button class="active" id="auth-mode-login" type="button">Iniciar sesión</button>
 <button id="auth-mode-signup" type="button">Crear cuenta</button>
 </nav>
-<button class="auth-google" id="auth-google" type="button">
+<form class="auth-form" id="auth-login-form">
+<button class="auth-google" data-auth-google type="button">
 <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21.6 12.23c0-.71-.06-1.4-.18-2.06H12v3.9h5.38a4.6 4.6 0 0 1-2 3.02v2.53h3.24c1.9-1.75 2.98-4.33 2.98-7.39Z" fill="#4285F4"/><path d="M12 22c2.7 0 4.97-.9 6.62-2.38l-3.24-2.53c-.9.6-2.05.96-3.38.96-2.6 0-4.8-1.76-5.6-4.12H3.05v2.6A10 10 0 0 0 12 22Z" fill="#34A853"/><path d="M6.4 13.93A6.02 6.02 0 0 1 6.08 12c0-.67.12-1.32.32-1.93v-2.6H3.05A10 10 0 0 0 2 12c0 1.61.39 3.13 1.05 4.53l3.35-2.6Z" fill="#FBBC05"/><path d="M12 5.95c1.47 0 2.8.5 3.84 1.5l2.88-2.88A9.65 9.65 0 0 0 12 2a10 10 0 0 0-8.95 5.47l3.35 2.6c.8-2.36 3-4.12 5.6-4.12Z" fill="#EA4335"/></svg>
 <span>Continuar con Google</span>
 </button>
 <div class="auth-divider"><span>o usar correo</span></div>
-<form class="auth-form" id="auth-login-form">
 <label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email" name="email" required="" spellcheck="false" type="email"/></label>
 <label><span>Contraseña</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="password" required="" type="password"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <button class="primary-action" type="submit">Entrar</button>
 <button class="text-action auth-forgot" id="forgot-password" type="button">Olvidé mi contraseña</button>
 </form>
 <form class="auth-form" hidden="" id="auth-signup-form">
+<button class="auth-google" data-auth-google type="button">
+<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21.6 12.23c0-.71-.06-1.4-.18-2.06H12v3.9h5.38a4.6 4.6 0 0 1-2 3.02v2.53h3.24c1.9-1.75 2.98-4.33 2.98-7.39Z" fill="#4285F4"/><path d="M12 22c2.7 0 4.97-.9 6.62-2.38l-3.24-2.53c-.9.6-2.05.96-3.38.96-2.6 0-4.8-1.76-5.6-4.12H3.05v2.6A10 10 0 0 0 12 22Z" fill="#34A853"/><path d="M6.4 13.93A6.02 6.02 0 0 1 6.08 12c0-.67.12-1.32.32-1.93v-2.6H3.05A10 10 0 0 0 2 12c0 1.61.39 3.13 1.05 4.53l3.35-2.6Z" fill="#FBBC05"/><path d="M12 5.95c1.47 0 2.8.5 3.84 1.5l2.88-2.88A9.65 9.65 0 0 0 12 2a10 10 0 0 0-8.95 5.47l3.35 2.6c.8-2.36 3-4.12 5.6-4.12Z" fill="#EA4335"/></svg>
+<span>Registrarme con Google</span>
+</button>
+<div class="auth-divider"><span>o crearla con correo</span></div>
 <label><span>Nombre <small>opcional</small></span><input autocomplete="name" maxlength="60" name="name" type="text"/></label>
 <label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email" name="email" required="" spellcheck="false" type="email"/></label>
 <label><span>Contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="password" required="" type="password"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>

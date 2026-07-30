@@ -1,1 +1,1701 @@
-(()=>{"use strict";const Ae="masa-user-cache-v1:",Ne="masa-user-pending-v1:",re="masa-last-user-v1";let H=null,s=null,Ee=!1,we=!1,x=!1,h=/(?:^|[?#&])type=recovery(?:&|$)/.test(`${location.search}${location.hash}`),c=null,A=null,I=null,B=null,oe=null,se=new Map,ce=new Map,Y=null,j=null,ue=null,le=0,G=!1;const k=new Map,J=[],o=e=>document.querySelector(e);function C(e){return JSON.parse(JSON.stringify(e))}function Te(e){return!!(e?.supabaseUrl&&e?.supabaseKey&&!e.supabaseUrl.includes("TU-PROYECTO")&&!e.supabaseKey.includes("TU_PUBLISHABLE"))}function de(){try{return!!(window.MASA_NATIVE?.isNative?.()||window.Capacitor?.isNativePlatform?.())}catch{return!1}}function y(e,n,t,i=""){const a=e?.message||String(e||t),u=new Error(a,e instanceof Error?{cause:e}:void 0);return u.name=e?.name||"Error",u.code=e?.code||i||"",u.status=e?.status,u.masaKind=n,u.masaContext=t,u}function v(e,n,t){console.error(`[MASA][${e}] ${n}`,t)}function N(e,n,t=12e3){let i=null;const a=new Promise((u,r)=>{i=setTimeout(()=>{r(y(new Error(`${n} super\xF3 el tiempo m\xE1ximo de ${Math.round(t/1e3)} segundos.`),"timeout",n,"MASA_TIMEOUT"))},t)});return Promise.race([Promise.resolve(e),a]).finally(()=>clearTimeout(i))}function q(e,n){j=y(n,"storage",`No se pudo ${e} el almacenamiento local`,"MASA_STORAGE"),v("storage",j.masaContext,j),x&&m("error","Sesi\xF3n no persistente")}function qe(){return Y||(Y={getItem(e){try{const n=window.localStorage.getItem(e);return n!==null&&k.set(e,n),n??k.get(e)??null}catch(n){return q("leer",n),k.get(e)??null}},setItem(e,n){k.set(e,n);try{window.localStorage.setItem(e,n)}catch(t){q("guardar",t)}},removeItem(e){k.delete(e);try{window.localStorage.removeItem(e)}catch(n){q("borrar",n)}}},Y)}function _(){if(H)return H;if(!Te(window.MASA_CONFIG))throw y(new Error("Complet\xE1 js/config.js con la URL y la Publishable key de Supabase."),"configuration","Configuraci\xF3n de Supabase","MASA_CONFIG");if(!window.supabase?.createClient)throw y(new Error("El paquete de Supabase no est\xE1 disponible en esta compilaci\xF3n."),"configuration","Carga del cliente de Supabase","MASA_SUPABASE_MISSING");return H=window.supabase.createClient(window.MASA_CONFIG.supabaseUrl,window.MASA_CONFIG.supabaseKey,{auth:{persistSession:!0,autoRefreshToken:!0,detectSessionInUrl:!de(),storage:qe()}}),H}function U(e,n,t="sync"){if(e?.error)throw y(e.error,t,n);return e?.data}function V(){const e=s?.user;if(!e)throw new Error("No hay un usuario autenticado.");return e}function w(){return!!s?.masaOffline}function $(e,n){try{const t=localStorage.getItem(e);return t?JSON.parse(t):null}catch(t){return q(n,t),null}}function fe(e,n,t){try{return localStorage.setItem(e,JSON.stringify(n)),!0}catch(i){return q(t,i),!1}}function Ie(e,n){try{localStorage.removeItem(e)}catch(t){q(n,t)}}function ge(e){e?.id&&fe(re,{id:String(e.id),email:String(e.email||"")},"guardar la identidad para el modo offline")}function W(){Ie(re,"borrar la identidad offline")}function Fe(){const e=$(re,"leer la identidad offline");return e?.id?{id:String(e.id),email:String(e.email||"")}:null}function me(){const e=Fe();if(!e)return null;const n=$(`${Ne}${e.id}`,"leer los cambios offline"),t=$(`${Ae}${e.id}`,"leer los datos offline");return!n&&!t?null:(s={user:{...e,offline:!0},masaOffline:!0},R(),Q(),m("offline",n?"Sin conexi\xF3n \xB7 cambios pendientes":"Sin conexi\xF3n \xB7 modo local"),s)}function g(e,n=!1){const t=o("#auth-message");t&&(t.textContent=e||"",t.classList.toggle("error",!!n))}function O(e){document.querySelectorAll("#auth-gate button, #auth-gate input").forEach(n=>{n.disabled=!!e}),o("#auth-gate")?.classList.toggle("busy",!!e)}function E(e="login"){Z();const n=e==="login";o("#auth-login-form")?.toggleAttribute("hidden",!n),o("#auth-signup-form")?.toggleAttribute("hidden",n),o("#auth-recovery-form")?.setAttribute("hidden",""),o("#auth-mode-login")?.classList.toggle("active",n),o("#auth-mode-signup")?.classList.toggle("active",!n),o("#auth-loading")?.setAttribute("hidden",""),o("#auth-forms")?.removeAttribute("hidden"),g("")}function K(){Z(),o("#auth-login-form")?.setAttribute("hidden",""),o("#auth-signup-form")?.setAttribute("hidden",""),o("#auth-recovery-form")?.removeAttribute("hidden"),o("#auth-loading")?.setAttribute("hidden",""),o("#auth-forms")?.removeAttribute("hidden"),g("Eleg\xED una contrase\xF1a nueva para tu cuenta.")}function Z(){clearTimeout(ue),ue=null}function L({showForms:e=!s||h,hideGate:n=!!(s&&!h)}={}){if(Z(),o("#auth-loading")?.setAttribute("hidden",""),e&&o("#auth-forms")?.removeAttribute("hidden"),n){const t=o("#auth-gate");t&&(t.hidden=!0)}}function X(e="Cargando tus datos\u2026"){const n=o("#auth-gate");if(!n)return;Z(),n.hidden=!1,o("#auth-forms")?.setAttribute("hidden",""),o("#auth-loading")?.removeAttribute("hidden");const t=o("#auth-loading-text");t&&(t.textContent=e),ue=setTimeout(()=>{const i=y(new Error("El cargador de autenticaci\xF3n alcanz\xF3 el tiempo m\xE1ximo."),"timeout","Pantalla de carga","MASA_LOADING_TIMEOUT");v("auth","Se cerr\xF3 un cargador bloqueado",i),s&&!h?L({showForms:!1,hideGate:!0}):(E("login"),g("La operaci\xF3n demor\xF3 demasiado. Volv\xE9 a intentarlo.",!0))},12500)}function Pe(e){v("startup","No se pudo completar la inicializaci\xF3n",e);const n=o("#auth-gate");n&&(n.hidden=!1),E("login"),g(F(e),!0)}function xe(){x=!0,L({showForms:!1,hideGate:!0}),document.body.classList.add("cloud-ready"),R(),j&&m("error","Sesi\xF3n no persistente")}function R(){const e=s?.user?.email||"",n=o("#account-email");n&&(n.textContent=e);const t=o("#account-area");t&&(t.hidden=!e);const i=o("#logout-button");i&&(i.hidden=!e)}function m(e,n){const t=o("#sync-status");t&&(t.dataset.status=e,t.textContent=n)}function Q(){if(s)for(;J.length;)J.shift()(s)}function Be({forgetIdentity:e=G}={}){if(e&&W(),G=!1,s=null,c=null,clearTimeout(A),A=null,R(),x)location.reload();else{const n=o("#auth-gate");n&&(n.hidden=!1),E("login")}}function Ge(e){const t=e.closest(".password-field")?.querySelector("input");if(!t)return;const i=t.selectionStart,a=t.selectionEnd,u=t.selectionDirection,r=t.type!=="text";if(t.type=r?"text":"password",e.setAttribute("aria-pressed",String(r)),e.setAttribute("aria-label",r?"Ocultar contrase\xF1a":"Mostrar contrase\xF1a"),t.focus({preventScroll:!0}),i!==null&&a!==null){const f=()=>{try{t.setSelectionRange(i,a,u||"none")}catch{}};f(),requestAnimationFrame(f)}}function ee(e){if(!e?.user)throw y(new Error("Supabase no devolvi\xF3 una sesi\xF3n v\xE1lida."),"auth","Inicio de sesi\xF3n","MASA_NO_SESSION");s=e,ge(e.user),R(),Q(),h||L({showForms:!1,hideGate:!0}),x&&navigator.onLine&&setTimeout(()=>{De().catch(n=>{v("sync","No se pudo reanudar la sincronizaci\xF3n despu\xE9s de iniciar sesi\xF3n",n)})},0)}function ke(){Ee||(Ee=!0,o("#auth-mode-login")?.addEventListener("click",()=>E("login")),o("#auth-mode-signup")?.addEventListener("click",()=>E("signup")),document.querySelectorAll("[data-password-toggle]").forEach(e=>{e.type="button",e.addEventListener("click",()=>Ge(e))}),o("#auth-login-form")?.addEventListener("submit",async e=>{e.preventDefault();const n=e.currentTarget,t=n.querySelector('input[name="email"]'),i=n.querySelector('input[name="password"]'),a=t.value.trim(),u=i.value;O(!0),g(""),X("Iniciando sesi\xF3n\u2026");try{const r=await N(_().auth.signInWithPassword({email:a,password:u}),"El inicio de sesi\xF3n");if(r.error)throw y(r.error,"auth","Inicio de sesi\xF3n");ee(r.data?.session)}catch(r){if(v("auth","Fall\xF3 el inicio de sesi\xF3n",r),s)return;R(),E("login"),g(F(r),!0)}finally{O(!1),L({showForms:!s||h,hideGate:!!(s&&!h)})}}),o("#auth-signup-form")?.addEventListener("submit",async e=>{e.preventDefault();const n=e.currentTarget,t=n.querySelector('input[name="email"]'),i=n.querySelector('input[name="password"]'),a=n.querySelector('input[name="name"]'),u=t.value.trim(),r=i.value,f=a.value.trim();O(!0),g(""),X("Creando la cuenta\u2026");try{if(r.length<8)throw y(new Error("La contrase\xF1a debe tener al menos 8 caracteres."),"validation","Registro","MASA_PASSWORD_LENGTH");const l=await N(_().auth.signUp({email:u,password:r,options:{data:{name:f}}}),"El registro de la cuenta");if(l.error)throw y(l.error,"auth","Registro");l.data?.session?ee(l.data.session):(E("login"),o("#auth-login-form").elements.email.value=u,g("Cuenta creada. Revis\xE1 tu correo para confirmarla y despu\xE9s inici\xE1 sesi\xF3n."))}catch(l){if(v("auth","Fall\xF3 el registro",l),s)return;E("signup"),g(F(l),!0)}finally{O(!1),L({showForms:!s||h,hideGate:!!(s&&!h)})}}),o("#forgot-password")?.addEventListener("click",async()=>{const e=o("#auth-login-form")?.querySelector('input[name="email"]'),n=e?.value.trim()||"";if(!n){g("Escrib\xED tu correo antes de solicitar el enlace.",!0),e?.focus();return}O(!0),g("");try{const t=window.MASA_CONFIG?.passwordResetUrl||`${location.origin}${location.pathname}`,i=await N(_().auth.resetPasswordForEmail(n,{redirectTo:t}),"El env\xEDo del enlace de recuperaci\xF3n");if(i.error)throw y(i.error,"auth","Recuperaci\xF3n de contrase\xF1a");g("Te enviamos un enlace para cambiar la contrase\xF1a.")}catch(t){v("auth","Fall\xF3 la recuperaci\xF3n de contrase\xF1a",t),g(F(t),!0)}finally{O(!1)}}),o("#auth-recovery-form")?.addEventListener("submit",async e=>{e.preventDefault();const i=e.currentTarget.querySelector('input[name="password"]').value;O(!0),g(""),X("Actualizando la contrase\xF1a\u2026");try{if(i.length<8)throw y(new Error("La contrase\xF1a debe tener al menos 8 caracteres."),"validation","Cambio de contrase\xF1a","MASA_PASSWORD_LENGTH");const a=await N(_().auth.updateUser({password:i}),"La actualizaci\xF3n de contrase\xF1a");if(a.error)throw y(a.error,"auth","Cambio de contrase\xF1a");h=!1,g("Contrase\xF1a actualizada."),s&&ee(s)}catch(a){v("auth","Fall\xF3 el cambio de contrase\xF1a",a),K(),g(F(a),!0)}finally{O(!1),L({showForms:!s||h,hideGate:!!(s&&!h)})}}),o("#logout-button")?.addEventListener("click",async()=>{G=!0,W();try{m("saving","Guardando\u2026"),await N(Oe(),"El guardado antes de cerrar sesi\xF3n")}catch(e){v("sync","No se complet\xF3 el guardado antes de salir",e)}try{await N(_().auth.signOut({scope:"local"}),"El cierre de sesi\xF3n")}catch(e){v("auth","Fall\xF3 el cierre de sesi\xF3n",e)}location.reload()}))}function pe(e){const n=e?.message||String(e||"");return/jwt|token.*(?:expired|invalid)|issued at future|session.*invalid|bad_jwt/i.test(n)}function he(e){const n=e?.message||e?.cause?.message||String(e||"");return/network|fetch|offline|failed to fetch|load failed|internet disconnected/i.test(n)}function F(e){const n=e?.message||e?.cause?.message||String(e||""),t=String(e?.code||e?.cause?.code||"").toLowerCase(),i=e?.masaKind||"";return i==="storage"||t==="masa_storage"?"No se pudo guardar la sesi\xF3n en este dispositivo. El acceso puede funcionar, pero tendr\xE1s que iniciar sesi\xF3n nuevamente al cerrar la aplicaci\xF3n.":i==="configuration"||t==="masa_supabase_missing"?n:t==="invalid_credentials"||i==="auth"&&/invalid login credentials/i.test(n)?"Credenciales incorrectas":t==="email_not_confirmed"||/email not confirmed/i.test(n)?"Primero confirm\xE1 la cuenta desde el correo que recibiste.":t==="user_already_exists"||/user already registered|already been registered/i.test(n)?"Ya existe una cuenta con ese correo.":t==="masa_password_length"||i==="validation"?n:pe(e)?"La sesi\xF3n guardada dej\xF3 de ser v\xE1lida. Inici\xE1 sesi\xF3n de nuevo.":t==="masa_timeout"||t==="masa_loading_timeout"||i==="timeout"?de()?"Supabase no respondi\xF3 dentro de 12 segundos en Android. Revis\xE1 la conexi\xF3n del dispositivo y volv\xE9 a intentar.":"Supabase no respondi\xF3 dentro de 12 segundos. Volv\xE9 a intentarlo.":he(e)?de()?"Android no pudo comunicarse con Supabase. Revis\xE1 la conexi\xF3n del dispositivo; el detalle real qued\xF3 registrado en la consola de la aplicaci\xF3n.":"No se pudo comunicar con Supabase. Revis\xE1 tu conexi\xF3n y volv\xE9 a intentar.":i==="auth"?`Supabase rechaz\xF3 la operaci\xF3n: ${n}`:n||"No se pudo completar el acceso."}function $e(e,n){if(n?.user&&(s=n,ge(n.user),R()),e==="PASSWORD_RECOVERY"){h=!0;const t=o("#auth-gate");t&&(t.hidden=!1),K();return}if(n){Q(),!h&&x&&L({showForms:!1,hideGate:!0});return}if(e==="SIGNED_OUT"){if(!G&&!navigator.onLine&&me())return;Be({forgetIdentity:G||navigator.onLine})}}async function ze(){if(we)return s;we=!0,ke(),X("Comprobando la sesi\xF3n\u2026");try{const e=_();e.auth.onAuthStateChange((i,a)=>{le+=1,$e(i,a)});const n=le,t=await N(e.auth.getSession(),"La recuperaci\xF3n de la sesi\xF3n");if(t.error)throw y(t.error,"auth","Recuperaci\xF3n de sesi\xF3n");if(le===n&&(s=t.data?.session||null),s?.user&&ge(s.user),!s&&!navigator.onLine&&me(),R(),s&&h&&!w()){const i=o("#auth-gate");i&&(i.hidden=!1),K()}else s?Q():(E("login"),navigator.onLine||g("Necesit\xE1s conexi\xF3n para iniciar sesi\xF3n por primera vez.",!0));return s}catch(e){v("startup","Fall\xF3 la recuperaci\xF3n inicial de la sesi\xF3n",e);const n=!navigator.onLine||he(e)||e?.masaKind==="timeout"?me():null;if(n)return n;if(pe(e)){W();try{await N(_().auth.signOut({scope:"local"}),"La limpieza de la sesi\xF3n inv\xE1lida")}catch(t){v("storage","No se pudo limpiar la sesi\xF3n inv\xE1lida",t)}}return s=null,R(),E("login"),g(navigator.onLine?F(e):"Necesit\xE1s conexi\xF3n para iniciar sesi\xF3n por primera vez.",!0),null}finally{L({showForms:!s||h,hideGate:!!(s&&!h)})}}async function He(){const e=await ze();if(e&&(!h||w()))return e;if(e&&h){const t=o("#auth-gate");return t&&(t.hidden=!1),K(),new Promise(i=>J.push(i))}const n=o("#auth-gate");return n&&(n.hidden=!1),E("login"),new Promise(t=>J.push(t))}function Ce(){return`${Ae}${V().id}`}function ye(){return`${Ne}${V().id}`}function ne(e){fe(Ce(),e,"guardar los datos locales")}function ve(){return $(Ce(),"leer los datos locales")}function z(e){ne(e),fe(ye(),e,"guardar los cambios pendientes")}function M(){return $(ye(),"leer los cambios pendientes")}function Ye(){Ie(ye(),"borrar los cambios ya sincronizados")}async function D(e,n,t=i=>i){const i=[];for(let a=0;;a+=1e3){let u=_().from(e).select(n).range(a,a+1e3-1);u=t(u);const r=U(await u,`No se pudo leer ${e}`)||[];if(i.push(...r),r.length<1e3)break}return i}async function je(){const e=V(),[n,t,i,a,u,r]=await Promise.all([_().from("profiles").select("*").eq("user_id",e.id).maybeSingle(),D("weigh_ins","*",d=>d.eq("user_id",e.id).order("logged_on")),D("foods","*",d=>d.eq("owner_id",e.id).order("name")),D("recipes","*",d=>d.eq("user_id",e.id).order("name")),D("recipe_ingredients","*",d=>d.eq("user_id",e.id).order("position")),D("diary_entries","*",d=>d.eq("user_id",e.id).order("entry_date").order("created_at"))]),f=U(n,"No se pudo cargar el perfil"),l=Ve(f?.profile_data),p=new Map;u.forEach(d=>{p.has(d.recipe_id)||p.set(d.recipe_id,[]),p.get(d.recipe_id).push(Ke(d))});const T={version:f?.schema_version||19,configured:!!f?.configured,profile:l.profile,weighIns:t.map(d=>({...S(d.metadata)?d.metadata:{},id:d.legacy_id||d.id,date:d.logged_on,weight:Number(d.weight_kg)})),foods:i.map(We),recipes:a.map(d=>Ze(d,p.get(d.id)||[])),diary:Xe(r),completedDays:l.completedDays,foodUsage:l.foodUsage,catalogOverrides:l.catalogOverrides,calibrationHistory:l.calibrationHistory,lastCheckinDate:l.lastCheckinDate},ae=!!(T.configured||t.length||i.length||a.length||r.length||Object.keys(T.profile||{}).length);return{state:T,hasData:ae,fromCache:!1,signatures:Le(T),foodMap:new Map(i.map(d=>[String(d.legacy_id||d.id),d.id])),recipeMap:new Map(a.map(d=>[String(d.legacy_id||d.id),d.id]))}}async function Je(){m("loading","Cargando datos\u2026");const e=M();e&&(c=C(e));const n=c||ve();if((!navigator.onLine||w())&&n)return m("offline",c?"Sin conexi\xF3n \xB7 cambios pendientes":"Sin conexi\xF3n \xB7 datos locales"),{state:n,hasData:!0,fromCache:!0,pendingSync:!!c};if(c&&navigator.onLine&&!w())try{await P()}catch(t){v("sync","No se pudieron enviar los cambios offline antes de cargar",t);const i=c||M()||n;if(i)return m("error","Datos locales \xB7 sincronizaci\xF3n pendiente"),{state:i,hasData:!0,fromCache:!0,error:t,pendingSync:!0}}try{const t=await N(je(),"La carga de datos del usuario");return oe=t.signatures,se=t.foodMap,ce=t.recipeMap,ne(t.state),m("saved","Guardado"),t}catch(t){if(v("sync","Fall\xF3 la carga de datos del usuario",t),pe(t)&&navigator.onLine&&!w()){W();try{await N(_().auth.signOut({scope:"local"}),"La limpieza de la sesi\xF3n inv\xE1lida")}catch(u){v("auth","No se pudo limpiar la sesi\xF3n inv\xE1lida",u)}throw s=null,y(t,"auth","Sesi\xF3n inv\xE1lida","INVALID_SESSION")}const i=M()||ve();if(i){const a=!navigator.onLine||w()||he(t);return m(a?"offline":"error",a?"Sin conexi\xF3n \xB7 datos locales":"Datos locales \xB7 error de sincronizaci\xF3n"),{state:i,hasData:!0,fromCache:!0,error:t,pendingSync:!!M()}}throw m("error","No se pudieron cargar los datos"),y(t,"sync","Carga de datos del usuario",t?.code||"MASA_SYNC_LOAD")}}function Ve(e){const n=S(e)?e:{},t=S(n.profile);return{profile:t?n.profile:n,completedDays:t&&S(n.completedDays)?n.completedDays:{},foodUsage:t&&S(n.foodUsage)?n.foodUsage:{},catalogOverrides:t&&S(n.catalogOverrides)?n.catalogOverrides:{},calibrationHistory:t&&Array.isArray(n.calibrationHistory)?n.calibrationHistory:[],lastCheckinDate:t?String(n.lastCheckinDate||""):""}}function We(e){const n=S(e.metadata)?C(e.metadata):{};return{...n,id:e.legacy_id||n.id||e.id,cloudId:e.id,kind:"food",name:e.name,brand:e.brand||n.brand||"",serving:e.serving_text||n.serving||"1 porci\xF3n",servingAmount:te(e.serving_amount,n.servingAmount),servingUnit:e.serving_unit||n.servingUnit||"serving",servingUnitCustom:e.serving_unit_custom||n.servingUnitCustom||"",calories:Number(e.calories),protein:Number(e.protein),fat:Number(e.fat),carbs:Number(e.carbs)}}function Ke(e){const n=S(e.metadata)?C(e.metadata):{};return{...n,id:n.id||e.id,cloudId:e.id,sourceId:n.sourceId||n.foodId||"",foodId:n.foodId||"",kind:n.kind||"food",name:e.ingredient_name,amount:Number(e.quantity),unit:e.quantity_unit||n.unit||"serving",serving:n.serving||"",calories:Number(e.calories),protein:Number(e.protein),fat:Number(e.fat),carbs:Number(e.carbs)}}function Ze(e,n){const t=S(e.metadata)?C(e.metadata):{};return{...t,id:e.legacy_id||t.id||e.id,cloudId:e.id,kind:"recipe",name:e.name,recipeYield:Number(e.yield_amount),recipeYieldUnit:e.yield_unit||t.recipeYieldUnit||"serving",recipeYieldUnitCustom:e.yield_unit_custom||t.recipeYieldUnitCustom||"",recipeServingAmount:te(e.serving_amount,t.recipeServingAmount||1),serving:t.serving||"1 porci\xF3n",servingAmount:te(e.serving_amount,t.servingAmount||1),servingUnit:e.yield_unit||t.servingUnit||"serving",servingUnitCustom:e.yield_unit_custom||t.servingUnitCustom||"",calories:Number(e.calories),protein:Number(e.protein),fat:Number(e.fat),carbs:Number(e.carbs),ingredients:n}}function Xe(e){return e.reduce((n,t)=>{n[t.entry_date]||(n[t.entry_date]=[]);const i=S(t.metadata)?C(t.metadata):{};return n[t.entry_date].push({...i,id:t.legacy_id||i.id||t.id,cloudId:t.id,meal:t.meal,name:t.name,kind:t.kind,serving:t.serving_text||i.serving||"1 porci\xF3n",servingAmount:te(t.serving_amount,i.servingAmount||1),servingUnit:t.serving_unit||i.servingUnit||"serving",servingUnitCustom:t.serving_unit_custom||i.servingUnitCustom||"",quantity:Number(t.quantity),quantityUnit:t.quantity_unit||i.quantityUnit||"",calories:Number(t.calories),protein:Number(t.protein),fat:Number(t.fat),carbs:Number(t.carbs)}),n},{})}async function Qe(){return(await D("foods","id,external_id,source,name,brand,serving_text,serving_amount,serving_unit,serving_unit_custom,calories,protein,fat,carbs,metadata",n=>n.is("owner_id",null).eq("is_active",!0).order("name"))).map(nn).filter(Boolean)}async function en(){return N(Qe(),"La carga del cat\xE1logo general")}function nn(e){const n=S(e.metadata)?C(e.metadata):{};if(S(n.per100g))return n;const t=ie(e.serving_amount,100),i=100/t;return{...n,id:e.external_id||n.id||e.id,name:e.name,aliases:Array.isArray(n.aliases)?n.aliases:[],sourceName:n.sourceName||e.brand||"",per100g:{calories:Number(e.calories)*i,protein:Number(e.protein)*i,fat:Number(e.fat)*i,carbs:Number(e.carbs)*i},serving:{...S(n.serving)?n.serving:{},metric:{unit:"g",quantity:t}}}}function Ue(e){c=C(e),z(c),B=null;const n=navigator.onLine&&!w();m(n?"pending":"offline",n?"Cambios pendientes":"Sin conexi\xF3n \xB7 pendiente"),clearTimeout(A),A=setTimeout(()=>{A=null,P().catch(()=>{})},700)}async function tn(e){c=C(e),z(c),clearTimeout(A),A=null,await P()}async function P(){if(I)return I;if(c||(c=M()),!c)return;if(!navigator.onLine||w()){z(c),m("offline","Sin conexi\xF3n \xB7 pendiente");return}const e=c;return c=null,m("saving","Guardando\u2026"),I=N(an(e),"La sincronizaci\xF3n con Supabase").then(()=>{B=null,ne(e),c?z(c):Ye(),m(c?"pending":"saved",c?"Cambios pendientes":"Guardado")}).catch(n=>{throw B=n,c||(c=e),z(c),m(navigator.onLine?"error":"offline",navigator.onLine?"No se pudo guardar \xB7 queda pendiente":"Sin conexi\xF3n \xB7 pendiente"),n}).finally(()=>{I=null,c&&!B&&navigator.onLine&&!w()&&Ue(c)}),I}async function Oe(){clearTimeout(A),A=null,I&&await I,c&&await P()}async function an(e){const n=V(),t=Le(e),i=oe||{};let a=se,u=ce;t.profile!==i.profile&&await rn(n.id,e),t.weighIns!==i.weighIns&&await on(n.id,e.weighIns||[]),t.foods!==i.foods&&(a=await sn(n.id,e.foods||[])),t.recipes!==i.recipes&&(u=await cn(n.id,e.recipes||[],a)),t.diary!==i.diary&&await un(n.id,e.diary||{},a,u),se=a,ce=u,oe=t}function Le(e){return{profile:JSON.stringify({version:e.version,configured:e.configured,profile:e.profile||{},completedDays:e.completedDays||{},foodUsage:e.foodUsage||{},catalogOverrides:e.catalogOverrides||{},calibrationHistory:e.calibrationHistory||[],lastCheckinDate:e.lastCheckinDate||""}),weighIns:JSON.stringify(e.weighIns||[]),foods:JSON.stringify(e.foods||[]),recipes:JSON.stringify(e.recipes||[]),diary:JSON.stringify(e.diary||{})}}async function rn(e,n){const t=S(n.profile)?n.profile:{},i={user_id:e,display_name:t.name||s?.user?.user_metadata?.name||null,configured:!!n.configured,schema_version:Number(n.version)||19,profile_data:{profile:t,completedDays:S(n.completedDays)?n.completedDays:{},foodUsage:S(n.foodUsage)?n.foodUsage:{},catalogOverrides:S(n.catalogOverrides)?n.catalogOverrides:{},calibrationHistory:Array.isArray(n.calibrationHistory)?n.calibrationHistory:[],lastCheckinDate:n.lastCheckinDate||""},migration_completed_at:new Date().toISOString()};U(await _().from("profiles").upsert(i,{onConflict:"user_id"}),"No se pudo guardar el perfil")}async function on(e,n){const t=n.map(i=>({user_id:e,legacy_id:String(i.id||crypto.randomUUID()),logged_on:i.date,weight_kg:Number(i.weight),metadata:i}));U(await _().from("weigh_ins").delete().eq("user_id",e),"No se pudieron actualizar los pesajes"),await Re("weigh_ins",t,"No se pudieron guardar los pesajes")}async function sn(e,n){const t=n.map(i=>({owner_id:e,legacy_id:String(i.id||crypto.randomUUID()),source:"user",name:i.name,brand:i.brand||null,serving_text:i.serving||null,serving_amount:be(i.servingAmount),serving_unit:i.servingUnit||null,serving_unit_custom:i.servingUnitCustom||null,calories:b(i.calories),protein:b(i.protein),fat:b(i.fat),carbs:b(i.carbs),is_active:!0,metadata:i}));return _e("foods","owner_id",e,t,"owner_id,legacy_id")}async function cn(e,n,t){const i=n.map(r=>({user_id:e,legacy_id:String(r.id||crypto.randomUUID()),name:r.name,yield_amount:ie(r.recipeYield,1),yield_unit:r.recipeYieldUnit||r.servingUnit||null,yield_unit_custom:r.recipeYieldUnitCustom||r.servingUnitCustom||null,serving_amount:be(r.recipeServingAmount??r.servingAmount),calories:b(r.calories),protein:b(r.protein),fat:b(r.fat),carbs:b(r.carbs),metadata:r})),a=await _e("recipes","user_id",e,i,"user_id,legacy_id");U(await _().from("recipe_ingredients").delete().eq("user_id",e),"No se pudieron actualizar los ingredientes");const u=[];return n.forEach(r=>{const f=a.get(String(r.id));f&&(r.ingredients||[]).forEach((l,p)=>{const T=String(l.foodId||l.sourceId||"");u.push({user_id:e,recipe_id:f,food_id:t.get(T)||null,position:p,ingredient_name:l.name||"Ingrediente",quantity:ie(l.amount,1),quantity_unit:l.unit||null,calories:b(l.calories),protein:b(l.protein),fat:b(l.fat),carbs:b(l.carbs),metadata:l})})}),await Re("recipe_ingredients",u,"No se pudieron guardar los ingredientes"),a}async function un(e,n,t,i){const a=[];Object.entries(n).forEach(([u,r])=>{(r||[]).forEach(f=>{const l=String(f.sourceId||"");a.push({user_id:e,legacy_id:String(f.id||crypto.randomUUID()),entry_date:u,meal:f.meal||"extras",name:f.name||"Registro",kind:f.kind||"food",serving_text:f.serving||null,serving_amount:be(f.servingAmount),serving_unit:f.servingUnit||null,serving_unit_custom:f.servingUnitCustom||null,quantity:ie(f.quantity,1),quantity_unit:f.quantityUnit||null,calories:b(f.calories),protein:b(f.protein),fat:b(f.fat),carbs:b(f.carbs),source_food_id:t.get(l)||null,source_recipe_id:i.get(l)||null,metadata:f})})}),await _e("diary_entries","user_id",e,a,"user_id,legacy_id")}async function _e(e,n,t,i,a){const u=await D(e,"id,legacy_id",p=>p.eq(n,t)),r=new Set(i.map(p=>String(p.legacy_id))),f=u.filter(p=>!p.legacy_id||!r.has(String(p.legacy_id))).map(p=>p.id);for(const p of Se(f,250))U(await _().from(e).delete().in("id",p),`No se pudieron borrar registros anteriores de ${e}`);const l=new Map;for(const p of Se(i,250))(U(await _().from(e).upsert(p,{onConflict:a}).select("id,legacy_id"),`No se pudo guardar ${e}`)||[]).forEach(ae=>l.set(String(ae.legacy_id),ae.id));return l}async function Re(e,n,t){for(const i of Se(n,250))U(await _().from(e).insert(i),t)}function Se(e,n){const t=[];for(let i=0;i<e.length;i+=n)t.push(e.slice(i,i+n));return t}function S(e){return!!(e&&typeof e=="object"&&!Array.isArray(e))}function be(e){if(e===""||e===null||e===void 0)return null;const n=Number(e);return Number.isFinite(n)?n:null}function te(e,n=""){if(e==null||e==="")return n;const t=Number(e);return Number.isFinite(t)?t:n}function b(e){const n=Number(e);return Number.isFinite(n)&&n>=0?n:0}function ie(e,n){const t=Number(e);return Number.isFinite(t)&&t>0?t:n}function Me(){return!!s?.user}async function ln(){if(!w())return!0;try{const e=await N(_().auth.getSession(),"La recuperaci\xF3n de la sesi\xF3n online");if(e.error)throw y(e.error,"auth","Recuperaci\xF3n de sesi\xF3n online");const n=e.data?.session;if(!n?.user){const t=o("#auth-gate");return t&&(t.hidden=!1),E("login"),g("La sesi\xF3n venci\xF3. Inici\xE1 sesi\xF3n para sincronizar los cambios guardados en este dispositivo.",!0),m("error","Inici\xE1 sesi\xF3n para sincronizar"),!1}return ee(n),!0}catch(e){v("auth","No se pudo recuperar la sesi\xF3n online",e);const n=o("#auth-gate");return n&&(n.hidden=!1),E("login"),g("Inici\xE1 sesi\xF3n para sincronizar los cambios guardados en este dispositivo.",!0),m("error","Conexi\xF3n recuperada \xB7 falta iniciar sesi\xF3n"),!1}}async function De(){if(await ln()){if(c||(c=M()),!c){m("saved","Conectado");return}B=null,clearTimeout(A),A=setTimeout(()=>{A=null,P().catch(()=>{})},100)}}window.addEventListener("online",()=>{De().catch(e=>{v("sync","Fall\xF3 la reanudaci\xF3n de la sincronizaci\xF3n",e)})}),window.addEventListener("offline",()=>{if(!Me())return;const e=c||M();m("offline",e?"Sin conexi\xF3n \xB7 cambios pendientes":"Sin conexi\xF3n \xB7 modo local")}),document.addEventListener("visibilitychange",()=>{document.visibilityState==="hidden"&&c&&navigator.onLine&&!w()&&(clearTimeout(A),A=null,P().catch(()=>{}))}),window.MASA_CLOUD=Object.freeze({requireSession:He,loadUserState:Je,loadGlobalFoods:en,scheduleStateSync:Ue,replaceState:tn,flush:Oe,cacheState:ne,readCachedState:ve,isAuthenticated:Me,hasPendingChanges:()=>!!(c||I||M()),finishBoot:xe,showFatalError:Pe,setSyncStatus:m,get user(){return s?.user||null}})})();
+(() => {
+  "use strict";
+
+  const SCHEMA_VERSION = 19;
+  const CACHE_PREFIX = "masa-user-cache-v1:";
+  const PENDING_PREFIX = "masa-user-pending-v1:";
+  const LAST_USER_KEY = "masa-last-user-v1";
+  const PAGE_SIZE = 1000;
+  const BATCH_SIZE = 250;
+  const SYNC_DELAY_MS = 700;
+  const OPERATION_TIMEOUT_MS = 12_000;
+
+  let client = null;
+  let session = null;
+  let authBound = false;
+  let authStarted = false;
+  let appBooted = false;
+  let recoveryMode = /(?:^|[?#&])type=recovery(?:&|$)/.test(`${location.search}${location.hash}`);
+  let pendingState = null;
+  let syncTimer = null;
+  let syncInFlight = null;
+  let lastSyncError = null;
+  let syncedSignatures = null;
+  let syncedFoodMap = new Map();
+  let syncedRecipeMap = new Map();
+  let authStorage = null;
+  let storageFailure = null;
+  let loadingWatchdog = null;
+  let authEventRevision = 0;
+  let explicitSignOut = false;
+  const memoryStorage = new Map();
+  const sessionWaiters = [];
+
+  const $ = selector => document.querySelector(selector);
+
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function configIsValid(config) {
+    return Boolean(
+      config?.supabaseUrl &&
+      config?.supabaseKey &&
+      !config.supabaseUrl.includes("TU-PROYECTO") &&
+      !config.supabaseKey.includes("TU_PUBLISHABLE")
+    );
+  }
+
+  function isNativeRuntime() {
+    try {
+      return Boolean(window.MASA_NATIVE?.isNative?.() || window.Capacitor?.isNativePlatform?.());
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function normalizeWebRedirectUrl(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    try {
+      const url = new URL(raw, location.origin);
+      if (!url.pathname.endsWith("/")) url.pathname += "/";
+      url.search = "";
+      url.hash = "";
+      return url.toString();
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  function getWebAuthRedirectUrl() {
+    const configured = normalizeWebRedirectUrl(
+      window.MASA_CONFIG?.authRedirectUrl ||
+      window.MASA_CONFIG?.passwordResetUrl ||
+      ""
+    );
+    if (configured) return configured;
+    return normalizeWebRedirectUrl(`${location.origin}${location.pathname}`);
+  }
+
+  function getNativeAuthRedirectUrl() {
+    return String(window.MASA_CONFIG?.nativeAuthRedirectUrl || "masa://auth/callback").trim();
+  }
+
+  function getAuthRedirectUrl() {
+    return isNativeRuntime() ? getNativeAuthRedirectUrl() : getWebAuthRedirectUrl();
+  }
+
+  function errorWithContext(source, kind, context, code = "") {
+    const message = source?.message || String(source || context);
+    const error = new Error(message, source instanceof Error ? { cause: source } : undefined);
+    error.name = source?.name || "Error";
+    error.code = source?.code || code || "";
+    error.status = source?.status;
+    error.masaKind = kind;
+    error.masaContext = context;
+    return error;
+  }
+
+  function logRealError(scope, context, error) {
+    console.error(`[MASA][${scope}] ${context}`, error);
+  }
+
+  function withTimeout(operation, context, timeoutMs = OPERATION_TIMEOUT_MS) {
+    let timer = null;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        reject(errorWithContext(
+          new Error(`${context} superó el tiempo máximo de ${Math.round(timeoutMs / 1000)} segundos.`),
+          "timeout",
+          context,
+          "MASA_TIMEOUT"
+        ));
+      }, timeoutMs);
+    });
+    return Promise.race([Promise.resolve(operation), timeout]).finally(() => clearTimeout(timer));
+  }
+
+  function noteStorageFailure(action, source) {
+    storageFailure = errorWithContext(source, "storage", `No se pudo ${action} el almacenamiento local`, "MASA_STORAGE");
+    logRealError("storage", storageFailure.masaContext, storageFailure);
+    if (appBooted) setSyncStatus("error", "Sesión no persistente");
+  }
+
+  function getAuthStorage() {
+    if (authStorage) return authStorage;
+    authStorage = {
+      getItem(key) {
+        try {
+          const value = window.localStorage.getItem(key);
+          if (value !== null) memoryStorage.set(key, value);
+          return value ?? memoryStorage.get(key) ?? null;
+        } catch (error) {
+          noteStorageFailure("leer", error);
+          return memoryStorage.get(key) ?? null;
+        }
+      },
+      setItem(key, value) {
+        memoryStorage.set(key, value);
+        try {
+          window.localStorage.setItem(key, value);
+        } catch (error) {
+          noteStorageFailure("guardar", error);
+        }
+      },
+      removeItem(key) {
+        memoryStorage.delete(key);
+        try {
+          window.localStorage.removeItem(key);
+        } catch (error) {
+          noteStorageFailure("borrar", error);
+        }
+      }
+    };
+    return authStorage;
+  }
+
+  function getClient() {
+    if (client) return client;
+    if (!configIsValid(window.MASA_CONFIG)) {
+      throw errorWithContext(
+        new Error("Completá js/config.js con la URL y la Publishable key de Supabase."),
+        "configuration",
+        "Configuración de Supabase",
+        "MASA_CONFIG"
+      );
+    }
+    if (!window.supabase?.createClient) {
+      throw errorWithContext(
+        new Error("El paquete de Supabase no está disponible en esta compilación."),
+        "configuration",
+        "Carga del cliente de Supabase",
+        "MASA_SUPABASE_MISSING"
+      );
+    }
+
+    client = window.supabase.createClient(
+      window.MASA_CONFIG.supabaseUrl,
+      window.MASA_CONFIG.supabaseKey,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: !isNativeRuntime(),
+          storage: getAuthStorage()
+        }
+      }
+    );
+    return client;
+  }
+
+  function throwIfError(result, context, kind = "sync") {
+    if (result?.error) throw errorWithContext(result.error, kind, context);
+    return result?.data;
+  }
+
+  function currentUser() {
+    const user = session?.user;
+    if (!user) throw new Error("No hay un usuario autenticado.");
+    return user;
+  }
+
+  function isOfflineSession() {
+    return Boolean(session?.masaOffline);
+  }
+
+  function readLocalJson(key, action) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      noteStorageFailure(action, error);
+      return null;
+    }
+  }
+
+  function writeLocalJson(key, value, action) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (error) {
+      noteStorageFailure(action, error);
+      return false;
+    }
+  }
+
+  function removeLocalItem(key, action) {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      noteStorageFailure(action, error);
+    }
+  }
+
+  function rememberUser(user) {
+    if (!user?.id) return;
+    writeLocalJson(LAST_USER_KEY, {
+      id: String(user.id),
+      email: String(user.email || "")
+    }, "guardar la identidad para el modo offline");
+  }
+
+  function forgetRememberedUser() {
+    removeLocalItem(LAST_USER_KEY, "borrar la identidad offline");
+  }
+
+  function readRememberedUser() {
+    const user = readLocalJson(LAST_USER_KEY, "leer la identidad offline");
+    return user?.id ? { id: String(user.id), email: String(user.email || "") } : null;
+  }
+
+  function activateOfflineSession() {
+    const user = readRememberedUser();
+    if (!user) return null;
+
+    const queued = readLocalJson(`${PENDING_PREFIX}${user.id}`, "leer los cambios offline");
+    const cached = readLocalJson(`${CACHE_PREFIX}${user.id}`, "leer los datos offline");
+    if (!queued && !cached) return null;
+
+    session = {
+      user: { ...user, offline: true },
+      masaOffline: true
+    };
+    updateAccountUI();
+    refreshAccountSecurity();
+    resolveSessionWaiters();
+    setSyncStatus("offline", queued ? "Sin conexión · cambios pendientes" : "Sin conexión · modo local");
+    return session;
+  }
+
+  function setAuthMessage(text, isError = false) {
+    const element = $("#auth-message");
+    if (!element) return;
+    element.textContent = text || "";
+    element.classList.toggle("error", Boolean(isError));
+  }
+
+  function setAuthBusy(busy) {
+    document.querySelectorAll("#auth-gate button, #auth-gate input").forEach(element => {
+      element.disabled = Boolean(busy);
+    });
+    $("#auth-gate")?.classList.toggle("busy", Boolean(busy));
+  }
+
+  function showAuthMode(mode = "login") {
+    clearLoadingWatchdog();
+    const login = mode === "login";
+    $("#auth-login-form")?.toggleAttribute("hidden", !login);
+    $("#auth-signup-form")?.toggleAttribute("hidden", login);
+    $("#auth-recovery-form")?.setAttribute("hidden", "");
+    $("#auth-mode-login")?.classList.toggle("active", login);
+    $("#auth-mode-signup")?.classList.toggle("active", !login);
+    $("#auth-loading")?.setAttribute("hidden", "");
+    $("#auth-forms")?.removeAttribute("hidden");
+    setAuthMessage("");
+  }
+
+  function showRecoveryMode() {
+    clearLoadingWatchdog();
+    $("#auth-login-form")?.setAttribute("hidden", "");
+    $("#auth-signup-form")?.setAttribute("hidden", "");
+    $("#auth-recovery-form")?.removeAttribute("hidden");
+    $("#auth-loading")?.setAttribute("hidden", "");
+    $("#auth-forms")?.removeAttribute("hidden");
+    setAuthMessage("Elegí una contraseña nueva para tu cuenta.");
+  }
+
+  function clearLoadingWatchdog() {
+    clearTimeout(loadingWatchdog);
+    loadingWatchdog = null;
+  }
+
+  function hideLoadingGate({ showForms = !session || recoveryMode, hideGate = Boolean(session && !recoveryMode) } = {}) {
+    clearLoadingWatchdog();
+    $("#auth-loading")?.setAttribute("hidden", "");
+    if (showForms) $("#auth-forms")?.removeAttribute("hidden");
+    if (hideGate) {
+      const gate = $("#auth-gate");
+      if (gate) gate.hidden = true;
+    }
+  }
+
+  function showLoadingGate(text = "Cargando tus datos…") {
+    const gate = $("#auth-gate");
+    if (!gate) return;
+    clearLoadingWatchdog();
+    gate.hidden = false;
+    $("#auth-forms")?.setAttribute("hidden", "");
+    $("#auth-loading")?.removeAttribute("hidden");
+    const label = $("#auth-loading-text");
+    if (label) label.textContent = text;
+    loadingWatchdog = setTimeout(() => {
+      const error = errorWithContext(
+        new Error("El cargador de autenticación alcanzó el tiempo máximo."),
+        "timeout",
+        "Pantalla de carga",
+        "MASA_LOADING_TIMEOUT"
+      );
+      logRealError("auth", "Se cerró un cargador bloqueado", error);
+      if (session && !recoveryMode) {
+        hideLoadingGate({ showForms: false, hideGate: true });
+      } else {
+        showAuthMode("login");
+        setAuthMessage("La operación demoró demasiado. Volvé a intentarlo.", true);
+      }
+    }, OPERATION_TIMEOUT_MS + 500);
+  }
+
+  function showFatalError(error) {
+    logRealError("startup", "No se pudo completar la inicialización", error);
+    const gate = $("#auth-gate");
+    if (gate) gate.hidden = false;
+    showAuthMode("login");
+    setAuthMessage(humanizeAuthError(error), true);
+  }
+
+  function finishBoot() {
+    appBooted = true;
+    hideLoadingGate({ showForms: false, hideGate: true });
+    document.body.classList.add("cloud-ready");
+    updateAccountUI();
+    if (storageFailure) setSyncStatus("error", "Sesión no persistente");
+  }
+
+  function updateAccountUI() {
+    const email = session?.user?.email || "";
+    const accountEmail = $("#account-email");
+    if (accountEmail) accountEmail.textContent = email;
+    const accountArea = $("#account-area");
+    if (accountArea) accountArea.hidden = !email;
+    const logoutButton = $("#logout-button");
+    if (logoutButton) logoutButton.hidden = !email;
+  }
+
+  function setSyncStatus(kind, text) {
+    const element = $("#sync-status");
+    if (!element) return;
+    element.dataset.status = kind;
+    element.textContent = text;
+  }
+
+  function resolveSessionWaiters() {
+    if (!session) return;
+    while (sessionWaiters.length) sessionWaiters.shift()(session);
+  }
+
+  function handleSignedOut({ forgetIdentity = explicitSignOut } = {}) {
+    if (forgetIdentity) forgetRememberedUser();
+    explicitSignOut = false;
+    session = null;
+    pendingState = null;
+    clearTimeout(syncTimer);
+    syncTimer = null;
+    updateAccountUI();
+    if (appBooted) location.reload();
+    else {
+      const gate = $("#auth-gate");
+      if (gate) gate.hidden = false;
+      showAuthMode("login");
+    }
+  }
+
+  function togglePasswordVisibility(button) {
+    const field = button.closest(".password-field");
+    const input = field?.querySelector("input");
+    if (!input) return;
+
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
+    const selectionDirection = input.selectionDirection;
+    const nextVisible = input.type !== "text";
+
+    input.type = nextVisible ? "text" : "password";
+    button.setAttribute("aria-pressed", String(nextVisible));
+    button.setAttribute("aria-label", nextVisible ? "Ocultar contraseña" : "Mostrar contraseña");
+    input.focus({ preventScroll: true });
+    if (selectionStart !== null && selectionEnd !== null) {
+      const restoreSelection = () => {
+        try { input.setSelectionRange(selectionStart, selectionEnd, selectionDirection || "none"); } catch (_) {}
+      };
+      restoreSelection();
+      requestAnimationFrame(restoreSelection);
+    }
+  }
+
+  function acceptSession(nextSession) {
+    if (!nextSession?.user) {
+      throw errorWithContext(
+        new Error("Supabase no devolvió una sesión válida."),
+        "auth",
+        "Inicio de sesión",
+        "MASA_NO_SESSION"
+      );
+    }
+    session = nextSession;
+    rememberUser(nextSession.user);
+    updateAccountUI();
+    refreshAccountSecurity();
+    resolveSessionWaiters();
+    if (!recoveryMode) hideLoadingGate({ showForms: false, hideGate: true });
+    if (appBooted && navigator.onLine) {
+      setTimeout(() => {
+        resumeOnlineSync().catch(error => {
+          logRealError("sync", "No se pudo reanudar la sincronización después de iniciar sesión", error);
+        });
+      }, 0);
+    }
+  }
+
+  function refreshAccountSecurity() {
+    const email = session?.user?.email || "";
+    const emailElement = $("#security-account-email");
+    if (emailElement) emailElement.textContent = email || "No disponible";
+  }
+
+  function setAccountSecurityBusy(busy) {
+    document.querySelectorAll("#account-password-form input, #account-password-form button, #send-password-reset").forEach(element => {
+      element.disabled = Boolean(busy);
+    });
+  }
+
+  function setAccountSecurityFeedback(text, isError = false) {
+    const element = $("#account-security-feedback");
+    if (!element) return;
+    element.textContent = text || "";
+    element.classList.toggle("error", Boolean(isError));
+  }
+
+
+  function readAuthParams(urlValue) {
+    const url = new URL(String(urlValue || ""));
+    const query = new URLSearchParams(url.search);
+    const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+    const read = key => hash.get(key) || query.get(key) || "";
+    return {
+      accessToken: read("access_token"),
+      refreshToken: read("refresh_token"),
+      type: read("type"),
+      error: read("error_description") || read("error")
+    };
+  }
+
+  async function consumeNativeAuthUrl(urlValue) {
+    if (!urlValue || !isNativeRuntime()) return false;
+    let params;
+    try {
+      params = readAuthParams(urlValue);
+    } catch (_) {
+      return false;
+    }
+    if (params.error) throw errorWithContext(new Error(params.error), "auth", "Retorno de autenticación");
+    if (!params.accessToken || !params.refreshToken) return false;
+
+    if (params.type === "recovery") recoveryMode = true;
+    const result = await withTimeout(
+      getClient().auth.setSession({ access_token: params.accessToken, refresh_token: params.refreshToken }),
+      "La apertura de la sesión desde Android"
+    );
+    if (result.error) throw errorWithContext(result.error, "auth", "Retorno de autenticación");
+    if (result.data?.session) acceptSession(result.data.session);
+    if (recoveryMode) {
+      const gate = $("#auth-gate");
+      if (gate) gate.hidden = false;
+      showRecoveryMode();
+    }
+    return true;
+  }
+
+  async function signInWithGoogle() {
+    const native = isNativeRuntime();
+    const result = await withTimeout(
+      getClient().auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: native ? getNativeAuthRedirectUrl() : getWebAuthRedirectUrl(),
+          skipBrowserRedirect: native
+        }
+      }),
+      "El inicio de sesión con Google"
+    );
+    if (result.error) throw errorWithContext(result.error, "auth", "Inicio con Google");
+    if (native) {
+      if (!result.data?.url) throw errorWithContext(new Error("Supabase no devolvió la dirección de Google."), "auth", "Inicio con Google");
+      if (!window.MASA_NATIVE?.openAuthUrl) {
+        throw errorWithContext(new Error("La compilación Android no incluye el puente de autenticación."), "configuration", "Inicio con Google");
+      }
+      await window.MASA_NATIVE.openAuthUrl(result.data.url);
+    }
+  }
+
+  async function sendPasswordReset(email) {
+    const result = await withTimeout(
+      getClient().auth.resetPasswordForEmail(email, { redirectTo: getAuthRedirectUrl() }),
+      "El envío del enlace de recuperación"
+    );
+    if (result.error) throw errorWithContext(result.error, "auth", "Recuperación de contraseña");
+  }
+
+  function bindAuthUI() {
+    if (authBound) return;
+    authBound = true;
+
+    $("#auth-mode-login")?.addEventListener("click", () => showAuthMode("login"));
+    $("#auth-mode-signup")?.addEventListener("click", () => showAuthMode("signup"));
+    document.querySelectorAll("[data-password-toggle]").forEach(button => {
+      button.type = "button";
+      button.addEventListener("click", () => togglePasswordVisibility(button));
+    });
+
+    document.querySelectorAll("[data-auth-google]").forEach(button => {
+      button.addEventListener("click", async () => {
+        setAuthBusy(true);
+        setAuthMessage("");
+        try {
+          await signInWithGoogle();
+          if (isNativeRuntime()) {
+            setAuthMessage("Completá el acceso con Google y volverás automáticamente a M.A.S.A.");
+          }
+        } catch (error) {
+          logRealError("auth", "Falló el inicio con Google", error);
+          setAuthMessage(humanizeAuthError(error), true);
+        } finally {
+          setAuthBusy(false);
+        }
+      });
+    });
+
+    $("#auth-login-form")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const emailInput = form.querySelector('input[name="email"]');
+      const passwordInput = form.querySelector('input[name="password"]');
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      setAuthBusy(true);
+      setAuthMessage("");
+      showLoadingGate("Iniciando sesión…");
+      try {
+        const result = await withTimeout(
+          getClient().auth.signInWithPassword({ email, password }),
+          "El inicio de sesión"
+        );
+        if (result.error) throw errorWithContext(result.error, "auth", "Inicio de sesión");
+        acceptSession(result.data?.session);
+      } catch (error) {
+        logRealError("auth", "Falló el inicio de sesión", error);
+        if (session) return;
+        updateAccountUI();
+        showAuthMode("login");
+        setAuthMessage(humanizeAuthError(error), true);
+      } finally {
+        setAuthBusy(false);
+        hideLoadingGate({ showForms: !session || recoveryMode, hideGate: Boolean(session && !recoveryMode) });
+      }
+    });
+
+    $("#auth-signup-form")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const emailInput = form.querySelector('input[name="email"]');
+      const passwordInput = form.querySelector('input[name="password"]');
+      const nameInput = form.querySelector('input[name="name"]');
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const name = nameInput.value.trim();
+
+      setAuthBusy(true);
+      setAuthMessage("");
+      showLoadingGate("Creando la cuenta…");
+      try {
+        if (password.length < 8) {
+          throw errorWithContext(
+            new Error("La contraseña debe tener al menos 8 caracteres."),
+            "validation",
+            "Registro",
+            "MASA_PASSWORD_LENGTH"
+          );
+        }
+        const result = await withTimeout(
+          getClient().auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: getAuthRedirectUrl(),
+              data: { name }
+            }
+          }),
+          "El registro de la cuenta"
+        );
+        if (result.error) throw errorWithContext(result.error, "auth", "Registro");
+
+        if (result.data?.session) {
+          acceptSession(result.data.session);
+        } else {
+          showAuthMode("login");
+          $("#auth-login-form").elements.email.value = email;
+          setAuthMessage("Cuenta creada. Revisá tu correo para confirmarla y después iniciá sesión.");
+        }
+      } catch (error) {
+        logRealError("auth", "Falló el registro", error);
+        if (session) return;
+        showAuthMode("signup");
+        setAuthMessage(humanizeAuthError(error), true);
+      } finally {
+        setAuthBusy(false);
+        hideLoadingGate({ showForms: !session || recoveryMode, hideGate: Boolean(session && !recoveryMode) });
+      }
+    });
+
+    $("#forgot-password")?.addEventListener("click", async () => {
+      const emailInput = $("#auth-login-form")?.querySelector('input[name="email"]');
+      const email = emailInput?.value.trim() || "";
+      if (!email) {
+        setAuthMessage("Escribí tu correo antes de solicitar el enlace.", true);
+        emailInput?.focus();
+        return;
+      }
+      setAuthBusy(true);
+      setAuthMessage("");
+      try {
+        await sendPasswordReset(email);
+        setAuthMessage("Te enviamos un enlace para cambiar la contraseña.");
+      } catch (error) {
+        logRealError("auth", "Falló la recuperación de contraseña", error);
+        setAuthMessage(humanizeAuthError(error), true);
+      } finally {
+        setAuthBusy(false);
+      }
+    });
+
+    $("#auth-recovery-form")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const passwordInput = form.querySelector('input[name="password"]');
+      const password = passwordInput.value;
+
+      setAuthBusy(true);
+      setAuthMessage("");
+      showLoadingGate("Actualizando la contraseña…");
+      try {
+        if (password.length < 8) {
+          throw errorWithContext(
+            new Error("La contraseña debe tener al menos 8 caracteres."),
+            "validation",
+            "Cambio de contraseña",
+            "MASA_PASSWORD_LENGTH"
+          );
+        }
+        const result = await withTimeout(
+          getClient().auth.updateUser({ password }),
+          "La actualización de contraseña"
+        );
+        if (result.error) throw errorWithContext(result.error, "auth", "Cambio de contraseña");
+        recoveryMode = false;
+        setAuthMessage("Contraseña actualizada.");
+        if (session) acceptSession(session);
+      } catch (error) {
+        logRealError("auth", "Falló el cambio de contraseña", error);
+        showRecoveryMode();
+        setAuthMessage(humanizeAuthError(error), true);
+      } finally {
+        setAuthBusy(false);
+        hideLoadingGate({ showForms: !session || recoveryMode, hideGate: Boolean(session && !recoveryMode) });
+      }
+    });
+
+    $("#account-password-form")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const currentPassword = form.elements.currentPassword.value;
+      const newPassword = form.elements.newPassword.value;
+      const confirmPassword = form.elements.confirmPassword.value;
+
+      setAccountSecurityBusy(true);
+      setAccountSecurityFeedback("");
+      try {
+        if (newPassword.length < 8) {
+          throw errorWithContext(
+            new Error("La contraseña nueva debe tener al menos 8 caracteres."),
+            "validation",
+            "Cambio de contraseña",
+            "MASA_PASSWORD_LENGTH"
+          );
+        }
+        if (newPassword !== confirmPassword) {
+          throw errorWithContext(
+            new Error("Las contraseñas nuevas no coinciden."),
+            "validation",
+            "Cambio de contraseña",
+            "MASA_PASSWORD_MISMATCH"
+          );
+        }
+        if (currentPassword === newPassword) {
+          throw errorWithContext(
+            new Error("La contraseña nueva debe ser diferente de la actual."),
+            "validation",
+            "Cambio de contraseña",
+            "MASA_PASSWORD_UNCHANGED"
+          );
+        }
+        const result = await withTimeout(
+          getClient().auth.updateUser({
+            password: newPassword,
+            current_password: currentPassword
+          }),
+          "La actualización de contraseña"
+        );
+        if (result.error) throw errorWithContext(result.error, "auth", "Cambio de contraseña");
+        form.reset();
+        setAccountSecurityFeedback("Contraseña actualizada correctamente.");
+      } catch (error) {
+        logRealError("auth", "Falló el cambio de contraseña desde Ajustes", error);
+        setAccountSecurityFeedback(humanizeAuthError(error), true);
+      } finally {
+        setAccountSecurityBusy(false);
+      }
+    });
+
+    $("#send-password-reset")?.addEventListener("click", async () => {
+      const email = session?.user?.email || "";
+      if (!email) {
+        setAccountSecurityFeedback("No se pudo identificar el correo de la cuenta.", true);
+        return;
+      }
+      setAccountSecurityBusy(true);
+      setAccountSecurityFeedback("");
+      try {
+        await sendPasswordReset(email);
+        setAccountSecurityFeedback(`Enviamos el enlace a ${email}.`);
+      } catch (error) {
+        logRealError("auth", "Falló el envío del enlace desde Ajustes", error);
+        setAccountSecurityFeedback(humanizeAuthError(error), true);
+      } finally {
+        setAccountSecurityBusy(false);
+      }
+    });
+
+    $("#logout-button")?.addEventListener("click", async () => {
+      explicitSignOut = true;
+      forgetRememberedUser();
+      try {
+        setSyncStatus("saving", "Guardando…");
+        await withTimeout(flush(), "El guardado antes de cerrar sesión");
+      } catch (error) {
+        logRealError("sync", "No se completó el guardado antes de salir", error);
+      }
+      try {
+        await withTimeout(getClient().auth.signOut({ scope: "local" }), "El cierre de sesión");
+      } catch (error) {
+        logRealError("auth", "Falló el cierre de sesión", error);
+      }
+      location.reload();
+    });
+  }
+
+  function isInvalidSessionError(error) {
+    const message = error?.message || String(error || "");
+    return /jwt|token.*(?:expired|invalid)|issued at future|session.*invalid|bad_jwt/i.test(message);
+  }
+
+  function isNetworkError(error) {
+    const message = error?.message || error?.cause?.message || String(error || "");
+    return /network|fetch|offline|failed to fetch|load failed|internet disconnected/i.test(message);
+  }
+
+  function humanizeAuthError(error) {
+    const message = error?.message || error?.cause?.message || String(error || "");
+    const code = String(error?.code || error?.cause?.code || "").toLowerCase();
+    const kind = error?.masaKind || "";
+
+    if (kind === "storage" || code === "masa_storage") {
+      return "No se pudo guardar la sesión en este dispositivo. El acceso puede funcionar, pero tendrás que iniciar sesión nuevamente al cerrar la aplicación.";
+    }
+    if (kind === "configuration" || code === "masa_supabase_missing") {
+      return message;
+    }
+    if (code === "invalid_credentials" || (kind === "auth" && /invalid login credentials/i.test(message))) {
+      return "Credenciales incorrectas";
+    }
+    if (code === "email_not_confirmed" || /email not confirmed/i.test(message)) {
+      return "Primero confirmá la cuenta desde el correo que recibiste.";
+    }
+    if (code === "user_already_exists" || /user already registered|already been registered/i.test(message)) {
+      return "Ya existe una cuenta con ese correo.";
+    }
+    if (/current password|password.*incorrect|invalid password/i.test(message)) {
+      return "La contraseña actual no es correcta.";
+    }
+    if (code === "masa_password_length" || kind === "validation") return message;
+    if (isInvalidSessionError(error)) return "La sesión guardada dejó de ser válida. Iniciá sesión de nuevo.";
+    if (code === "masa_timeout" || code === "masa_loading_timeout" || kind === "timeout") {
+      return isNativeRuntime()
+        ? "Supabase no respondió dentro de 12 segundos en Android. Revisá la conexión del dispositivo y volvé a intentar."
+        : "Supabase no respondió dentro de 12 segundos. Volvé a intentarlo.";
+    }
+    if (isNetworkError(error)) {
+      return isNativeRuntime()
+        ? "Android no pudo comunicarse con Supabase. Revisá la conexión del dispositivo; el detalle real quedó registrado en la consola de la aplicación."
+        : "No se pudo comunicar con Supabase. Revisá tu conexión y volvé a intentar.";
+    }
+    if (kind === "auth") return `Supabase rechazó la operación: ${message}`;
+    return message || "No se pudo completar el acceso.";
+  }
+
+  function handleAuthStateChange(event, nextSession) {
+    if (nextSession?.user) {
+      session = nextSession;
+      rememberUser(nextSession.user);
+      updateAccountUI();
+      refreshAccountSecurity();
+    }
+
+    if (event === "PASSWORD_RECOVERY") {
+      recoveryMode = true;
+      const gate = $("#auth-gate");
+      if (gate) gate.hidden = false;
+      showRecoveryMode();
+      return;
+    }
+
+    if (nextSession) {
+      resolveSessionWaiters();
+      if (!recoveryMode && appBooted) hideLoadingGate({ showForms: false, hideGate: true });
+      return;
+    }
+
+    if (event === "SIGNED_OUT") {
+      if (!explicitSignOut && !navigator.onLine && activateOfflineSession()) return;
+      handleSignedOut({ forgetIdentity: explicitSignOut || navigator.onLine });
+    }
+  }
+
+  async function startAuth() {
+    if (authStarted) return session;
+    authStarted = true;
+    bindAuthUI();
+    showLoadingGate("Comprobando la sesión…");
+
+    try {
+      const supabaseClient = getClient();
+      supabaseClient.auth.onAuthStateChange((event, nextSession) => {
+        authEventRevision += 1;
+        handleAuthStateChange(event, nextSession);
+      });
+
+      if (isNativeRuntime()) {
+        window.addEventListener("masa:native-auth-url", event => {
+          consumeNativeAuthUrl(event.detail?.url).catch(error => {
+            logRealError("auth", "Falló el retorno de autenticación en Android", error);
+            const gate = $("#auth-gate");
+            if (gate) gate.hidden = false;
+            showAuthMode("login");
+            setAuthMessage(humanizeAuthError(error), true);
+          });
+        });
+        const launchUrl = await window.MASA_NATIVE?.getInitialAuthUrl?.();
+        if (launchUrl) await consumeNativeAuthUrl(launchUrl);
+      }
+
+      const revisionBeforeGetSession = authEventRevision;
+      const result = await withTimeout(supabaseClient.auth.getSession(), "La recuperación de la sesión");
+      if (result.error) throw errorWithContext(result.error, "auth", "Recuperación de sesión");
+      if (authEventRevision === revisionBeforeGetSession) {
+        session = result.data?.session || null;
+      }
+      if (session?.user) rememberUser(session.user);
+      if (!session && !navigator.onLine) activateOfflineSession();
+      updateAccountUI();
+      refreshAccountSecurity();
+
+      if (session && recoveryMode && !isOfflineSession()) {
+        const gate = $("#auth-gate");
+        if (gate) gate.hidden = false;
+        showRecoveryMode();
+      } else if (session) {
+        resolveSessionWaiters();
+      } else {
+        showAuthMode("login");
+        if (!navigator.onLine) {
+          setAuthMessage("Necesitás conexión para iniciar sesión por primera vez.", true);
+        }
+      }
+      return session;
+    } catch (error) {
+      logRealError("startup", "Falló la recuperación inicial de la sesión", error);
+
+      const offlineSession = (!navigator.onLine || isNetworkError(error) || error?.masaKind === "timeout")
+        ? activateOfflineSession()
+        : null;
+      if (offlineSession) return offlineSession;
+
+      if (isInvalidSessionError(error)) {
+        forgetRememberedUser();
+        try {
+          await withTimeout(getClient().auth.signOut({ scope: "local" }), "La limpieza de la sesión inválida");
+        } catch (signOutError) {
+          logRealError("storage", "No se pudo limpiar la sesión inválida", signOutError);
+        }
+      }
+      session = null;
+      updateAccountUI();
+      showAuthMode("login");
+      setAuthMessage(
+        !navigator.onLine ? "Necesitás conexión para iniciar sesión por primera vez." : humanizeAuthError(error),
+        true
+      );
+      return null;
+    } finally {
+      hideLoadingGate({ showForms: !session || recoveryMode, hideGate: Boolean(session && !recoveryMode) });
+    }
+  }
+
+  async function requireSession() {
+    const current = await startAuth();
+    if (current && (!recoveryMode || isOfflineSession())) return current;
+    if (current && recoveryMode) {
+      const gate = $("#auth-gate");
+      if (gate) gate.hidden = false;
+      showRecoveryMode();
+      return new Promise(resolve => sessionWaiters.push(resolve));
+    }
+
+    const gate = $("#auth-gate");
+    if (gate) gate.hidden = false;
+    showAuthMode("login");
+    return new Promise(resolve => sessionWaiters.push(resolve));
+  }
+
+  function cacheKey() {
+    return `${CACHE_PREFIX}${currentUser().id}`;
+  }
+
+  function pendingKey() {
+    return `${PENDING_PREFIX}${currentUser().id}`;
+  }
+
+  function cacheState(state) {
+    writeLocalJson(cacheKey(), state, "guardar los datos locales");
+  }
+
+  function readCachedState() {
+    return readLocalJson(cacheKey(), "leer los datos locales");
+  }
+
+  function persistPendingState(state) {
+    cacheState(state);
+    writeLocalJson(pendingKey(), state, "guardar los cambios pendientes");
+  }
+
+  function readPersistedPendingState() {
+    return readLocalJson(pendingKey(), "leer los cambios pendientes");
+  }
+
+  function clearPersistedPendingState() {
+    removeLocalItem(pendingKey(), "borrar los cambios ya sincronizados");
+  }
+
+  async function fetchPaged(table, columns, apply = query => query) {
+    const rows = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      let query = getClient().from(table).select(columns).range(from, from + PAGE_SIZE - 1);
+      query = apply(query);
+      const data = throwIfError(await query, `No se pudo leer ${table}`) || [];
+      rows.push(...data);
+      if (data.length < PAGE_SIZE) break;
+    }
+    return rows;
+  }
+
+  async function loadUserStateFromRemote() {
+    const user = currentUser();
+    const [profileResult, weighRows, foodRows, recipeRows, ingredientRows, diaryRows] = await Promise.all([
+      getClient().from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
+      fetchPaged("weigh_ins", "*", query => query.eq("user_id", user.id).order("logged_on")),
+      fetchPaged("foods", "*", query => query.eq("owner_id", user.id).order("name")),
+      fetchPaged("recipes", "*", query => query.eq("user_id", user.id).order("name")),
+      fetchPaged("recipe_ingredients", "*", query => query.eq("user_id", user.id).order("position")),
+      fetchPaged("diary_entries", "*", query => query.eq("user_id", user.id).order("entry_date").order("created_at"))
+    ]);
+
+    const profileRow = throwIfError(profileResult, "No se pudo cargar el perfil");
+    const profileData = decodeProfileData(profileRow?.profile_data);
+    const ingredientsByRecipe = new Map();
+    ingredientRows.forEach(row => {
+      if (!ingredientsByRecipe.has(row.recipe_id)) ingredientsByRecipe.set(row.recipe_id, []);
+      ingredientsByRecipe.get(row.recipe_id).push(ingredientFromRow(row));
+    });
+
+    const state = {
+      version: profileRow?.schema_version || SCHEMA_VERSION,
+      configured: Boolean(profileRow?.configured),
+      profile: profileData.profile,
+      weighIns: weighRows.map(row => ({
+        ...(plainObject(row.metadata) ? row.metadata : {}),
+        id: row.legacy_id || row.id,
+        date: row.logged_on,
+        weight: Number(row.weight_kg)
+      })),
+      foods: foodRows.map(foodFromRow),
+      recipes: recipeRows.map(row => recipeFromRow(row, ingredientsByRecipe.get(row.id) || [])),
+      diary: diaryFromRows(diaryRows),
+      completedDays: profileData.completedDays,
+      foodUsage: profileData.foodUsage,
+      catalogOverrides: profileData.catalogOverrides,
+      calibrationHistory: profileData.calibrationHistory,
+      lastCheckinDate: profileData.lastCheckinDate
+    };
+
+    const hasData = Boolean(
+      state.configured ||
+      weighRows.length || foodRows.length || recipeRows.length || diaryRows.length ||
+      Object.keys(state.profile || {}).length
+    );
+    return {
+      state,
+      hasData,
+      fromCache: false,
+      signatures: stateSignatures(state),
+      foodMap: new Map(foodRows.map(row => [String(row.legacy_id || row.id), row.id])),
+      recipeMap: new Map(recipeRows.map(row => [String(row.legacy_id || row.id), row.id]))
+    };
+  }
+
+  async function loadUserState() {
+    setSyncStatus("loading", "Cargando datos…");
+
+    const persistedPending = readPersistedPendingState();
+    if (persistedPending) pendingState = clone(persistedPending);
+    const localState = pendingState || readCachedState();
+
+    if ((!navigator.onLine || isOfflineSession()) && localState) {
+      setSyncStatus("offline", pendingState ? "Sin conexión · cambios pendientes" : "Sin conexión · datos locales");
+      return {
+        state: localState,
+        hasData: true,
+        fromCache: true,
+        pendingSync: Boolean(pendingState)
+      };
+    }
+
+    if (pendingState && navigator.onLine && !isOfflineSession()) {
+      try {
+        await runPendingSync();
+      } catch (error) {
+        logRealError("sync", "No se pudieron enviar los cambios offline antes de cargar", error);
+        const safeLocalState = pendingState || readPersistedPendingState() || localState;
+        if (safeLocalState) {
+          setSyncStatus("error", "Datos locales · sincronización pendiente");
+          return { state: safeLocalState, hasData: true, fromCache: true, error, pendingSync: true };
+        }
+      }
+    }
+
+    try {
+      const result = await withTimeout(loadUserStateFromRemote(), "La carga de datos del usuario");
+      syncedSignatures = result.signatures;
+      syncedFoodMap = result.foodMap;
+      syncedRecipeMap = result.recipeMap;
+      cacheState(result.state);
+      setSyncStatus("saved", "Guardado");
+      return result;
+    } catch (error) {
+      logRealError("sync", "Falló la carga de datos del usuario", error);
+      if (isInvalidSessionError(error) && navigator.onLine && !isOfflineSession()) {
+        forgetRememberedUser();
+        try {
+          await withTimeout(getClient().auth.signOut({ scope: "local" }), "La limpieza de la sesión inválida");
+        } catch (signOutError) {
+          logRealError("auth", "No se pudo limpiar la sesión inválida", signOutError);
+        }
+        session = null;
+        const safeError = errorWithContext(
+          error,
+          "auth",
+          "Sesión inválida",
+          "INVALID_SESSION"
+        );
+        throw safeError;
+      }
+
+      const cached = readPersistedPendingState() || readCachedState();
+      if (cached) {
+        const offline = !navigator.onLine || isOfflineSession() || isNetworkError(error);
+        setSyncStatus(
+          offline ? "offline" : "error",
+          offline ? "Sin conexión · datos locales" : "Datos locales · error de sincronización"
+        );
+        return {
+          state: cached,
+          hasData: true,
+          fromCache: true,
+          error,
+          pendingSync: Boolean(readPersistedPendingState())
+        };
+      }
+
+      setSyncStatus("error", "No se pudieron cargar los datos");
+      throw errorWithContext(
+        error,
+        "sync",
+        "Carga de datos del usuario",
+        error?.code || "MASA_SYNC_LOAD"
+      );
+    }
+  }
+
+  function decodeProfileData(raw) {
+    const data = plainObject(raw) ? raw : {};
+    const wrapped = plainObject(data.profile);
+    return {
+      profile: wrapped ? data.profile : data,
+      completedDays: wrapped && plainObject(data.completedDays) ? data.completedDays : {},
+      foodUsage: wrapped && plainObject(data.foodUsage) ? data.foodUsage : {},
+      catalogOverrides: wrapped && plainObject(data.catalogOverrides) ? data.catalogOverrides : {},
+      calibrationHistory: wrapped && Array.isArray(data.calibrationHistory) ? data.calibrationHistory : [],
+      lastCheckinDate: wrapped ? String(data.lastCheckinDate || "") : ""
+    };
+  }
+
+  function foodFromRow(row) {
+    const metadata = plainObject(row.metadata) ? clone(row.metadata) : {};
+    return {
+      ...metadata,
+      id: row.legacy_id || metadata.id || row.id,
+      cloudId: row.id,
+      kind: "food",
+      name: row.name,
+      brand: row.brand || metadata.brand || "",
+      serving: row.serving_text || metadata.serving || "1 porción",
+      servingAmount: nullableNumber(row.serving_amount, metadata.servingAmount),
+      servingUnit: row.serving_unit || metadata.servingUnit || "serving",
+      servingUnitCustom: row.serving_unit_custom || metadata.servingUnitCustom || "",
+      calories: Number(row.calories),
+      protein: Number(row.protein),
+      fat: Number(row.fat),
+      carbs: Number(row.carbs)
+    };
+  }
+
+  function ingredientFromRow(row) {
+    const metadata = plainObject(row.metadata) ? clone(row.metadata) : {};
+    return {
+      ...metadata,
+      id: metadata.id || row.id,
+      cloudId: row.id,
+      sourceId: metadata.sourceId || metadata.foodId || "",
+      foodId: metadata.foodId || "",
+      kind: metadata.kind || "food",
+      name: row.ingredient_name,
+      amount: Number(row.quantity),
+      unit: row.quantity_unit || metadata.unit || "serving",
+      serving: metadata.serving || "",
+      calories: Number(row.calories),
+      protein: Number(row.protein),
+      fat: Number(row.fat),
+      carbs: Number(row.carbs)
+    };
+  }
+
+  function recipeFromRow(row, ingredients) {
+    const metadata = plainObject(row.metadata) ? clone(row.metadata) : {};
+    return {
+      ...metadata,
+      id: row.legacy_id || metadata.id || row.id,
+      cloudId: row.id,
+      kind: "recipe",
+      name: row.name,
+      recipeYield: Number(row.yield_amount),
+      recipeYieldUnit: row.yield_unit || metadata.recipeYieldUnit || "serving",
+      recipeYieldUnitCustom: row.yield_unit_custom || metadata.recipeYieldUnitCustom || "",
+      recipeServingAmount: nullableNumber(row.serving_amount, metadata.recipeServingAmount || 1),
+      serving: metadata.serving || "1 porción",
+      servingAmount: nullableNumber(row.serving_amount, metadata.servingAmount || 1),
+      servingUnit: row.yield_unit || metadata.servingUnit || "serving",
+      servingUnitCustom: row.yield_unit_custom || metadata.servingUnitCustom || "",
+      calories: Number(row.calories),
+      protein: Number(row.protein),
+      fat: Number(row.fat),
+      carbs: Number(row.carbs),
+      ingredients
+    };
+  }
+
+  function diaryFromRows(rows) {
+    return rows.reduce((result, row) => {
+      if (!result[row.entry_date]) result[row.entry_date] = [];
+      const metadata = plainObject(row.metadata) ? clone(row.metadata) : {};
+      result[row.entry_date].push({
+        ...metadata,
+        id: row.legacy_id || metadata.id || row.id,
+        cloudId: row.id,
+        meal: row.meal,
+        name: row.name,
+        kind: row.kind,
+        serving: row.serving_text || metadata.serving || "1 porción",
+        servingAmount: nullableNumber(row.serving_amount, metadata.servingAmount || 1),
+        servingUnit: row.serving_unit || metadata.servingUnit || "serving",
+        servingUnitCustom: row.serving_unit_custom || metadata.servingUnitCustom || "",
+        quantity: Number(row.quantity),
+        quantityUnit: row.quantity_unit || metadata.quantityUnit || "",
+        calories: Number(row.calories),
+        protein: Number(row.protein),
+        fat: Number(row.fat),
+        carbs: Number(row.carbs)
+      });
+      return result;
+    }, {});
+  }
+
+  async function loadGlobalFoodsFromRemote() {
+    const rows = await fetchPaged(
+      "foods",
+      "id,external_id,source,name,brand,serving_text,serving_amount,serving_unit,serving_unit_custom,calories,protein,fat,carbs,metadata",
+      query => query.is("owner_id", null).eq("is_active", true).order("name")
+    );
+
+    return rows.map(globalFoodFromRow).filter(Boolean);
+  }
+
+  async function loadGlobalFoods() {
+    return withTimeout(loadGlobalFoodsFromRemote(), "La carga del catálogo general");
+  }
+
+  function globalFoodFromRow(row) {
+    const metadata = plainObject(row.metadata) ? clone(row.metadata) : {};
+    if (plainObject(metadata.per100g)) return metadata;
+
+    const metricQuantity = positiveNumber(row.serving_amount, 100);
+    const factor = 100 / metricQuantity;
+    return {
+      ...metadata,
+      id: row.external_id || metadata.id || row.id,
+      name: row.name,
+      aliases: Array.isArray(metadata.aliases) ? metadata.aliases : [],
+      sourceName: metadata.sourceName || row.brand || "",
+      per100g: {
+        calories: Number(row.calories) * factor,
+        protein: Number(row.protein) * factor,
+        fat: Number(row.fat) * factor,
+        carbs: Number(row.carbs) * factor
+      },
+      serving: {
+        ...(plainObject(metadata.serving) ? metadata.serving : {}),
+        metric: { unit: "g", quantity: metricQuantity }
+      }
+    };
+  }
+
+  function scheduleStateSync(state) {
+    pendingState = clone(state);
+    persistPendingState(pendingState);
+    lastSyncError = null;
+    const online = navigator.onLine && !isOfflineSession();
+    setSyncStatus(online ? "pending" : "offline", online ? "Cambios pendientes" : "Sin conexión · pendiente");
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => {
+      syncTimer = null;
+      runPendingSync().catch(() => {});
+    }, SYNC_DELAY_MS);
+  }
+
+  async function replaceState(state) {
+    pendingState = clone(state);
+    persistPendingState(pendingState);
+    clearTimeout(syncTimer);
+    syncTimer = null;
+    await runPendingSync();
+  }
+
+  async function runPendingSync() {
+    if (syncInFlight) return syncInFlight;
+    if (!pendingState) pendingState = readPersistedPendingState();
+    if (!pendingState) return;
+
+    if (!navigator.onLine || isOfflineSession()) {
+      persistPendingState(pendingState);
+      setSyncStatus("offline", "Sin conexión · pendiente");
+      return;
+    }
+
+    const snapshot = pendingState;
+    pendingState = null;
+    setSyncStatus("saving", "Guardando…");
+
+    syncInFlight = withTimeout(syncState(snapshot), "La sincronización con Supabase")
+      .then(() => {
+        lastSyncError = null;
+        cacheState(snapshot);
+        if (pendingState) persistPendingState(pendingState);
+        else clearPersistedPendingState();
+        setSyncStatus(pendingState ? "pending" : "saved", pendingState ? "Cambios pendientes" : "Guardado");
+      })
+      .catch(error => {
+        lastSyncError = error;
+        if (!pendingState) pendingState = snapshot;
+        persistPendingState(pendingState);
+        setSyncStatus(
+          navigator.onLine ? "error" : "offline",
+          navigator.onLine ? "No se pudo guardar · queda pendiente" : "Sin conexión · pendiente"
+        );
+        throw error;
+      })
+      .finally(() => {
+        syncInFlight = null;
+        if (pendingState && !lastSyncError && navigator.onLine && !isOfflineSession()) {
+          scheduleStateSync(pendingState);
+        }
+      });
+
+    return syncInFlight;
+  }
+
+  async function flush() {
+    clearTimeout(syncTimer);
+    syncTimer = null;
+    if (syncInFlight) await syncInFlight;
+    if (pendingState) await runPendingSync();
+  }
+
+  async function syncState(state) {
+    const user = currentUser();
+    const nextSignatures = stateSignatures(state);
+    const previous = syncedSignatures || {};
+    let foodMap = syncedFoodMap;
+    let recipeMap = syncedRecipeMap;
+
+    if (nextSignatures.profile !== previous.profile) {
+      await syncProfile(user.id, state);
+    }
+    if (nextSignatures.weighIns !== previous.weighIns) {
+      await syncWeighIns(user.id, state.weighIns || []);
+    }
+    if (nextSignatures.foods !== previous.foods) {
+      foodMap = await syncFoods(user.id, state.foods || []);
+    }
+    if (nextSignatures.recipes !== previous.recipes) {
+      recipeMap = await syncRecipes(user.id, state.recipes || [], foodMap);
+    }
+    if (nextSignatures.diary !== previous.diary) {
+      await syncDiary(user.id, state.diary || {}, foodMap, recipeMap);
+    }
+
+    syncedFoodMap = foodMap;
+    syncedRecipeMap = recipeMap;
+    syncedSignatures = nextSignatures;
+  }
+
+  function stateSignatures(state) {
+    return {
+      profile: JSON.stringify({
+        version: state.version,
+        configured: state.configured,
+        profile: state.profile || {},
+        completedDays: state.completedDays || {},
+        foodUsage: state.foodUsage || {},
+        catalogOverrides: state.catalogOverrides || {},
+        calibrationHistory: state.calibrationHistory || [],
+        lastCheckinDate: state.lastCheckinDate || ""
+      }),
+      weighIns: JSON.stringify(state.weighIns || []),
+      foods: JSON.stringify(state.foods || []),
+      recipes: JSON.stringify(state.recipes || []),
+      diary: JSON.stringify(state.diary || {})
+    };
+  }
+
+  async function syncProfile(userId, state) {
+    const profile = plainObject(state.profile) ? state.profile : {};
+    const row = {
+      user_id: userId,
+      display_name: profile.name || session?.user?.user_metadata?.name || null,
+      configured: Boolean(state.configured),
+      schema_version: Number(state.version) || SCHEMA_VERSION,
+      profile_data: {
+        profile,
+        completedDays: plainObject(state.completedDays) ? state.completedDays : {},
+        foodUsage: plainObject(state.foodUsage) ? state.foodUsage : {},
+        catalogOverrides: plainObject(state.catalogOverrides) ? state.catalogOverrides : {},
+        calibrationHistory: Array.isArray(state.calibrationHistory) ? state.calibrationHistory : [],
+        lastCheckinDate: state.lastCheckinDate || ""
+      },
+      migration_completed_at: new Date().toISOString()
+    };
+    throwIfError(
+      await getClient().from("profiles").upsert(row, { onConflict: "user_id" }),
+      "No se pudo guardar el perfil"
+    );
+  }
+
+  async function syncWeighIns(userId, weighIns) {
+    const rows = weighIns.map(item => ({
+      user_id: userId,
+      legacy_id: String(item.id || crypto.randomUUID()),
+      logged_on: item.date,
+      weight_kg: Number(item.weight),
+      metadata: item
+    }));
+    throwIfError(
+      await getClient().from("weigh_ins").delete().eq("user_id", userId),
+      "No se pudieron actualizar los pesajes"
+    );
+    await insertChunks("weigh_ins", rows, "No se pudieron guardar los pesajes");
+  }
+
+  async function syncFoods(userId, foods) {
+    const rows = foods.map(food => ({
+      owner_id: userId,
+      legacy_id: String(food.id || crypto.randomUUID()),
+      source: "user",
+      name: food.name,
+      brand: food.brand || null,
+      serving_text: food.serving || null,
+      serving_amount: numberOrNull(food.servingAmount),
+      serving_unit: food.servingUnit || null,
+      serving_unit_custom: food.servingUnitCustom || null,
+      calories: nonNegative(food.calories),
+      protein: nonNegative(food.protein),
+      fat: nonNegative(food.fat),
+      carbs: nonNegative(food.carbs),
+      is_active: true,
+      metadata: food
+    }));
+    return syncByLegacyId("foods", "owner_id", userId, rows, "owner_id,legacy_id");
+  }
+
+  async function syncRecipes(userId, recipes, foodMap) {
+    const rows = recipes.map(recipe => ({
+      user_id: userId,
+      legacy_id: String(recipe.id || crypto.randomUUID()),
+      name: recipe.name,
+      yield_amount: positiveNumber(recipe.recipeYield, 1),
+      yield_unit: recipe.recipeYieldUnit || recipe.servingUnit || null,
+      yield_unit_custom: recipe.recipeYieldUnitCustom || recipe.servingUnitCustom || null,
+      serving_amount: numberOrNull(recipe.recipeServingAmount ?? recipe.servingAmount),
+      calories: nonNegative(recipe.calories),
+      protein: nonNegative(recipe.protein),
+      fat: nonNegative(recipe.fat),
+      carbs: nonNegative(recipe.carbs),
+      metadata: recipe
+    }));
+
+    const recipeMap = await syncByLegacyId("recipes", "user_id", userId, rows, "user_id,legacy_id");
+    throwIfError(
+      await getClient().from("recipe_ingredients").delete().eq("user_id", userId),
+      "No se pudieron actualizar los ingredientes"
+    );
+
+    const ingredientRows = [];
+    recipes.forEach(recipe => {
+      const recipeId = recipeMap.get(String(recipe.id));
+      if (!recipeId) return;
+      (recipe.ingredients || []).forEach((ingredient, position) => {
+        const localFoodId = String(ingredient.foodId || ingredient.sourceId || "");
+        ingredientRows.push({
+          user_id: userId,
+          recipe_id: recipeId,
+          food_id: foodMap.get(localFoodId) || null,
+          position,
+          ingredient_name: ingredient.name || "Ingrediente",
+          quantity: positiveNumber(ingredient.amount, 1),
+          quantity_unit: ingredient.unit || null,
+          calories: nonNegative(ingredient.calories),
+          protein: nonNegative(ingredient.protein),
+          fat: nonNegative(ingredient.fat),
+          carbs: nonNegative(ingredient.carbs),
+          metadata: ingredient
+        });
+      });
+    });
+
+    await insertChunks("recipe_ingredients", ingredientRows, "No se pudieron guardar los ingredientes");
+    return recipeMap;
+  }
+
+  async function syncDiary(userId, diary, foodMap, recipeMap) {
+    const rows = [];
+    Object.entries(diary).forEach(([date, entries]) => {
+      (entries || []).forEach(entry => {
+        const sourceId = String(entry.sourceId || "");
+        rows.push({
+          user_id: userId,
+          legacy_id: String(entry.id || crypto.randomUUID()),
+          entry_date: date,
+          meal: entry.meal || "extras",
+          name: entry.name || "Registro",
+          kind: entry.kind || "food",
+          serving_text: entry.serving || null,
+          serving_amount: numberOrNull(entry.servingAmount),
+          serving_unit: entry.servingUnit || null,
+          serving_unit_custom: entry.servingUnitCustom || null,
+          quantity: positiveNumber(entry.quantity, 1),
+          quantity_unit: entry.quantityUnit || null,
+          calories: nonNegative(entry.calories),
+          protein: nonNegative(entry.protein),
+          fat: nonNegative(entry.fat),
+          carbs: nonNegative(entry.carbs),
+          source_food_id: foodMap.get(sourceId) || null,
+          source_recipe_id: recipeMap.get(sourceId) || null,
+          metadata: entry
+        });
+      });
+    });
+    await syncByLegacyId("diary_entries", "user_id", userId, rows, "user_id,legacy_id");
+  }
+
+  async function syncByLegacyId(table, ownerColumn, ownerId, rows, conflict) {
+    const existing = await fetchPaged(
+      table,
+      "id,legacy_id",
+      query => query.eq(ownerColumn, ownerId)
+    );
+    const wanted = new Set(rows.map(row => String(row.legacy_id)));
+    const staleIds = existing
+      .filter(row => !row.legacy_id || !wanted.has(String(row.legacy_id)))
+      .map(row => row.id);
+
+    for (const batch of chunks(staleIds, BATCH_SIZE)) {
+      throwIfError(
+        await getClient().from(table).delete().in("id", batch),
+        `No se pudieron borrar registros anteriores de ${table}`
+      );
+    }
+
+    const resultMap = new Map();
+    for (const batch of chunks(rows, BATCH_SIZE)) {
+      const saved = throwIfError(
+        await getClient().from(table).upsert(batch, { onConflict: conflict }).select("id,legacy_id"),
+        `No se pudo guardar ${table}`
+      ) || [];
+      saved.forEach(row => resultMap.set(String(row.legacy_id), row.id));
+    }
+    return resultMap;
+  }
+
+  async function insertChunks(table, rows, context) {
+    for (const batch of chunks(rows, BATCH_SIZE)) {
+      throwIfError(await getClient().from(table).insert(batch), context);
+    }
+  }
+
+  function chunks(values, size) {
+    const result = [];
+    for (let index = 0; index < values.length; index += size) {
+      result.push(values.slice(index, index + size));
+    }
+    return result;
+  }
+
+  function plainObject(value) {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  }
+
+  function numberOrNull(value) {
+    if (value === "" || value === null || value === undefined) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function nullableNumber(value, fallback = "") {
+    if (value === null || value === undefined || value === "") return fallback;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function nonNegative(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? number : 0;
+  }
+
+  function positiveNumber(value, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? number : fallback;
+  }
+
+  function isAuthenticated() {
+    return Boolean(session?.user);
+  }
+
+  async function recoverOnlineSession() {
+    if (!isOfflineSession()) return true;
+    try {
+      const result = await withTimeout(getClient().auth.getSession(), "La recuperación de la sesión online");
+      if (result.error) throw errorWithContext(result.error, "auth", "Recuperación de sesión online");
+      const nextSession = result.data?.session;
+      if (!nextSession?.user) {
+        const gate = $("#auth-gate");
+        if (gate) gate.hidden = false;
+        showAuthMode("login");
+        setAuthMessage("La sesión venció. Iniciá sesión para sincronizar los cambios guardados en este dispositivo.", true);
+        setSyncStatus("error", "Iniciá sesión para sincronizar");
+        return false;
+      }
+      acceptSession(nextSession);
+      return true;
+    } catch (error) {
+      logRealError("auth", "No se pudo recuperar la sesión online", error);
+      const gate = $("#auth-gate");
+      if (gate) gate.hidden = false;
+      showAuthMode("login");
+      setAuthMessage("Iniciá sesión para sincronizar los cambios guardados en este dispositivo.", true);
+      setSyncStatus("error", "Conexión recuperada · falta iniciar sesión");
+      return false;
+    }
+  }
+
+  async function resumeOnlineSync() {
+    const sessionReady = await recoverOnlineSession();
+    if (!sessionReady) return;
+    if (!pendingState) pendingState = readPersistedPendingState();
+    if (!pendingState) {
+      setSyncStatus("saved", "Conectado");
+      return;
+    }
+
+    lastSyncError = null;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => {
+      syncTimer = null;
+      runPendingSync().catch(() => {});
+    }, 100);
+  }
+
+  window.addEventListener("online", () => {
+    resumeOnlineSync().catch(error => {
+      logRealError("sync", "Falló la reanudación de la sincronización", error);
+    });
+  });
+
+  window.addEventListener("offline", () => {
+    if (!isAuthenticated()) return;
+    const queued = pendingState || readPersistedPendingState();
+    setSyncStatus("offline", queued ? "Sin conexión · cambios pendientes" : "Sin conexión · modo local");
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && pendingState && navigator.onLine && !isOfflineSession()) {
+      clearTimeout(syncTimer);
+      syncTimer = null;
+      runPendingSync().catch(() => {});
+    }
+  });
+
+  window.MASA_CLOUD = Object.freeze({
+    requireSession,
+    refreshAccountSecurity,
+    loadUserState,
+    loadGlobalFoods,
+    scheduleStateSync,
+    replaceState,
+    flush,
+    cacheState,
+    readCachedState,
+    isAuthenticated,
+    hasPendingChanges: () => Boolean(pendingState || syncInFlight || readPersistedPendingState()),
+    finishBoot,
+    showFatalError,
+    setSyncStatus,
+    get user() { return session?.user || null; }
+  });
+})();

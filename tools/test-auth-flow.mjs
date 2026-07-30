@@ -80,7 +80,8 @@ function buildDom() {
   make("#auth-message");
   make("#auth-mode-login");
   make("#auth-mode-signup");
-  const googleButton = make("#auth-google", { type: "button" });
+  const googleLoginButton = new FakeElement({ type: "button" });
+  const googleSignupButton = new FakeElement({ type: "button" });
   make("#account-email");
   make("#account-area");
   make("#logout-button");
@@ -120,7 +121,7 @@ function buildDom() {
   const eye = new FakeElement({ type: "button" });
   eye.closestElement = passwordField;
 
-  const allBusy = [googleButton, loginEmail, loginPassword, signupEmail, signupPassword, signupName, recoveryPassword, eye];
+  const allBusy = [googleLoginButton, googleSignupButton, loginEmail, loginPassword, signupEmail, signupPassword, signupName, recoveryPassword, eye];
   const accountBusy = [currentPassword, newPassword, confirmPassword, sendPasswordReset];
   const document = {
     body: { classList: new FakeClassList() },
@@ -128,6 +129,7 @@ function buildDom() {
     querySelector(selector) { return selectors.get(selector) || null; },
     querySelectorAll(selector) {
       if (selector === "[data-password-toggle]") return [eye];
+      if (selector === "[data-auth-google]") return [googleLoginButton, googleSignupButton];
       if (selector === "#auth-gate button, #auth-gate input") return allBusy;
       if (selector === "#account-password-form input, #account-password-form button, #send-password-reset") return accountBusy;
       return [];
@@ -143,7 +145,8 @@ function buildDom() {
     loading,
     forms,
     loginForm,
-    googleButton,
+    googleButton: googleLoginButton,
+    googleSignupButton,
     loginEmail,
     loginPassword,
     eye,
@@ -363,6 +366,15 @@ async function testGoogleLoginUsesConfiguredReturn() {
   assert.equal(runtime.oauthArgs.options.skipBrowserRedirect, false);
 }
 
+async function testGoogleSignupButtonUsesSameFlow() {
+  const runtime = await createRuntime({ initialSession: null });
+  runtime.cloud.requireSession();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await runtime.dom.googleSignupButton.emit("click");
+  assert.equal(runtime.oauthArgs.provider, "google");
+  assert.equal(runtime.oauthArgs.options.redirectTo, "https://example.com/masa/");
+}
+
 async function testNativeGoogleLoginUsesDeepLink() {
   const runtime = await createRuntime({ initialSession: null, native: true });
   runtime.cloud.requireSession();
@@ -422,6 +434,7 @@ await testLoginReadsLiveInput();
 await testSignupReadsLiveInput();
 await testAccountPasswordChangeAndResetLink();
 await testGoogleLoginUsesConfiguredReturn();
+await testGoogleSignupButtonUsesSameFlow();
 await testNativeGoogleLoginUsesDeepLink();
 await testCredentialErrorMessage();
 await testOfflineSessionAndDurableQueue();
