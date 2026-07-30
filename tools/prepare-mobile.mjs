@@ -10,7 +10,7 @@ const webDir = join(root, "www");
 await rm(webDir, { recursive: true, force: true });
 await mkdir(webDir, { recursive: true });
 
-for (const item of ["index.html", "css", "js", "assets", "data", "manifest.webmanifest", "DATA-LICENSE.md", "plantilla-pesajes.xlsx", "plantilla-ingestas.xlsx"]) {
+for (const item of ["index.html", "privacy.html", "terms.html", "css", "js", "assets", "data", "manifest.webmanifest", "DATA-LICENSE.md", "plantilla-pesajes.xlsx", "plantilla-ingestas.xlsx"]) {
   await cp(join(root, item), join(webDir, item), { recursive: true });
 }
 await rm(join(webDir, "js", "app.js.backup-catalogo"), { force: true });
