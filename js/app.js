@@ -5,6 +5,7 @@
   const TIPS_SEEN_KEY = "masa-tips-seen-v1";
   const LEGACY_KEYS = ["masa-state-v9", "masa-state-v8", "masa-state-v7", "masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
   const DAY_MS = 86_400_000;
+  const DIARY_ROLLOVER_HOUR = 3; // MASA_DIARY_ROLLOVER_3AM_V2
   const KG_KCAL = 7700;
   // MASA_ADAPTIVE_EXPENDITURE_V1
   const EXPENDITURE_CONFIG = Object.freeze({
@@ -117,8 +118,10 @@
   let calorieRange = 14;
   let weightEditorForced = false;
   let editingDiaryEntryId = null;
-  let selectedDiaryDate = todayISO();
+  let selectedDiaryDate = operationalDayISO();
   let selectedHistoryId = null;
+  let lastOperationalDay = operationalDayISO();
+  let operationalDayTimer = null;
 
   const $ = selector => document.querySelector(selector);
   const $$ = selector => Array.from(document.querySelectorAll(selector));
@@ -148,6 +151,16 @@
 
   function todayISO() {
     return toISODate(new Date());
+  }
+
+  function operationalDayISO(date = new Date()) {
+    const shifted = new Date(date);
+    shifted.setHours(shifted.getHours() - DIARY_ROLLOVER_HOUR);
+    return toISODate(shifted);
+  }
+
+  function dailyRolloverReached(date = new Date()) {
+    return date.getHours() >= DIARY_ROLLOVER_HOUR;
   }
 
   function normalizeDate(value) {
@@ -1011,8 +1024,10 @@
   }
 
   function diaryDateStatus(date = selectedDiaryDate) {
-    if (date === todayISO()) return "Hoy";
-    const yesterday = toISODate(addDays(parseDate(todayISO()), -1));
+    const operationalToday = operationalDayISO();
+    if (date === operationalToday) return "Hoy";
+    if (date === todayISO() && date !== operationalToday) return "Día siguiente";
+    const yesterday = toISODate(addDays(parseDate(operationalToday), -1));
     if (date === yesterday) return "Ayer";
     return formatDate(date);
   }
@@ -1065,7 +1080,7 @@
     $("#diary-native-date").value = selectedDiaryDate;
     $("#diary-native-date").max = todayISO();
     $("#diary-next-day").disabled = selectedDiaryDate >= todayISO();
-    $("#diary-today-button").hidden = selectedDiaryDate === todayISO();
+    $("#diary-today-button").hidden = selectedDiaryDate === operationalDayISO();
 
     $("#diary-calories").textContent = formatNumber(Math.round(totals.calories));
     const remaining = target - totals.calories;
@@ -1115,7 +1130,7 @@
 
     const completed = Boolean(state.completedDays?.[selectedDiaryDate]);
     $("#day-reading").hidden = !completed;
-    $("#finish-day").textContent = completed ? "Día terminado ✓" : selectedDiaryDate === todayISO() ? "Terminar día" : "Terminar este día";
+    $("#finish-day").textContent = completed ? "Día terminado ✓" : selectedDiaryDate === operationalDayISO() ? "Terminar día" : "Terminar este día";
     $("#finish-day").classList.toggle("completed", completed);
     if (completed) renderDayProjection(plan, totals);
     if (activeDiaryView === "chart") drawCalorieChart(plan);
@@ -1320,7 +1335,7 @@
       sidebar.insertBefore(card, quickTools || null);
     }
     if (!compact && ledger && card.parentElement !== ledger) ledger.prepend(card);
-    const selectedLabel = selectedDiaryDate === todayISO() ? "hoy" : `el ${formatDate(selectedDiaryDate)}`;
+    const selectedLabel = selectedDiaryDate === operationalDayISO() ? "hoy" : `el ${formatDate(selectedDiaryDate)}`;
     $("#record-weight-title").textContent = recorded ? `Peso de ${selectedLabel}` : `Registrar peso de ${selectedLabel}`;
     $("#weight-context").textContent = recorded
       ? `Este dato forma parte de la tendencia y puede editarse sin salir del registro diario.`
@@ -3569,21 +3584,57 @@
     render();
   }
 
+  function syncOperationalDay() {
+    const currentOperationalDay = operationalDayISO();
+    const followedDefaultDay = selectedDiaryDate === lastOperationalDay;
+
+    if (currentOperationalDay !== lastOperationalDay) {
+      lastOperationalDay = currentOperationalDay;
+      if (followedDefaultDay) selectedDiaryDate = currentOperationalDay;
+      weightEditorForced = false;
+      render();
+    }
+
+    maybeOpenDailyCheckin();
+  }
+
+  function scheduleOperationalDayRollover() {
+    if (operationalDayTimer) window.clearTimeout(operationalDayTimer);
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(DIARY_ROLLOVER_HOUR, 0, 1, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+
+    operationalDayTimer = window.setTimeout(() => {
+      syncOperationalDay();
+      scheduleOperationalDayRollover();
+    }, Math.min(next.getTime() - now.getTime(), 2_147_000_000));
+  }
+
   function maybeOpenDailyCheckin() {
-    if (!state.configured || state.lastCheckinDate === todayISO()) return;
-    const alreadyWeighed = state.weighIns.some(item => item.date === todayISO());
+    const now = new Date();
+    if (!dailyRolloverReached(now) || !state.configured) return;
+
+    const checkinDate = operationalDayISO(now);
+    if (state.lastCheckinDate === checkinDate) return;
+
+    const alreadyWeighed = state.weighIns.some(item => item.date === checkinDate);
     if (alreadyWeighed) {
-      state.lastCheckinDate = todayISO();
+      state.lastCheckinDate = checkinDate;
       saveState(state);
       return;
     }
+
     $("#daily-checkin-modal").hidden = false;
     document.body.classList.add("modal-open");
   }
 
   function finishDailyCheckin(weight = null) {
-    if (Number.isFinite(weight) && weight > 0) state.weighIns = mergeWeighIns(state.weighIns, [{ date: todayISO(), weight }]);
-    state.lastCheckinDate = todayISO();
+    const checkinDate = operationalDayISO();
+    if (Number.isFinite(weight) && weight > 0) {
+      state.weighIns = mergeWeighIns(state.weighIns, [{ date: checkinDate, weight }]);
+    }
+    state.lastCheckinDate = checkinDate;
     saveState(state);
     $("#daily-checkin-modal").hidden = true;
     document.body.classList.remove("modal-open");
@@ -5691,9 +5742,13 @@
 
     $("#diary-prev-day").addEventListener("click", () => changeDiaryDay(-1));
     $("#diary-next-day").addEventListener("click", () => changeDiaryDay(1));
-    $("#diary-today-button").addEventListener("click", () => setSelectedDiaryDate(todayISO()));
+    $("#diary-today-button").addEventListener("click", () => setSelectedDiaryDate(operationalDayISO()));
     $("#diary-date-button").addEventListener("click", openDiaryCalendar);
     $("#diary-native-date").addEventListener("change", event => setSelectedDiaryDate(event.target.value));
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) syncOperationalDay();
+    });
+    window.addEventListener("focus", syncOperationalDay);
 
     $("#quick-weight-form").addEventListener("submit", addQuickWeight);
     $("#edit-today-weight").addEventListener("click", showWeightEditor);
@@ -5877,10 +5932,22 @@
     } catch (_) {}
   }
 
+  function removeNumericGoalsBranding() {
+    document.title = document.title
+      .replace(/\s*[·|-]\s*registros y progreso por números/gi, " · registros y progreso")
+      .replace(/\s*[·|-]\s*objetivos por números/gi, "");
+
+    $$(".brand-name small, [data-brand-tagline]").forEach(element => {
+      if (/objetivos por números/i.test(element.textContent || "")) element.remove();
+    });
+  }
+
   function renderInitialApplication(initialState) {
     state = normalizeState(initialState || emptyState());
     window.MASA_CLOUD.cacheState(state);
+    removeNumericGoalsBranding();
     bindEvents();
+    scheduleOperationalDayRollover();
     $$(".help-dot[data-tooltip]").forEach(button => { button.title = button.dataset.tooltip; });
     bindHelpTooltips();
     render();
