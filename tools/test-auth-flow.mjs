@@ -126,9 +126,9 @@ function buildDom() {
   return { document, gate, loading, forms, loginForm, loginEmail, loginPassword, eye, authMessage: selectors.get("#auth-message") };
 }
 
-async function createRuntime({ initialSession = null, signInResult }) {
+async function createRuntime({ initialSession = null, signInResult, online = true, getSessionError = null, initialStorage = {} }) {
   const dom = buildDom();
-  const storage = new Map();
+  const storage = new Map(Object.entries(initialStorage));
   let createClientCalls = 0;
   let clientOptions = null;
   let signInCredentials = null;
@@ -138,7 +138,7 @@ async function createRuntime({ initialSession = null, signInResult }) {
   const session = initialSession || { user: { id: "user-1", email: "user@example.com" } };
   const auth = {
     onAuthStateChange(callback) { authCallback = callback; return { data: { subscription: { unsubscribe() {} } } }; },
-    async getSession() { return { data: { session: initialSession }, error: null }; },
+    async getSession() { return { data: { session: initialSession }, error: getSessionError }; },
     async signInWithPassword(credentials) {
       signInCredentials = credentials;
       return signInResult || { data: { session }, error: null };
@@ -179,7 +179,7 @@ async function createRuntime({ initialSession = null, signInResult }) {
     window,
     document: dom.document,
     location,
-    navigator: { onLine: true },
+    navigator: { onLine: online },
     localStorage,
     console,
     crypto: globalThis.crypto,
@@ -209,7 +209,8 @@ async function createRuntime({ initialSession = null, signInResult }) {
     get clientOptions() { return clientOptions; },
     get signInCredentials() { return signInCredentials; },
     get signUpCredentials() { return signUpCredentials; },
-    get authCallback() { return authCallback; }
+    get authCallback() { return authCallback; },
+    storage
   };
 }
 
@@ -288,8 +289,35 @@ async function testCredentialErrorMessage() {
   assert.equal(runtime.dom.gate.hidden, false);
 }
 
+async function testOfflineSessionAndDurableQueue() {
+  const cachedState = { configured: true, weighIns: [{ id: "w1", date: "2026-07-30", weight: 73.5 }], diary: {} };
+  const initialStorage = {
+    "masa-last-user-v1": JSON.stringify({ id: "offline-user", email: "offline@example.com" }),
+    "masa-user-cache-v1:offline-user": JSON.stringify(cachedState)
+  };
+  const networkError = Object.assign(new Error("Failed to fetch"), { code: "NETWORK" });
+  const runtime = await createRuntime({
+    initialSession: null,
+    online: false,
+    getSessionError: networkError,
+    initialStorage
+  });
+
+  const offlineSession = await runtime.cloud.requireSession();
+  assert.equal(offlineSession.user.id, "offline-user");
+  assert.equal(offlineSession.masaOffline, true);
+  assert.deepEqual(runtime.cloud.readCachedState(), cachedState);
+
+  const changedState = { ...cachedState, diary: { "2026-07-30": [{ id: "d1", calories: 500 }] } };
+  runtime.cloud.scheduleStateSync(changedState);
+  const queued = JSON.parse(runtime.storage.get("masa-user-pending-v1:offline-user"));
+  assert.deepEqual(queued, changedState);
+  assert.equal(runtime.cloud.hasPendingChanges(), true);
+}
+
 await testExistingSession();
 await testLoginReadsLiveInput();
 await testSignupReadsLiveInput();
 await testCredentialErrorMessage();
+await testOfflineSessionAndDurableQueue();
 console.log("Auth flow tests: OK");

@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { APP_ID, VERSION_CODE, VERSION_NAME } from "./version.mjs";
@@ -95,6 +95,7 @@ import android.os.Bundle;
 import android.view.Window;
 import androidx.activity.OnBackPressedCallback;
 import androidx.core.graphics.Insets;
+import androidx.core.splashscreen.SplashScreen;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -107,6 +108,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         hideStatusBar();
@@ -174,14 +176,45 @@ public class MainActivity extends BridgeActivity {
 }
 `);
 
-const styles = join(androidRoot, "app", "src", "main", "res", "values", "styles.xml");
+const resRoot = join(androidRoot, "app", "src", "main", "res");
+const styles = join(resRoot, "values", "styles.xml");
 if (await exists(styles)) {
   let source = await readFile(styles, "utf8");
   source = source.replace(/(<style name="AppTheme(?:\.NoActionBar)?"[^>]*>)([\s\S]*?)(<\/style>)/g, (match, opening, body, closing) => {
     if (body.includes('name="android:windowFullscreen"')) return match;
     return `${opening}\n        <item name="android:windowFullscreen">true</item>\n        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>${body}${closing}`;
   });
+
+  const launchTheme = `    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/masa_splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/masa_splash_icon</item>
+        <item name="windowSplashScreenAnimationDuration">120</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    </style>`;
+  const launchPattern = /\s*<style name="AppTheme\.NoActionBarLaunch"[\s\S]*?<\/style>/;
+  source = launchPattern.test(source)
+    ? source.replace(launchPattern, `\n\n${launchTheme}`)
+    : source.replace(/\s*<\/resources>/, `\n\n${launchTheme}\n</resources>`);
   await writeFile(styles, source);
 }
+
+const splashDrawableDir = join(resRoot, "drawable-nodpi");
+await mkdir(splashDrawableDir, { recursive: true });
+await copyFile(join(root, "resources", "splash-icon.png"), join(splashDrawableDir, "masa_splash_icon.png"));
+
+const lightColorsDir = join(resRoot, "values");
+const darkColorsDir = join(resRoot, "values-night");
+await mkdir(lightColorsDir, { recursive: true });
+await mkdir(darkColorsDir, { recursive: true });
+await writeFile(join(lightColorsDir, "masa_splash_colors.xml"), `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="masa_splash_background">#F2EFE7</color>
+</resources>
+`);
+await writeFile(join(darkColorsDir, "masa_splash_colors.xml"), `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="masa_splash_background">#15181D</color>
+</resources>
+`);
 
 console.log(`Android release configurado: ${appId}, versionCode ${versionCode}, versionName ${versionName}`);
