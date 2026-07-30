@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { registerPlugin } from "@capacitor/core";
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -8,10 +9,24 @@ import {
 } from "@capacitor/barcode-scanner";
 
 const isNative = () => Boolean(window.Capacitor?.isNativePlatform?.());
+const MasaAuthPlugin = registerPlugin("MasaAuth");
 
 window.supabase = { createClient };
 window.MASA_NATIVE = {
   isNative,
+  async openAuthUrl(url) {
+    if (!url) throw new Error("No se recibió la URL de autenticación.");
+    if (isNative()) {
+      await MasaAuthPlugin.openAuthUrl({ url: String(url) });
+      return;
+    }
+    window.open(String(url), "_blank", "noopener,noreferrer");
+  },
+  async getInitialAuthUrl() {
+    if (!isNative()) return "";
+    const result = await MasaAuthPlugin.getInitialAuthUrl();
+    return String(result?.url || "");
+  },
   async scanBarcode() {
     return CapacitorBarcodeScanner.scanBarcode({
       hint: CapacitorBarcodeScannerTypeHintALLOption.ALL,

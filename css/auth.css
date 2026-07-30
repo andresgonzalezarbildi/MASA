@@ -27,6 +27,28 @@
 .auth-tabs button { min-height: 44px; border: 0; background: transparent; font-weight: 900; }
 .auth-tabs button + button { border-left: 1px solid var(--ink); }
 .auth-tabs button.active { background: var(--night); color: var(--acid); }
+
+.auth-google {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  margin-bottom: 14px;
+  border: 1px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 900;
+}
+.auth-google:hover { background: rgba(141,124,255,.08); }
+.auth-google:disabled { opacity: .58; cursor: progress; }
+.auth-google svg { width: 21px; height: 21px; flex: 0 0 auto; }
+.auth-divider { display: flex; align-items: center; gap: 10px; margin: 2px 0 16px; color: var(--muted); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+.auth-divider span { white-space: nowrap; }
+
 .auth-form { display: grid; gap: 15px; }
 .auth-form[hidden] { display: none; }
 .auth-form label { display: grid; gap: 6px; }

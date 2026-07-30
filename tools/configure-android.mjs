@@ -91,6 +91,7 @@ const mainActivity = join(mainActivityDir, "MainActivity.java");
 await mkdir(mainActivityDir, { recursive: true });
 await writeFile(mainActivity, `package uy.com.andresgonzalez.masa;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Window;
 import androidx.activity.OnBackPressedCallback;
@@ -101,15 +102,21 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
+import org.json.JSONObject;
 
 public class MainActivity extends BridgeActivity {
     private int lastTopCss = 0;
     private int lastBottomCss = 0;
+    private String initialAuthUrl = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SplashScreen.installSplashScreen(this);
+        registerPlugin(MasaAuthPlugin.class);
         super.onCreate(savedInstanceState);
+        initialAuthUrl = getIntent() != null && getIntent().getDataString() != null
+            ? getIntent().getDataString()
+            : "";
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         hideStatusBar();
         configureWebInsets();
@@ -119,6 +126,28 @@ public class MainActivity extends BridgeActivity {
                 dispatchBackToWeb();
             }
         });
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String url = intent != null ? intent.getDataString() : null;
+        if (url != null && !url.isEmpty()) dispatchAuthUrlToWeb(url);
+    }
+
+    private void dispatchAuthUrlToWeb(String url) {
+        if (bridge == null || bridge.getWebView() == null || url == null) return;
+        String script = "window.dispatchEvent(new CustomEvent('masa:native-auth-url',{detail:{url:" + JSONObject.quote(url) + "}}));";
+        Runnable send = () -> bridge.getWebView().evaluateJavascript(script, null);
+        bridge.getWebView().post(send);
+        bridge.getWebView().postDelayed(send, 350);
+    }
+
+    public synchronized String consumeInitialAuthUrl() {
+        String value = initialAuthUrl;
+        initialAuthUrl = "";
+        return value;
     }
 
     @Override
@@ -175,6 +204,67 @@ public class MainActivity extends BridgeActivity {
     }
 }
 `);
+
+
+const authPlugin = join(mainActivityDir, "MasaAuthPlugin.java");
+await writeFile(authPlugin, `package uy.com.andresgonzalez.masa;
+
+import android.content.Intent;
+import android.net.Uri;
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+@CapacitorPlugin(name = "MasaAuth")
+public class MasaAuthPlugin extends Plugin {
+    @PluginMethod
+    public void openAuthUrl(PluginCall call) {
+        String url = call.getString("url");
+        if (url == null || url.isEmpty()) {
+            call.reject("No se recibió la URL de autenticación.");
+            return;
+        }
+        try {
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            getActivity().startActivity(browserIntent);
+            call.resolve();
+        } catch (Exception error) {
+            call.reject("No se pudo abrir el navegador.", null, error);
+        }
+    }
+
+    @PluginMethod
+    public void getInitialAuthUrl(PluginCall call) {
+        JSObject result = new JSObject();
+        String url = "";
+        if (getActivity() instanceof MainActivity) {
+            url = ((MainActivity) getActivity()).consumeInitialAuthUrl();
+        }
+        result.put("url", url);
+        call.resolve(result);
+    }
+}
+`);
+
+const manifest = join(androidRoot, "app", "src", "main", "AndroidManifest.xml");
+if (await exists(manifest)) {
+  let source = await readFile(manifest, "utf8");
+  if (!source.includes('android:scheme="masa"')) {
+    const launcherEnd = `            </intent-filter>`;
+    const deepLinkFilter = `${launcherEnd}
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="masa" android:host="auth" android:path="/callback" />
+            </intent-filter>`;
+    if (!source.includes(launcherEnd)) throw new Error("No se encontró el intent-filter principal de Android.");
+    source = source.replace(launcherEnd, deepLinkFilter);
+  }
+  await writeFile(manifest, source);
+}
 
 const resRoot = join(androidRoot, "app", "src", "main", "res");
 const styles = join(resRoot, "values", "styles.xml");

@@ -4886,10 +4886,12 @@
   }
 
   function switchSettingsTab(tab) {
-    const chosen = tab === "weights" ? "weights" : "profile";
+    const chosen = ["profile", "weights", "account"].includes(tab) ? tab : "profile";
     $$('[data-settings-tab]').forEach(button => button.classList.toggle("active", button.dataset.settingsTab === chosen));
     $("#settings-profile").hidden = chosen !== "profile";
     $("#settings-weights").hidden = chosen !== "weights";
+    $("#settings-account").hidden = chosen !== "account";
+    if (chosen === "account") window.MASA_CLOUD?.refreshAccountSecurity?.();
   }
 
   function fillProfileForm() {

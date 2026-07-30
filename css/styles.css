@@ -223,11 +223,20 @@ h3 { font-size: 26px; }
 .settings-header p:last-child { margin: 0; color: var(--muted); }
 .close-button { width: 44px; height: 44px; flex: 0 0 auto; border: 1px solid var(--ink); background: transparent; font-size: 28px; }
 .close-button:hover { background: var(--ink); color: var(--paper); }
-.settings-tabs { position: sticky; top: 0; z-index: 4; display: grid; grid-template-columns: 1fr 1fr; margin: 18px 0 0; background: var(--paper); border: 1px solid var(--ink); }
+.settings-tabs { position: sticky; top: 0; z-index: 4; display: grid; grid-template-columns: repeat(3, 1fr); margin: 18px 0 0; background: var(--paper); border: 1px solid var(--ink); }
 .settings-tabs button { min-height: 46px; border: 0; border-right: 1px solid var(--ink); background: transparent; font-weight: 900; }
 .settings-tabs button:last-child { border-right: 0; }
 .settings-tabs button.active { background: var(--night); color: var(--acid); }
 .settings-view { padding-top: 8px; }
+.account-security-block { margin-top: 8px; }
+.account-security-summary { display: grid; gap: 4px; margin: 18px 0; padding: 16px; border: 1px solid var(--ink); background: rgba(255,255,255,.45); }
+.account-security-summary span { color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.account-security-summary b { overflow-wrap: anywhere; }
+.account-password-form { display: grid; gap: 15px; }
+.account-password-form > label { display: grid; gap: 6px; }
+.account-password-form > label > span { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.account-security-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+.account-security-actions button { flex: 1 1 220px; }
 .form-block { padding: 30px 0; border-bottom: 1px solid var(--ink); }
 .form-block-title { display: grid; grid-template-columns: 48px 1fr; gap: 13px; margin-bottom: 22px; }
 .form-block-title > span { width: 42px; height: 42px; display: grid; place-items: center; background: var(--night); color: var(--acid); font-family: var(--font-mono); font-weight: 900; }

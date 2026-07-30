@@ -54,6 +54,38 @@
     }
   }
 
+  function normalizeWebRedirectUrl(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    try {
+      const url = new URL(raw, location.origin);
+      if (!url.pathname.endsWith("/")) url.pathname += "/";
+      url.search = "";
+      url.hash = "";
+      return url.toString();
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  function getWebAuthRedirectUrl() {
+    const configured = normalizeWebRedirectUrl(
+      window.MASA_CONFIG?.authRedirectUrl ||
+      window.MASA_CONFIG?.passwordResetUrl ||
+      ""
+    );
+    if (configured) return configured;
+    return normalizeWebRedirectUrl(`${location.origin}${location.pathname}`);
+  }
+
+  function getNativeAuthRedirectUrl() {
+    return String(window.MASA_CONFIG?.nativeAuthRedirectUrl || "masa://auth/callback").trim();
+  }
+
+  function getAuthRedirectUrl() {
+    return isNativeRuntime() ? getNativeAuthRedirectUrl() : getWebAuthRedirectUrl();
+  }
+
   function errorWithContext(source, kind, context, code = "") {
     const message = source?.message || String(source || context);
     const error = new Error(message, source instanceof Error ? { cause: source } : undefined);
@@ -230,6 +262,7 @@
       masaOffline: true
     };
     updateAccountUI();
+    refreshAccountSecurity();
     resolveSessionWaiters();
     setSyncStatus("offline", queued ? "Sin conexión · cambios pendientes" : "Sin conexión · modo local");
     return session;
@@ -402,6 +435,7 @@
     session = nextSession;
     rememberUser(nextSession.user);
     updateAccountUI();
+    refreshAccountSecurity();
     resolveSessionWaiters();
     if (!recoveryMode) hideLoadingGate({ showForms: false, hideGate: true });
     if (appBooted && navigator.onLine) {
@@ -413,6 +447,95 @@
     }
   }
 
+  function refreshAccountSecurity() {
+    const email = session?.user?.email || "";
+    const emailElement = $("#security-account-email");
+    if (emailElement) emailElement.textContent = email || "No disponible";
+  }
+
+  function setAccountSecurityBusy(busy) {
+    document.querySelectorAll("#account-password-form input, #account-password-form button, #send-password-reset").forEach(element => {
+      element.disabled = Boolean(busy);
+    });
+  }
+
+  function setAccountSecurityFeedback(text, isError = false) {
+    const element = $("#account-security-feedback");
+    if (!element) return;
+    element.textContent = text || "";
+    element.classList.toggle("error", Boolean(isError));
+  }
+
+
+  function readAuthParams(urlValue) {
+    const url = new URL(String(urlValue || ""));
+    const query = new URLSearchParams(url.search);
+    const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+    const read = key => hash.get(key) || query.get(key) || "";
+    return {
+      accessToken: read("access_token"),
+      refreshToken: read("refresh_token"),
+      type: read("type"),
+      error: read("error_description") || read("error")
+    };
+  }
+
+  async function consumeNativeAuthUrl(urlValue) {
+    if (!urlValue || !isNativeRuntime()) return false;
+    let params;
+    try {
+      params = readAuthParams(urlValue);
+    } catch (_) {
+      return false;
+    }
+    if (params.error) throw errorWithContext(new Error(params.error), "auth", "Retorno de autenticación");
+    if (!params.accessToken || !params.refreshToken) return false;
+
+    if (params.type === "recovery") recoveryMode = true;
+    const result = await withTimeout(
+      getClient().auth.setSession({ access_token: params.accessToken, refresh_token: params.refreshToken }),
+      "La apertura de la sesión desde Android"
+    );
+    if (result.error) throw errorWithContext(result.error, "auth", "Retorno de autenticación");
+    if (result.data?.session) acceptSession(result.data.session);
+    if (recoveryMode) {
+      const gate = $("#auth-gate");
+      if (gate) gate.hidden = false;
+      showRecoveryMode();
+    }
+    return true;
+  }
+
+  async function signInWithGoogle() {
+    const native = isNativeRuntime();
+    const result = await withTimeout(
+      getClient().auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: native ? getNativeAuthRedirectUrl() : getWebAuthRedirectUrl(),
+          skipBrowserRedirect: native
+        }
+      }),
+      "El inicio de sesión con Google"
+    );
+    if (result.error) throw errorWithContext(result.error, "auth", "Inicio con Google");
+    if (native) {
+      if (!result.data?.url) throw errorWithContext(new Error("Supabase no devolvió la dirección de Google."), "auth", "Inicio con Google");
+      if (!window.MASA_NATIVE?.openAuthUrl) {
+        throw errorWithContext(new Error("La compilación Android no incluye el puente de autenticación."), "configuration", "Inicio con Google");
+      }
+      await window.MASA_NATIVE.openAuthUrl(result.data.url);
+    }
+  }
+
+  async function sendPasswordReset(email) {
+    const result = await withTimeout(
+      getClient().auth.resetPasswordForEmail(email, { redirectTo: getAuthRedirectUrl() }),
+      "El envío del enlace de recuperación"
+    );
+    if (result.error) throw errorWithContext(result.error, "auth", "Recuperación de contraseña");
+  }
+
   function bindAuthUI() {
     if (authBound) return;
     authBound = true;
@@ -422,6 +545,22 @@
     document.querySelectorAll("[data-password-toggle]").forEach(button => {
       button.type = "button";
       button.addEventListener("click", () => togglePasswordVisibility(button));
+    });
+
+    $("#auth-google")?.addEventListener("click", async () => {
+      setAuthBusy(true);
+      setAuthMessage("");
+      try {
+        await signInWithGoogle();
+        if (isNativeRuntime()) {
+          setAuthMessage("Completá el acceso con Google y volverás automáticamente a M.A.S.A.");
+        }
+      } catch (error) {
+        logRealError("auth", "Falló el inicio con Google", error);
+        setAuthMessage(humanizeAuthError(error), true);
+      } finally {
+        setAuthBusy(false);
+      }
     });
 
     $("#auth-login-form")?.addEventListener("submit", async event => {
@@ -477,7 +616,14 @@
           );
         }
         const result = await withTimeout(
-          getClient().auth.signUp({ email, password, options: { data: { name } } }),
+          getClient().auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: getAuthRedirectUrl(),
+              data: { name }
+            }
+          }),
           "El registro de la cuenta"
         );
         if (result.error) throw errorWithContext(result.error, "auth", "Registro");
@@ -511,12 +657,7 @@
       setAuthBusy(true);
       setAuthMessage("");
       try {
-        const redirectTo = window.MASA_CONFIG?.passwordResetUrl || `${location.origin}${location.pathname}`;
-        const result = await withTimeout(
-          getClient().auth.resetPasswordForEmail(email, { redirectTo }),
-          "El envío del enlace de recuperación"
-        );
-        if (result.error) throw errorWithContext(result.error, "auth", "Recuperación de contraseña");
+        await sendPasswordReset(email);
         setAuthMessage("Te enviamos un enlace para cambiar la contraseña.");
       } catch (error) {
         logRealError("auth", "Falló la recuperación de contraseña", error);
@@ -559,6 +700,77 @@
       } finally {
         setAuthBusy(false);
         hideLoadingGate({ showForms: !session || recoveryMode, hideGate: Boolean(session && !recoveryMode) });
+      }
+    });
+
+    $("#account-password-form")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const currentPassword = form.elements.currentPassword.value;
+      const newPassword = form.elements.newPassword.value;
+      const confirmPassword = form.elements.confirmPassword.value;
+
+      setAccountSecurityBusy(true);
+      setAccountSecurityFeedback("");
+      try {
+        if (newPassword.length < 8) {
+          throw errorWithContext(
+            new Error("La contraseña nueva debe tener al menos 8 caracteres."),
+            "validation",
+            "Cambio de contraseña",
+            "MASA_PASSWORD_LENGTH"
+          );
+        }
+        if (newPassword !== confirmPassword) {
+          throw errorWithContext(
+            new Error("Las contraseñas nuevas no coinciden."),
+            "validation",
+            "Cambio de contraseña",
+            "MASA_PASSWORD_MISMATCH"
+          );
+        }
+        if (currentPassword === newPassword) {
+          throw errorWithContext(
+            new Error("La contraseña nueva debe ser diferente de la actual."),
+            "validation",
+            "Cambio de contraseña",
+            "MASA_PASSWORD_UNCHANGED"
+          );
+        }
+        const result = await withTimeout(
+          getClient().auth.updateUser({
+            password: newPassword,
+            current_password: currentPassword
+          }),
+          "La actualización de contraseña"
+        );
+        if (result.error) throw errorWithContext(result.error, "auth", "Cambio de contraseña");
+        form.reset();
+        setAccountSecurityFeedback("Contraseña actualizada correctamente.");
+      } catch (error) {
+        logRealError("auth", "Falló el cambio de contraseña desde Ajustes", error);
+        setAccountSecurityFeedback(humanizeAuthError(error), true);
+      } finally {
+        setAccountSecurityBusy(false);
+      }
+    });
+
+    $("#send-password-reset")?.addEventListener("click", async () => {
+      const email = session?.user?.email || "";
+      if (!email) {
+        setAccountSecurityFeedback("No se pudo identificar el correo de la cuenta.", true);
+        return;
+      }
+      setAccountSecurityBusy(true);
+      setAccountSecurityFeedback("");
+      try {
+        await sendPasswordReset(email);
+        setAccountSecurityFeedback(`Enviamos el enlace a ${email}.`);
+      } catch (error) {
+        logRealError("auth", "Falló el envío del enlace desde Ajustes", error);
+        setAccountSecurityFeedback(humanizeAuthError(error), true);
+      } finally {
+        setAccountSecurityBusy(false);
       }
     });
 
@@ -610,6 +822,9 @@
     if (code === "user_already_exists" || /user already registered|already been registered/i.test(message)) {
       return "Ya existe una cuenta con ese correo.";
     }
+    if (/current password|password.*incorrect|invalid password/i.test(message)) {
+      return "La contraseña actual no es correcta.";
+    }
     if (code === "masa_password_length" || kind === "validation") return message;
     if (isInvalidSessionError(error)) return "La sesión guardada dejó de ser válida. Iniciá sesión de nuevo.";
     if (code === "masa_timeout" || code === "masa_loading_timeout" || kind === "timeout") {
@@ -631,6 +846,7 @@
       session = nextSession;
       rememberUser(nextSession.user);
       updateAccountUI();
+      refreshAccountSecurity();
     }
 
     if (event === "PASSWORD_RECOVERY") {
@@ -666,6 +882,20 @@
         handleAuthStateChange(event, nextSession);
       });
 
+      if (isNativeRuntime()) {
+        window.addEventListener("masa:native-auth-url", event => {
+          consumeNativeAuthUrl(event.detail?.url).catch(error => {
+            logRealError("auth", "Falló el retorno de autenticación en Android", error);
+            const gate = $("#auth-gate");
+            if (gate) gate.hidden = false;
+            showAuthMode("login");
+            setAuthMessage(humanizeAuthError(error), true);
+          });
+        });
+        const launchUrl = await window.MASA_NATIVE?.getInitialAuthUrl?.();
+        if (launchUrl) await consumeNativeAuthUrl(launchUrl);
+      }
+
       const revisionBeforeGetSession = authEventRevision;
       const result = await withTimeout(supabaseClient.auth.getSession(), "La recuperación de la sesión");
       if (result.error) throw errorWithContext(result.error, "auth", "Recuperación de sesión");
@@ -675,6 +905,7 @@
       if (session?.user) rememberUser(session.user);
       if (!session && !navigator.onLine) activateOfflineSession();
       updateAccountUI();
+      refreshAccountSecurity();
 
       if (session && recoveryMode && !isOfflineSession()) {
         const gate = $("#auth-gate");
@@ -1450,6 +1681,7 @@
 
   window.MASA_CLOUD = Object.freeze({
     requireSession,
+    refreshAccountSecurity,
     loadUserState,
     loadGlobalFoods,
     scheduleStateSync,

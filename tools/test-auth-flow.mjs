@@ -54,6 +54,9 @@ class FakeElement {
     if (force) this.setAttribute(name, ""); else this.removeAttribute(name);
   }
   focus() { this.focused = true; }
+  reset() {
+    Object.values(this.elements || {}).forEach(element => { element.value = ""; });
+  }
   setSelectionRange(start, end, direction) {
     this.selectionStart = start;
     this.selectionEnd = end;
@@ -77,21 +80,29 @@ function buildDom() {
   make("#auth-message");
   make("#auth-mode-login");
   make("#auth-mode-signup");
+  const googleButton = make("#auth-google", { type: "button" });
   make("#account-email");
   make("#account-area");
   make("#logout-button");
   make("#sync-status");
   make("#forgot-password");
+  make("#security-account-email");
+  make("#account-security-feedback");
+  const sendPasswordReset = make("#send-password-reset", { type: "button" });
 
   const loginForm = make("#auth-login-form");
   const signupForm = make("#auth-signup-form");
   const recoveryForm = make("#auth-recovery-form");
+  const accountPasswordForm = make("#account-password-form");
   const loginEmail = new FakeElement({ type: "email" });
   const loginPassword = new FakeElement({ type: "password" });
   const signupEmail = new FakeElement({ type: "email" });
   const signupPassword = new FakeElement({ type: "password" });
   const signupName = new FakeElement({ type: "text" });
   const recoveryPassword = new FakeElement({ type: "password" });
+  const currentPassword = new FakeElement({ type: "password" });
+  const newPassword = new FakeElement({ type: "password" });
+  const confirmPassword = new FakeElement({ type: "password" });
 
   loginForm.childrenBySelector.set('input[name="email"]', loginEmail);
   loginForm.childrenBySelector.set('input[name="password"]', loginPassword);
@@ -102,13 +113,15 @@ function buildDom() {
   signupForm.elements = { email: signupEmail, password: signupPassword, name: signupName };
   recoveryForm.childrenBySelector.set('input[name="password"]', recoveryPassword);
   recoveryForm.elements = { password: recoveryPassword };
+  accountPasswordForm.elements = { currentPassword, newPassword, confirmPassword };
 
   const passwordField = new FakeElement();
   passwordField.childrenBySelector.set("input", loginPassword);
   const eye = new FakeElement({ type: "button" });
   eye.closestElement = passwordField;
 
-  const allBusy = [loginEmail, loginPassword, signupEmail, signupPassword, signupName, recoveryPassword, eye];
+  const allBusy = [googleButton, loginEmail, loginPassword, signupEmail, signupPassword, signupName, recoveryPassword, eye];
+  const accountBusy = [currentPassword, newPassword, confirmPassword, sendPasswordReset];
   const document = {
     body: { classList: new FakeClassList() },
     activeElement: null,
@@ -116,6 +129,7 @@ function buildDom() {
     querySelectorAll(selector) {
       if (selector === "[data-password-toggle]") return [eye];
       if (selector === "#auth-gate button, #auth-gate input") return allBusy;
+      if (selector === "#account-password-form input, #account-password-form button, #send-password-reset") return accountBusy;
       return [];
     },
     addEventListener() {}
@@ -123,16 +137,37 @@ function buildDom() {
   const originalFocus = loginPassword.focus.bind(loginPassword);
   loginPassword.focus = () => { originalFocus(); document.activeElement = loginPassword; };
 
-  return { document, gate, loading, forms, loginForm, loginEmail, loginPassword, eye, authMessage: selectors.get("#auth-message") };
+  return {
+    document,
+    gate,
+    loading,
+    forms,
+    loginForm,
+    googleButton,
+    loginEmail,
+    loginPassword,
+    eye,
+    accountPasswordForm,
+    currentPassword,
+    newPassword,
+    confirmPassword,
+    sendPasswordReset,
+    accountFeedback: selectors.get("#account-security-feedback"),
+    authMessage: selectors.get("#auth-message")
+  };
 }
 
-async function createRuntime({ initialSession = null, signInResult, online = true, getSessionError = null, initialStorage = {} }) {
+async function createRuntime({ initialSession = null, signInResult, online = true, getSessionError = null, initialStorage = {}, native = false }) {
   const dom = buildDom();
   const storage = new Map(Object.entries(initialStorage));
   let createClientCalls = 0;
   let clientOptions = null;
   let signInCredentials = null;
   let signUpCredentials = null;
+  let updateCredentials = null;
+  let resetPasswordArgs = null;
+  let oauthArgs = null;
+  let openedAuthUrl = null;
   let authCallback = null;
 
   const session = initialSession || { user: { id: "user-1", email: "user@example.com" } };
@@ -147,14 +182,35 @@ async function createRuntime({ initialSession = null, signInResult, online = tru
       signUpCredentials = credentials;
       return { data: { session }, error: null };
     },
-    async updateUser() { return { data: {}, error: null }; },
-    async resetPasswordForEmail() { return { data: {}, error: null }; },
+    async updateUser(credentials) {
+      updateCredentials = credentials;
+      return { data: {}, error: null };
+    },
+    async resetPasswordForEmail(email, options) {
+      resetPasswordArgs = { email, options };
+      return { data: {}, error: null };
+    },
+    async signInWithOAuth(args) {
+      oauthArgs = args;
+      return { data: { url: "https://accounts.google.test/" }, error: null };
+    },
+    async setSession() { return { data: { session }, error: null }; },
     async signOut() { return { error: null }; }
   };
   const client = { auth, from() { throw new Error("Database access is not expected in this auth test."); } };
 
   const window = {
-    MASA_CONFIG: { supabaseUrl: "https://example.supabase.co", supabaseKey: "sb_publishable_test" },
+    MASA_CONFIG: {
+      supabaseUrl: "https://example.supabase.co",
+      authRedirectUrl: "https://example.com/masa/",
+      nativeAuthRedirectUrl: "masa://auth/callback",
+      supabaseKey: "sb_publishable_test"
+    },
+    MASA_NATIVE: {
+      isNative() { return native; },
+      async openAuthUrl(url) { openedAuthUrl = url; },
+      async getInitialAuthUrl() { return ""; }
+    },
     supabase: {
       createClient(_url, _key, options) {
         createClientCalls += 1;
@@ -209,6 +265,10 @@ async function createRuntime({ initialSession = null, signInResult, online = tru
     get clientOptions() { return clientOptions; },
     get signInCredentials() { return signInCredentials; },
     get signUpCredentials() { return signUpCredentials; },
+    get updateCredentials() { return updateCredentials; },
+    get resetPasswordArgs() { return resetPasswordArgs; },
+    get oauthArgs() { return oauthArgs; },
+    get openedAuthUrl() { return openedAuthUrl; },
     get authCallback() { return authCallback; },
     storage
   };
@@ -269,8 +329,50 @@ async function testSignupReadsLiveInput() {
   assert.equal(runtime.signUpCredentials.email, "new@example.com");
   assert.equal(runtime.signUpCredentials.password, "  signup password  ");
   assert.equal(runtime.signUpCredentials.options.data.name, "Andrés");
+  assert.equal(runtime.signUpCredentials.options.emailRedirectTo, "https://example.com/masa/");
   assert.equal(runtime.dom.loading.hidden, true);
   assert.equal(runtime.dom.gate.hidden, true);
+}
+
+async function testAccountPasswordChangeAndResetLink() {
+  const runtime = await createRuntime({ initialSession: { user: { id: "user-1", email: "account@example.com" } } });
+  await runtime.cloud.requireSession();
+  runtime.cloud.refreshAccountSecurity();
+
+  runtime.dom.currentPassword.value = "old password";
+  runtime.dom.newPassword.value = "new password";
+  runtime.dom.confirmPassword.value = "new password";
+  await runtime.dom.accountPasswordForm.emit("submit");
+
+  assert.equal(runtime.updateCredentials.current_password, "old password");
+  assert.equal(runtime.updateCredentials.password, "new password");
+  assert.equal(runtime.dom.accountFeedback.textContent, "Contraseña actualizada correctamente.");
+
+  await runtime.dom.sendPasswordReset.emit("click");
+  assert.equal(runtime.resetPasswordArgs.email, "account@example.com");
+  assert.equal(runtime.resetPasswordArgs.options.redirectTo, "https://example.com/masa/");
+}
+
+async function testGoogleLoginUsesConfiguredReturn() {
+  const runtime = await createRuntime({ initialSession: null });
+  runtime.cloud.requireSession();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await runtime.dom.googleButton.emit("click");
+  assert.equal(runtime.oauthArgs.provider, "google");
+  assert.equal(runtime.oauthArgs.options.redirectTo, "https://example.com/masa/");
+  assert.equal(runtime.oauthArgs.options.skipBrowserRedirect, false);
+}
+
+async function testNativeGoogleLoginUsesDeepLink() {
+  const runtime = await createRuntime({ initialSession: null, native: true });
+  runtime.cloud.requireSession();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await runtime.dom.googleButton.emit("click");
+  assert.equal(runtime.oauthArgs.provider, "google");
+  assert.equal(runtime.oauthArgs.options.redirectTo, "masa://auth/callback");
+  assert.equal(runtime.oauthArgs.options.skipBrowserRedirect, true);
+  assert.equal(runtime.openedAuthUrl, "https://accounts.google.test/");
+  assert.equal(runtime.clientOptions.auth.detectSessionInUrl, false);
 }
 
 async function testCredentialErrorMessage() {
@@ -318,6 +420,9 @@ async function testOfflineSessionAndDurableQueue() {
 await testExistingSession();
 await testLoginReadsLiveInput();
 await testSignupReadsLiveInput();
+await testAccountPasswordChangeAndResetLink();
+await testGoogleLoginUsesConfiguredReturn();
+await testNativeGoogleLoginUsesDeepLink();
 await testCredentialErrorMessage();
 await testOfflineSessionAndDurableQueue();
 console.log("Auth flow tests: OK");
