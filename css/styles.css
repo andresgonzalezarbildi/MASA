@@ -3517,3 +3517,56 @@ body.legal-page { min-height: 100vh; }
   .legal-footer { display: grid; }
   .legal-footer p { text-align: left; }
 }
+
+/* MASA_V31_RECIPE_INGREDIENT_COMPACT_ROWS: las filas no se estiran para ocupar toda la lista. */
+#recipe-modal .recipe-ingredient-list {
+  align-content: start;
+  grid-auto-rows: max-content;
+}
+#recipe-modal .recipe-ingredient-row {
+  align-self: start;
+  gap: 5px;
+  max-height: 54px;
+  padding: 5px 7px;
+}
+#recipe-modal .recipe-ingredient-row label {
+  gap: 2px;
+}
+#recipe-modal .recipe-ingredient-row label > span {
+  font-size: 7.5px;
+}
+#recipe-modal .recipe-ingredient-row input,
+#recipe-modal .recipe-ingredient-row select {
+  min-height: 30px;
+  height: 30px;
+  padding-block: 3px;
+}
+#recipe-modal .recipe-ingredient-name b,
+#recipe-modal .recipe-ingredient-name small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 470px) {
+  #recipe-modal .recipe-ingredient-row {
+    grid-template-columns: minmax(0, 1fr) 62px 76px auto;
+    gap: 4px;
+    max-height: 52px;
+    padding: 4px 5px;
+  }
+  #recipe-modal .recipe-ingredient-name {
+    grid-column: auto;
+  }
+  #recipe-modal .recipe-ingredient-row input,
+  #recipe-modal .recipe-ingredient-row select {
+    padding-inline: 4px;
+    font-size: 12px;
+  }
+  #recipe-modal .recipe-ingredient-row .danger-text-action {
+    grid-column: auto;
+    justify-self: end;
+    padding-inline: 3px;
+    font-size: 10px;
+  }
+}
