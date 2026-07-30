@@ -199,7 +199,12 @@ public class MainActivity extends BridgeActivity {
         }
         String script = "(function(){try{return !!(window.MASAHandleAndroidBack&&window.MASAHandleAndroidBack());}catch(e){return false;}})();";
         bridge.getWebView().evaluateJavascript(script, handled -> {
-            if (!"true".equals(handled)) finish();
+            if ("true".equals(handled)) return;
+            if (bridge.getWebView().canGoBack()) {
+                bridge.getWebView().goBack();
+                return;
+            }
+            finish();
         });
     }
 }

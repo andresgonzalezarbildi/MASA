@@ -232,6 +232,7 @@ h3 { font-size: 26px; }
 .account-security-summary { display: grid; gap: 4px; margin: 18px 0; padding: 16px; border: 1px solid var(--ink); background: rgba(255,255,255,.45); }
 .account-security-summary span { color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
 .account-security-summary b { overflow-wrap: anywhere; }
+.account-provider-note { margin: 0; padding: 14px 16px; border: 1px solid var(--line); background: var(--paper-soft); line-height: 1.5; }
 .account-password-form { display: grid; gap: 15px; }
 .account-password-form > label { display: grid; gap: 6px; }
 .account-password-form > label > span { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }

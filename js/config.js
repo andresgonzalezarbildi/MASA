@@ -2,9 +2,9 @@
 // Nunca coloques aquí la service_role key.
 window.MASA_CONFIG = Object.freeze({
   supabaseUrl: "https://plkicsnxrjmnnwhjgobe.supabase.co",
-  // Retorno de confirmaciones, recuperaciones e inicio con Google en la web.
+  // Retorno web de confirmaciones, recuperación de contraseña e inicio con Google.
   authRedirectUrl: "https://andresgonzalez.netlify.app/masa/",
-  // Retorno de Google y de los correos cuando se usan desde la APK Android.
+  // Retorno exclusivo de Google OAuth hacia la APK Android.
   nativeAuthRedirectUrl: "masa://auth/callback",
   supabaseKey: "sb_publishable_89uUOLFGMxVxQiPNqSk2iw_q0AwGynd"
 });

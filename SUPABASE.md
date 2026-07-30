@@ -67,7 +67,7 @@ En Supabase abrí **Authentication → URL Configuration** y guardá exactamente
   - `masa://auth/callback`
   - `http://localhost:5173/**`
 
-La URL exacta es importante. Si Supabase no encuentra el `redirectTo` en esta lista, ignora el valor enviado por la aplicación y usa el Site URL. La APK utiliza `masa://auth/callback` para volver automáticamente desde Google y desde los enlaces de correo.
+La URL exacta es importante. Si Supabase no encuentra el `redirectTo` en esta lista, ignora el valor enviado por la aplicación y usa el Site URL. La APK utiliza `masa://auth/callback` únicamente para volver automáticamente desde Google. Las confirmaciones y recuperaciones enviadas por correo vuelven a la URL web pública de M.A.S.A., porque los clientes de correo abren esos enlaces en el navegador.
 
 ### 2. Activar Google
 

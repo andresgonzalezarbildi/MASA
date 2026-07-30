@@ -82,8 +82,11 @@
     return String(window.MASA_CONFIG?.nativeAuthRedirectUrl || "masa://auth/callback").trim();
   }
 
-  function getAuthRedirectUrl() {
-    return isNativeRuntime() ? getNativeAuthRedirectUrl() : getWebAuthRedirectUrl();
+  // Los enlaces enviados por correo siempre vuelven a la versión web.
+  // El deep link nativo se reserva únicamente para OAuth (Google), porque
+  // los clientes de correo abren primero el enlace de verificación en un navegador.
+  function getEmailAuthRedirectUrl() {
+    return getWebAuthRedirectUrl();
   }
 
   function errorWithContext(source, kind, context, code = "") {
@@ -447,14 +450,46 @@
     }
   }
 
+  function getAccountProviders() {
+    const user = session?.user;
+    const providers = new Set();
+    const primaryProvider = user?.app_metadata?.provider;
+    if (primaryProvider) providers.add(String(primaryProvider));
+    for (const provider of user?.app_metadata?.providers || []) providers.add(String(provider));
+    for (const identity of user?.identities || []) {
+      if (identity?.provider) providers.add(String(identity.provider));
+    }
+    return providers;
+  }
+
   function refreshAccountSecurity() {
     const email = session?.user?.email || "";
     const emailElement = $("#security-account-email");
     if (emailElement) emailElement.textContent = email || "No disponible";
+
+    const providers = getAccountProviders();
+    const providerKnown = providers.size > 0;
+    const hasEmailPassword = !providerKnown || providers.has("email");
+    const passwordForm = $("#account-password-form");
+    const providerNote = $("#account-provider-note");
+    const description = $("#account-security-description");
+
+    if (passwordForm) passwordForm.hidden = !hasEmailPassword;
+    if (providerNote) {
+      providerNote.hidden = hasEmailPassword;
+      providerNote.textContent = hasEmailPassword
+        ? ""
+        : "Esta cuenta inicia sesión con Google. La contraseña se administra desde tu cuenta de Google.";
+    }
+    if (description) {
+      description.textContent = hasEmailPassword
+        ? "Cambiá la contraseña validando primero la contraseña actual."
+        : "Tu acceso está vinculado a Google y no usa una contraseña propia de M.A.S.A.";
+    }
   }
 
   function setAccountSecurityBusy(busy) {
-    document.querySelectorAll("#account-password-form input, #account-password-form button, #send-password-reset").forEach(element => {
+    document.querySelectorAll("#account-password-form input, #account-password-form button").forEach(element => {
       element.disabled = Boolean(busy);
     });
   }
@@ -530,7 +565,7 @@
 
   async function sendPasswordReset(email) {
     const result = await withTimeout(
-      getClient().auth.resetPasswordForEmail(email, { redirectTo: getAuthRedirectUrl() }),
+      getClient().auth.resetPasswordForEmail(email, { redirectTo: getEmailAuthRedirectUrl() }),
       "El envío del enlace de recuperación"
     );
     if (result.error) throw errorWithContext(result.error, "auth", "Recuperación de contraseña");
@@ -622,7 +657,7 @@
             email,
             password,
             options: {
-              emailRedirectTo: getAuthRedirectUrl(),
+              emailRedirectTo: getEmailAuthRedirectUrl(),
               data: { name }
             }
           }),
@@ -751,25 +786,6 @@
         setAccountSecurityFeedback("Contraseña actualizada correctamente.");
       } catch (error) {
         logRealError("auth", "Falló el cambio de contraseña desde Ajustes", error);
-        setAccountSecurityFeedback(humanizeAuthError(error), true);
-      } finally {
-        setAccountSecurityBusy(false);
-      }
-    });
-
-    $("#send-password-reset")?.addEventListener("click", async () => {
-      const email = session?.user?.email || "";
-      if (!email) {
-        setAccountSecurityFeedback("No se pudo identificar el correo de la cuenta.", true);
-        return;
-      }
-      setAccountSecurityBusy(true);
-      setAccountSecurityFeedback("");
-      try {
-        await sendPasswordReset(email);
-        setAccountSecurityFeedback(`Enviamos el enlace a ${email}.`);
-      } catch (error) {
-        logRealError("auth", "Falló el envío del enlace desde Ajustes", error);
         setAccountSecurityFeedback(humanizeAuthError(error), true);
       } finally {
         setAccountSecurityBusy(false);

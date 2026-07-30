@@ -10,12 +10,12 @@
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="assets/icon-192.png" rel="apple-touch-icon"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=30.4" rel="stylesheet"/>
-<link href="./css/auth.css?v=30.4" rel="stylesheet"/>
-<script defer src="./vendor/masa-vendor.js?v=30.4"></script>
-<script defer="" src="./js/config.js?v=30.4"></script>
-<script defer="" src="./js/cloud.js?v=30.4"></script>
-<script defer="" src="./js/app.js?v=30.4"></script>
+<link href="./css/styles.css?v=30.5" rel="stylesheet"/>
+<link href="./css/auth.css?v=30.5" rel="stylesheet"/>
+<script defer src="./vendor/masa-vendor.js?v=30.5"></script>
+<script defer="" src="./js/config.js?v=30.5"></script>
+<script defer="" src="./js/cloud.js?v=30.5"></script>
+<script defer="" src="./js/app.js?v=30.5"></script>
 </head>
 <body>
 
@@ -64,7 +64,7 @@
 <p aria-live="polite" class="auth-message" id="auth-message"></p>
 </div>
 <small class="auth-note">Los alimentos generales se comparten. Tus datos y alimentos agregados son privados.</small>
-<nav class="auth-legal-links" aria-label="Información legal"><a href="privacy.html" target="_blank">Privacidad</a><span>·</span><a href="terms.html" target="_blank">Condiciones</a></nav>
+<nav class="auth-legal-links" aria-label="Información legal"><a href="./privacy.html">Privacidad</a><span>·</span><a href="./terms.html">Condiciones</a></nav>
 </article>
 </section>
 <div aria-hidden="true" class="ambient ambient-a"></div>
@@ -341,8 +341,8 @@
 <p>Una herramienta para entender las cuentas detrás del peso. No reemplaza una evaluación clínica individual.</p>
 <div class="footer-actions">
 <button class="footer-about-button" id="open-about" type="button">Acerca de M.A.S.A.</button>
-<a href="privacy.html" target="_blank">Privacidad ↗</a>
-<a href="terms.html" target="_blank">Condiciones ↗</a>
+<a href="./privacy.html">Privacidad ↗</a>
+<a href="./terms.html">Condiciones ↗</a>
 <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">Datos: OpenNutrition ↗</a>
 <a href="https://andresgonzalez.netlify.app/" rel="noopener" target="_blank">Más herramientas ↗</a>
 </div>
@@ -398,7 +398,7 @@
 <section class="about-legal" aria-labelledby="about-legal-title">
 <p class="eyebrow" id="about-legal-title">PRIVACIDAD Y CONDICIONES</p>
 <p>Consultá qué datos utiliza M.A.S.A., cómo podés eliminarlos y las reglas de uso del servicio.</p>
-<div class="about-legal-links"><a href="privacy.html" target="_blank">Política de privacidad ↗</a><a href="terms.html" target="_blank">Condiciones del servicio ↗</a></div>
+<div class="about-legal-links"><a href="./privacy.html">Política de privacidad ↗</a><a href="./terms.html">Condiciones del servicio ↗</a></div>
 </section>
 <section class="about-limitations" aria-labelledby="about-limitations-title">
 <p class="eyebrow" id="about-limitations-title">LIMITACIONES</p>
@@ -526,22 +526,21 @@
 </section>
 <section class="settings-view" hidden="" id="settings-account">
 <section class="form-block account-security-block">
-<div class="form-block-title"><span>01</span><div><h3>Cuenta y seguridad</h3><p>Cambiá la contraseña desde la sesión actual o solicitá un enlace por correo.</p></div></div>
+<div class="form-block-title"><span>01</span><div><h3>Cuenta y seguridad</h3><p id="account-security-description">Cambiá la contraseña validando primero la contraseña actual.</p></div></div>
 <div class="account-security-summary">
 <span>Cuenta conectada</span>
 <b id="security-account-email">—</b>
 </div>
+<p class="account-provider-note" hidden id="account-provider-note"></p>
 <form class="account-password-form" id="account-password-form">
 <label><span>Contraseña actual</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="currentPassword" required="" type="password"/><button aria-label="Mostrar contraseña actual" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <label><span>Nueva contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="newPassword" required="" type="password"/><button aria-label="Mostrar nueva contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <label><span>Repetir nueva contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="confirmPassword" required="" type="password"/><button aria-label="Mostrar contraseña repetida" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <div class="account-security-actions">
 <button class="primary-action" type="submit">Cambiar contraseña</button>
-<button class="secondary-action" id="send-password-reset" type="button">Enviar enlace por correo</button>
 </div>
 </form>
 <p class="feedback" id="account-security-feedback" role="status"></p>
-<small>El enlace por correo abre la versión web de M.A.S.A. También funciona si lo solicitaste desde la APK.</small>
 </section>
 </section>
 <section class="settings-view" hidden="" id="settings-weights">

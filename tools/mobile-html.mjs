@@ -1,9 +1,17 @@
+function transformLocalLegalNavigation(html) {
+  return String(html)
+    .replace(/<base\s+href=["']\/masa\/["']\s*\/?>/i, '<base href="./"/>')
+    .replace(/href=["']\/masa\/privacy\.html["']/gi, 'href="./privacy.html"')
+    .replace(/href=["']\/masa\/terms\.html["']/gi, 'href="./terms.html"')
+    .replace(/href=["']\/masa\/["']/gi, 'href="./index.html"')
+    .replace(/(<a\b[^>]*href=["'](?:\.\/)?(?:privacy|terms)\.html["'][^>]*)\s+target=["']_blank["']/gi, '$1');
+}
+
 export function transformMobileHtml(html, assetVersion) {
   const version = String(assetVersion || "1.0");
-  let transformed = String(html)
+  let transformed = transformLocalLegalNavigation(html)
     .replace(/\s*<script\b[^>]*src=["']https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2[^"']*["'][^>]*><\/script>/i, "")
-    .replace(/\s*<script\b[^>]*src=["']https:\/\/cdn\.jsdelivr\.net\/npm\/@zxing\/browser@[^"']+["'][^>]*><\/script>/i, "")
-    .replace(/<base\s+href=["']\/masa\/["']\s*\/?>/i, '<base href="./"/>');
+    .replace(/\s*<script\b[^>]*src=["']https:\/\/cdn\.jsdelivr\.net\/npm\/@zxing\/browser@[^"']+["'][^>]*><\/script>/i, "");
 
   const configScriptPattern = /<script\b[^>]*src=["']\.\/js\/config\.js(?:\?v=[^"']*)?["'][^>]*><\/script>/i;
   if (!configScriptPattern.test(transformed)) {
@@ -26,4 +34,8 @@ export function transformMobileHtml(html, assetVersion) {
   }
 
   return transformed;
+}
+
+export function transformMobileLegalHtml(html) {
+  return transformLocalLegalNavigation(html);
 }

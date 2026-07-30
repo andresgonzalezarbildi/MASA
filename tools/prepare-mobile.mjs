@@ -2,7 +2,7 @@ import { build } from "esbuild";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { transformMobileHtml } from "./mobile-html.mjs";
+import { transformMobileHtml, transformMobileLegalHtml } from "./mobile-html.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const webDir = join(root, "www");
@@ -21,6 +21,12 @@ const assetVersion = String(packageData.version || "1.0.0").split(".").slice(0, 
 let html = await readFile(join(webDir, "index.html"), "utf8");
 html = transformMobileHtml(html, assetVersion);
 await writeFile(join(webDir, "index.html"), html);
+
+for (const legalPage of ["privacy.html", "terms.html"]) {
+  const legalPath = join(webDir, legalPage);
+  const legalHtml = transformMobileLegalHtml(await readFile(legalPath, "utf8"));
+  await writeFile(legalPath, legalHtml);
+}
 
 await mkdir(join(webDir, "vendor"), { recursive: true });
 await build({

@@ -89,7 +89,8 @@ function buildDom() {
   make("#forgot-password");
   make("#security-account-email");
   make("#account-security-feedback");
-  const sendPasswordReset = make("#send-password-reset", { type: "button" });
+  make("#account-provider-note");
+  make("#account-security-description");
 
   const loginForm = make("#auth-login-form");
   const signupForm = make("#auth-signup-form");
@@ -122,7 +123,7 @@ function buildDom() {
   eye.closestElement = passwordField;
 
   const allBusy = [googleLoginButton, googleSignupButton, loginEmail, loginPassword, signupEmail, signupPassword, signupName, recoveryPassword, eye];
-  const accountBusy = [currentPassword, newPassword, confirmPassword, sendPasswordReset];
+  const accountBusy = [currentPassword, newPassword, confirmPassword];
   const document = {
     body: { classList: new FakeClassList() },
     activeElement: null,
@@ -131,7 +132,7 @@ function buildDom() {
       if (selector === "[data-password-toggle]") return [eye];
       if (selector === "[data-auth-google]") return [googleLoginButton, googleSignupButton];
       if (selector === "#auth-gate button, #auth-gate input") return allBusy;
-      if (selector === "#account-password-form input, #account-password-form button, #send-password-reset") return accountBusy;
+      if (selector === "#account-password-form input, #account-password-form button") return accountBusy;
       return [];
     },
     addEventListener() {}
@@ -154,7 +155,6 @@ function buildDom() {
     currentPassword,
     newPassword,
     confirmPassword,
-    sendPasswordReset,
     accountFeedback: selectors.get("#account-security-feedback"),
     authMessage: selectors.get("#auth-message")
   };
@@ -337,7 +337,7 @@ async function testSignupReadsLiveInput() {
   assert.equal(runtime.dom.gate.hidden, true);
 }
 
-async function testAccountPasswordChangeAndResetLink() {
+async function testAccountPasswordChangeWithoutResetLink() {
   const runtime = await createRuntime({ initialSession: { user: { id: "user-1", email: "account@example.com" } } });
   await runtime.cloud.requireSession();
   runtime.cloud.refreshAccountSecurity();
@@ -350,10 +350,34 @@ async function testAccountPasswordChangeAndResetLink() {
   assert.equal(runtime.updateCredentials.current_password, "old password");
   assert.equal(runtime.updateCredentials.password, "new password");
   assert.equal(runtime.dom.accountFeedback.textContent, "Contraseña actualizada correctamente.");
+}
 
-  await runtime.dom.sendPasswordReset.emit("click");
-  assert.equal(runtime.resetPasswordArgs.email, "account@example.com");
+
+async function testNativePasswordResetUsesWebReturn() {
+  const runtime = await createRuntime({ initialSession: null, native: true });
+  runtime.cloud.requireSession();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  runtime.dom.loginEmail.value = "user@example.com";
+  await runtime.dom.document.querySelector("#forgot-password").emit("click");
+  assert.equal(runtime.resetPasswordArgs.email, "user@example.com");
   assert.equal(runtime.resetPasswordArgs.options.redirectTo, "https://example.com/masa/");
+}
+
+
+async function testGoogleAccountHidesPasswordForm() {
+  const googleSession = {
+    user: {
+      id: "google-user",
+      email: "google@example.com",
+      app_metadata: { provider: "google", providers: ["google"] },
+      identities: [{ provider: "google" }]
+    }
+  };
+  const runtime = await createRuntime({ initialSession: googleSession });
+  await runtime.cloud.requireSession();
+  runtime.cloud.refreshAccountSecurity();
+  assert.equal(runtime.dom.accountPasswordForm.hidden, true);
+  assert.equal(runtime.dom.document.querySelector("#account-provider-note").hidden, false);
 }
 
 async function testGoogleLoginUsesConfiguredReturn() {
@@ -432,7 +456,9 @@ async function testOfflineSessionAndDurableQueue() {
 await testExistingSession();
 await testLoginReadsLiveInput();
 await testSignupReadsLiveInput();
-await testAccountPasswordChangeAndResetLink();
+await testAccountPasswordChangeWithoutResetLink();
+await testNativePasswordResetUsesWebReturn();
+await testGoogleAccountHidesPasswordForm();
 await testGoogleLoginUsesConfiguredReturn();
 await testGoogleSignupButtonUsesSameFlow();
 await testNativeGoogleLoginUsesDeepLink();
