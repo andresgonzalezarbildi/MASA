@@ -2233,6 +2233,12 @@
       : item.kind === "external" && item.userOverride
         ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
         : "";
+    // MASA_V29_MOBILE_ABOUT_SEARCH_EDIT_V2: alimentos propios y recetas también se editan desde los resultados.
+    const editActions = item.kind === "external"
+      ? `<div class="food-catalog-actions"><button class="text-action" data-edit-catalog-food="${escapeHTML(item.id)}" type="button">Editar alimento</button><button class="danger-text-action" data-hide-catalog-food="${escapeHTML(item.id)}" type="button">Ocultar</button></div>`
+      : item.kind === "recipe"
+        ? `<div class="food-catalog-actions"><button class="text-action" data-edit-user-food="${escapeHTML(item.id)}" data-edit-user-kind="recipe" type="button">Editar receta</button></div>`
+        : `<div class="food-catalog-actions"><button class="text-action" data-edit-user-food="${escapeHTML(item.id)}" data-edit-user-kind="food" type="button">Editar alimento</button></div>`;
     button.innerHTML = `<div><div class="food-result-name"><b>${escapeHTML(item.name)}</b>${originBadge}</div><small>${escapeHTML(recipeDetail)} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}${escapeHTML(usageDetail)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span>`;
     wrapper.appendChild(button);
 
@@ -2242,7 +2248,7 @@
     const options = foodQuantityOptions(item);
     const preview = quantityPreview(item, defaults.amount, defaults.unit);
     const form = document.createElement("form");
-    form.className = `food-inline-add${item.kind === "external" ? " has-catalog-actions" : ""}`;
+    form.className = "food-inline-add has-catalog-actions";
     form.dataset.foodAddForm = "";
     form.dataset.foodId = item.id;
     form.dataset.foodKind = item.kind;
@@ -2262,7 +2268,7 @@
         <b data-food-preview-calories>${formatNumber(Math.round(preview.calories))} kcal</b>
         <small data-food-preview-macros>P ${formatNumber(preview.protein,1)} · G ${formatNumber(preview.fat,1)} · C ${formatNumber(preview.carbs,1)}</small>
       </div>
-      ${item.kind === "external" ? `<div class="food-catalog-actions"><button class="text-action" data-edit-catalog-food="${escapeHTML(item.id)}" type="button">Editar alimento</button><button class="danger-text-action" data-hide-catalog-food="${escapeHTML(item.id)}" type="button">Ocultar</button></div>` : ""}
+      ${editActions}
       <div class="food-inline-actions">
         <button class="text-action" data-cancel-food type="button">Cancelar</button>
         <button class="primary-action" type="submit">Agregar</button>
@@ -2408,6 +2414,13 @@
   }
 
   function handleFoodResultClick(event) {
+    const editUserFood = event.target.closest("[data-edit-user-food]");
+    if (editUserFood) {
+      const options = { editId: editUserFood.dataset.editUserFood, returnTarget: "food" };
+      if (editUserFood.dataset.editUserKind === "recipe") openRecipeEditor(options);
+      else openFoodEditor(options);
+      return;
+    }
     const editCatalog = event.target.closest("[data-edit-catalog-food]");
     if (editCatalog) {
       openFoodEditor({ catalogId: editCatalog.dataset.editCatalogFood, returnTarget: "food" });

@@ -3267,3 +3267,62 @@ body { padding-bottom: var(--app-safe-bottom); }
     padding-bottom: calc(14px + var(--app-safe-bottom));
   }
 }
+
+/* MASA_V29_MOBILE_ABOUT_SEARCH_EDIT_V2: ancho seguro de Acerca de en móvil */
+#about-modal .about-sheet {
+  width: min(
+    780px,
+    calc(100vw - max(12px, env(safe-area-inset-left)) - max(12px, env(safe-area-inset-right)))
+  );
+  max-width: calc(100vw - max(12px, env(safe-area-inset-left)) - max(12px, env(safe-area-inset-right)));
+  overflow-x: hidden;
+}
+#about-modal .settings-header,
+#about-modal .settings-header > div,
+#about-modal .about-copy,
+#about-modal .about-copy > *,
+#about-modal .about-math,
+#about-modal .about-formulas,
+#about-modal .about-formulas article {
+  min-width: 0;
+  max-width: 100%;
+}
+#about-modal .about-formulas code,
+#about-modal .about-reference,
+#about-modal .about-reference a {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+#about-modal .about-formulas code {
+  white-space: normal;
+}
+@media (max-width: 590px) {
+  #about-modal .about-sheet {
+    width: calc(100vw - max(8px, env(safe-area-inset-left)) - max(8px, env(safe-area-inset-right)));
+    max-width: calc(100vw - max(8px, env(safe-area-inset-left)) - max(8px, env(safe-area-inset-right)));
+    padding: 16px 12px;
+    box-shadow: 5px 5px 0 var(--violet);
+  }
+  #about-modal .settings-header {
+    align-items: flex-start;
+    gap: 8px;
+  }
+  #about-modal .settings-header h2 {
+    font-size: clamp(27px, 9vw, 36px);
+    overflow-wrap: anywhere;
+  }
+  #about-modal .about-copy {
+    margin-top: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  #about-modal .about-mission,
+  #about-modal .about-math {
+    padding: 12px 9px;
+  }
+  #about-modal .about-formulas article {
+    padding: 10px 8px;
+  }
+}
+
