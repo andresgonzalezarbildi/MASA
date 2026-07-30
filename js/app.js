@@ -593,11 +593,7 @@
       .filter(base => !overrides[base.id]?.hidden)
       .map(base => effectiveCatalogFood(base, overrides[base.id]));
     externalFoodsById = new Map(externalFoods.map(item => [item.id, item]));
-    externalFoodSearchIndex = externalFoods.map(item => ({
-      item,
-      nameText: normalizeHeader(item.name),
-      searchText: foodSearchText(item)
-    }));
+    externalFoodSearchIndex = externalFoods.map(item => createFoodSearchEntry(item));
   }
 
   function catalogFoodForEditing(id) {
@@ -1905,8 +1901,24 @@
       || null;
   }
 
+  function normalizeSearchText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
+  function searchTokens(value) {
+    const normalized = normalizeSearchText(value);
+    if (!normalized) return [];
+    return normalized.split(" ").flatMap(part => part.match(/[a-z]+|\d+/g) || []);
+  }
+
   function foodSearchText(item) {
-    return normalizeHeader([
+    return normalizeSearchText([
       item.name,
       item.brand,
       item.barcode,
@@ -1915,22 +1927,121 @@
     ].filter(Boolean).join(" "));
   }
 
-  function searchExternalFoods(query, limit = 50) {
-    if (!query) return externalFoods.slice(0, limit);
-    const starts = [];
-    const contains = [];
+  function createFoodSearchEntry(item, extraText = "") {
+    const nameText = normalizeSearchText(item?.name);
+    const searchText = normalizeSearchText(`${foodSearchText(item)} ${extraText}`);
+    return {
+      item,
+      nameText,
+      nameCompact: nameText.replace(/\s+/g, ""),
+      searchText,
+      searchCompact: searchText.replace(/\s+/g, ""),
+      tokens: searchTokens(searchText)
+    };
+  }
 
-    for (const row of externalFoodSearchIndex) {
-      if (!row.searchText.includes(query)) continue;
-      if (row.nameText.startsWith(query)) {
-        if (starts.length < limit) starts.push(row.item);
-      } else if (contains.length < limit) {
-        contains.push(row.item);
+  function createFoodQueryInfo(query) {
+    const text = normalizeSearchText(query);
+    return {
+      text,
+      compact: text.replace(/\s+/g, ""),
+      tokens: searchTokens(text)
+    };
+  }
+
+  function isOrderedSubsequence(needle, haystack) {
+    if (!needle || !haystack) return false;
+    let index = 0;
+    for (const char of haystack) {
+      if (char === needle[index]) index += 1;
+      if (index === needle.length) return true;
+    }
+    return false;
+  }
+
+  function tokenBuiltFromWordPrefixes(queryToken, candidateTokens) {
+    if (!queryToken || queryToken.length < 4 || !/^[a-z]+$/.test(queryToken)) return false;
+    const words = candidateTokens.filter(token => /^[a-z]+$/.test(token));
+    const memo = new Map();
+
+    function visit(queryIndex, wordIndex) {
+      if (queryIndex === queryToken.length) return true;
+      const key = `${queryIndex}:${wordIndex}`;
+      if (memo.has(key)) return memo.get(key);
+
+      for (let index = wordIndex; index < words.length; index += 1) {
+        const remaining = queryToken.length - queryIndex;
+        const maxLength = Math.min(words[index].length, remaining);
+        for (let length = maxLength; length >= 2; length -= 1) {
+          const fragment = queryToken.slice(queryIndex, queryIndex + length);
+          if (!words[index].startsWith(fragment)) continue;
+          if (visit(queryIndex + length, index + 1)) {
+            memo.set(key, true);
+            return true;
+          }
+        }
       }
-      if (starts.length >= limit && contains.length >= limit) break;
+
+      memo.set(key, false);
+      return false;
     }
 
-    return [...starts, ...contains].slice(0, limit);
+    return visit(0, 0);
+  }
+
+  function foodSearchScoreFromEntry(entry, queryInfo) {
+    if (!queryInfo.text) return 0;
+    const { text, compact, tokens } = queryInfo;
+
+    if (entry.nameText === text) return 10000;
+    if (entry.nameCompact === compact) return 9800;
+    if (entry.nameText.startsWith(text)) return 9300 - Math.min(300, entry.nameText.length - text.length);
+    if (entry.nameCompact.startsWith(compact)) return 9000 - Math.min(300, entry.nameCompact.length - compact.length);
+
+    let tokenScore = 0;
+    let allTokensMatch = tokens.length > 0;
+    for (const queryToken of tokens) {
+      let best = 0;
+      for (const candidateToken of entry.tokens) {
+        if (candidateToken === queryToken) best = Math.max(best, 180);
+        else if (candidateToken.startsWith(queryToken)) best = Math.max(best, 140);
+        else if (queryToken.length >= 3 && candidateToken.includes(queryToken)) best = Math.max(best, 95);
+      }
+      if (!best && tokenBuiltFromWordPrefixes(queryToken, entry.tokens)) best = 120;
+      if (!best) {
+        allTokensMatch = false;
+        break;
+      }
+      tokenScore += best;
+    }
+    if (allTokensMatch) return 7600 + tokenScore;
+
+    if (entry.searchCompact.includes(compact)) {
+      return 6500 - Math.min(500, entry.searchCompact.indexOf(compact));
+    }
+
+    const coverage = compact.length / Math.max(1, entry.searchCompact.length);
+    if (compact.length >= 4 && coverage >= 0.42 && isOrderedSubsequence(compact, entry.searchCompact)) {
+      return 4800 + Math.round(coverage * 1000);
+    }
+
+    return 0;
+  }
+
+  function foodSearchScore(item, query, extraText = "") {
+    return foodSearchScoreFromEntry(createFoodSearchEntry(item, extraText), createFoodQueryInfo(query));
+  }
+
+  function searchExternalFoods(query, limit = 50) {
+    const queryInfo = createFoodQueryInfo(query);
+    if (!queryInfo.text) return externalFoods.slice(0, limit);
+
+    return externalFoodSearchIndex
+      .map(entry => ({ item: entry.item, score: foodSearchScoreFromEntry(entry, queryInfo) }))
+      .filter(result => result.score > 0)
+      .sort((a, b) => b.score - a.score || String(a.item.name || "").localeCompare(String(b.item.name || ""), "es"))
+      .slice(0, limit)
+      .map(result => result.item);
   }
 
   function usedExternalFoods() {
@@ -1958,16 +2069,18 @@
   }
 
   function renderFoodResults() {
-    const query = normalizeHeader($("#food-search-input")?.value || "");
+    const rawQuery = $("#food-search-input")?.value || "";
+    const query = normalizeSearchText(rawQuery);
     const container = $("#food-results");
     container.innerHTML = "";
     renderCatalogStatus(container);
 
     if (!query) return;
-    const localMatches = localLibraryFoods().filter(item => foodSearchText(item).includes(query));
-    const selected = [...localMatches, ...searchExternalFoods(query, 45)];
+    const localMatches = localLibraryFoods().filter(item => foodSearchScore(item, rawQuery) > 0);
+    const selected = [...localMatches, ...searchExternalFoods(rawQuery, 45)];
     const unique = [...new Map(selected.map(item => [item.id, item])).values()]
-      .sort((a, b) => compareMealFoodPriority(a, b, activeMeal))
+      .sort((a, b) => foodSearchScore(b, rawQuery) - foodSearchScore(a, rawQuery)
+        || compareMealFoodPriority(a, b, activeMeal))
       .slice(0, 35);
 
     if (!unique.length) {
@@ -2500,22 +2613,21 @@
   }
 
   function searchEntireCatalog(query, limit = 40) {
-    const normalizedQuery = normalizeHeader(query || "");
-    if (!normalizedQuery) return [];
-    const starts = [];
-    const contains = [];
+    const queryInfo = createFoodQueryInfo(query);
+    if (!queryInfo.text) return [];
+    const matches = [];
 
     for (const base of externalFoodCatalog) {
       const item = effectiveCatalogFood(base, state.catalogOverrides?.[base.id]);
-      const nameText = normalizeHeader(item.name);
-      const searchText = `${foodSearchText(item)} ${foodSearchText(base)}`;
-      if (!searchText.includes(normalizedQuery)) continue;
-      const target = nameText.startsWith(normalizedQuery) ? starts : contains;
-      if (target.length < limit) target.push(item);
-      if (starts.length >= limit && contains.length >= limit) break;
+      const entry = createFoodSearchEntry(item, foodSearchText(base));
+      const score = foodSearchScoreFromEntry(entry, queryInfo);
+      if (score > 0) matches.push({ item, score });
     }
 
-    return [...starts, ...contains].slice(0, limit);
+    return matches
+      .sort((a, b) => b.score - a.score || String(a.item.name || "").localeCompare(String(b.item.name || ""), "es"))
+      .slice(0, limit)
+      .map(result => result.item);
   }
 
   function libraryCatalogSearchCard(item) {
@@ -2995,21 +3107,26 @@
   }
 
   function recipeIngredientCandidates(query) {
-    const local = state.foods.filter(item => !query || foodSearchText(item).includes(query));
+    const normalizedQuery = normalizeSearchText(query);
+    const local = state.foods.filter(item => !normalizedQuery || foodSearchScore(item, query) > 0);
     let external = [];
-    if (query) external = searchExternalFoods(query, 30);
+    if (normalizedQuery) external = searchExternalFoods(query, 30);
     else {
       const recentFoods = allUsedFoods().filter(item => item.kind !== "recipe").sort(compareRecentFoods);
       external = [...recentFoods, ...externalFoods.slice(0, 12)];
     }
-    return [...new Map([...local, ...external].filter(item => item.kind !== "recipe").map(item => [item.id, item])).values()].slice(0, 24);
+    return [...new Map([...local, ...external].filter(item => item.kind !== "recipe").map(item => [item.id, item])).values()]
+      .sort((a, b) => normalizedQuery
+        ? foodSearchScore(b, query) - foodSearchScore(a, query) || compareMealFoodPriority(a, b, activeMeal)
+        : compareRecentFoods(a, b))
+      .slice(0, 24);
   }
 
   function renderRecipeIngredientResults() {
     const container = $("#recipe-ingredient-results");
     const rawQuery = $("#recipe-ingredient-search")?.value || "";
     const query = normalizeHeader(rawQuery);
-    const candidates = recipeIngredientCandidates(query);
+    const candidates = recipeIngredientCandidates(rawQuery);
     container.innerHTML = "";
     if (externalFoodsStatus === "loading") renderCatalogStatus(container);
     candidates.forEach(item => container.appendChild(recipeIngredientResultButton(item)));
