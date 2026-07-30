@@ -16,6 +16,19 @@
   status = 301
   force = true
 
+# Mantiene las páginas legales dentro de /masa/ sin cambiar la URL visible.
+[[redirects]]
+  from = "/masa/privacy.html"
+  to = "/privacy.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/masa/terms.html"
+  to = "/terms.html"
+  status = 200
+  force = true
+
 # Publica esta carpeta también bajo /masa sin duplicar archivos.
 [[redirects]]
   from = "/masa/*"
