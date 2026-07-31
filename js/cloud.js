@@ -784,6 +784,13 @@
         if (result.error) throw errorWithContext(result.error, "auth", "Cambio de contraseña");
         form.reset();
         setAccountSecurityFeedback("Contraseña actualizada correctamente.");
+        const toggle = $("#toggle-account-password");
+        const panel = $("#account-password-manager");
+        if (toggle && panel) {
+          toggle.setAttribute("aria-expanded", "false");
+          toggle.querySelector("i").textContent = "＋";
+          panel.hidden = true;
+        }
       } catch (error) {
         logRealError("auth", "Falló el cambio de contraseña desde Ajustes", error);
         setAccountSecurityFeedback(humanizeAuthError(error), true);

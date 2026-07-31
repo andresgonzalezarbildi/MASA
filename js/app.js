@@ -126,6 +126,43 @@
   const $ = selector => document.querySelector(selector);
   const $$ = selector => Array.from(document.querySelectorAll(selector));
 
+  function isNativeRuntime() {
+    try {
+      return Boolean(window.Capacitor?.isNativePlatform?.() || window.location.protocol === "capacitor:");
+    } catch (_) {
+      return window.location.protocol === "capacitor:";
+    }
+  }
+
+  function isMobileWebRuntime() {
+    return !isNativeRuntime() && window.matchMedia("(max-width: 800px)").matches;
+  }
+
+  function syncVisualViewport() {
+    const viewport = window.visualViewport;
+    const height = Math.max(320, Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight));
+    const offsetTop = Math.max(0, Math.round(viewport?.offsetTop || 0));
+    const root = document.documentElement;
+    root.classList.toggle("native-runtime", isNativeRuntime());
+    root.classList.toggle("web-runtime", !isNativeRuntime());
+    root.style.setProperty("--visual-viewport-height", `${height}px`);
+    root.style.setProperty("--visual-viewport-top", `${offsetTop}px`);
+  }
+
+  function focusOnOpen(element) {
+    if (!element || isMobileWebRuntime()) return;
+    requestAnimationFrame(() => element.focus());
+  }
+
+  function keepFocusedFieldVisible(event) {
+    const field = event.target;
+    if (!isMobileWebRuntime() || !field?.matches?.("input, select, textarea") || !field.closest(".modal, .confirm-modal")) return;
+    window.setTimeout(() => {
+      syncVisualViewport();
+      field.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" });
+    }, 180);
+  }
+
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
@@ -1765,7 +1802,7 @@
     document.body.classList.add("modal-open");
     switchFoodMode("recent", false);
     updateFoodSearchDisplay();
-    requestAnimationFrame(() => $("#food-search-input")?.focus());
+    focusOnOpen($("#food-search-input"));
   }
 
   function modalIsOpen(id) {
@@ -2467,7 +2504,7 @@
     activeFoodSelection = null;
     $("#food-search-input").value = "";
     updateFoodSearchDisplay();
-    requestAnimationFrame(() => $("#food-search-input")?.focus());
+    focusOnOpen($("#food-search-input"));
   }
 
   function addLibraryFood(id, kind, amountValue, unitValue) {
@@ -2595,9 +2632,15 @@
   function addQuickCalories(event) {
     event.preventDefault();
     const form = event.currentTarget;
+    const name = String(form.elements.name.value || "").trim();
+    const calories = toNumber(form.elements.calories.value, NaN);
+    if (!name || !Number.isFinite(calories) || calories <= 0) {
+      form.reportValidity();
+      return;
+    }
     const item = normalizeDiaryEntry({
       id: createId(),
-      name: form.elements.name.value,
+      name,
       calories,
       protein: 0, fat: 0, carbs: 0,
       serving: "carga libre",
@@ -2611,7 +2654,7 @@
     form.reset();
     render();
     showFoodAddedFeedback(addedName, `${formatNumber(addedCalories)} kcal`);
-    requestAnimationFrame(() => form.elements.name.focus());
+    focusOnOpen(form.elements.name);
   }
 
   function openLibraryManager(returnTarget = "food") {
@@ -2694,7 +2737,7 @@
     button.textContent = opening ? "Cerrar búsqueda" : "Buscar alimento de la base";
     if (opening) {
       renderLibraryCatalogSearchResults();
-      requestAnimationFrame(() => input.focus());
+      focusOnOpen(input);
     }
   }
 
@@ -2866,7 +2909,7 @@
     if (foodEditorReturnTarget === "recipe") $("#recipe-modal").hidden = true;
     $("#food-editor-modal").hidden = false;
     document.body.classList.add("modal-open");
-    requestAnimationFrame(() => form.elements.name.focus());
+    focusOnOpen(form.elements.name);
   }
 
   function closeFoodEditor() {
@@ -3104,7 +3147,7 @@
     document.body.classList.add("modal-open");
     renderRecipeIngredientResults();
     renderRecipeIngredientList();
-    requestAnimationFrame(() => form.elements.name.focus());
+    focusOnOpen(form.elements.name);
   }
 
   function closeRecipeEditor() {
@@ -4048,29 +4091,66 @@
   }
   function buildRecalibrationSuggestion(profile, plan, weighIns) {
     const suggestion = automaticAdjustmentData(profile, plan, weighIns);
-    return suggestion.ready && suggestion.reviewDue ? suggestion : null;
+    return suggestion.ready && suggestion.reviewDue && suggestion.meaningful ? suggestion : null;
   }
   function automaticAdjustmentSummary(suggestion) {
     if (!suggestion?.ready) return suggestion?.reason || "Todavía no hay datos suficientes.";
     const direction = suggestion.observedWeekly < -0.01 ? "bajando" : suggestion.observedWeekly > 0.01 ? "subiendo" : "estable";
+    const registeredDays = Math.max(suggestion.intakeDays || 0, suggestion.weighInCount || 0);
     const sourceText = suggestion.completedOnly
-      ? `${suggestion.intakeDays} días terminados`
-      : `${suggestion.intakeDays} días con ingestas; cerrar días completos aumenta la confianza`;
+      ? `${registeredDays} días de registro`
+      : `${registeredDays} días de registro; cerrar los días completos aumenta la confianza`;
     const modelText = `El gasto observado es ${formatNumber(Math.round(suggestion.observedMaintenance))} kcal y el gasto adaptativo usado por M.A.S.A. queda en ${formatNumber(Math.round(suggestion.adaptiveMaintenance))} kcal, con confianza ${suggestion.confidenceLabel.toLowerCase()}.`;
     if (!suggestion.calendarDue) {
-      return `Con ${sourceText} y ${suggestion.weighInCount} pesajes, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} La próxima revisión corresponde el ${formatDate(suggestion.nextReviewDate)}.`;
+      return `Con ${sourceText}, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} La próxima revisión corresponde el ${formatDate(suggestion.nextReviewDate)}.`;
     }
     if (!suggestion.hasNewData) {
-      const missingIntakes = Math.max(0, EXPENDITURE_CONFIG.minNewIntakeDays - suggestion.newIntakeDays);
-      const missingWeights = Math.max(0, EXPENDITURE_CONFIG.minNewWeighIns - suggestion.newWeighIns);
-      return `La fecha mínima de revisión ya llegó, pero M.A.S.A. espera datos nuevos para no recalcular con el mismo período. Faltan ${missingIntakes} días de ingesta y ${missingWeights} pesajes posteriores a la última revisión.`;
+      const remaining = Math.max(
+        0,
+        EXPENDITURE_CONFIG.minNewIntakeDays - suggestion.newIntakeDays,
+        EXPENDITURE_CONFIG.minNewWeighIns - suggestion.newWeighIns
+      );
+      return `La fecha mínima de revisión ya llegó, pero M.A.S.A. espera datos nuevos para no recalcular con el mismo período. Faltan ${remaining} días de registro.`;
     }
     if (!suggestion.meaningful) {
-      return `Con ${sourceText} y ${suggestion.weighInCount} pesajes, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} El objetivo actual está suficientemente cerca y no necesita cambiar.`;
+      return `Con ${sourceText}, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} El objetivo actual está suficientemente cerca y no necesita cambiar.`;
     }
     const nextTarget = suggestion.currentTarget + suggestion.appliedChange;
-    return `Con ${sourceText} y ${suggestion.weighInCount} pesajes, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} El objetivo pasaría de ${formatNumber(Math.round(suggestion.currentTarget))} a ${formatNumber(Math.round(nextTarget))} kcal por día (${suggestion.appliedChange > 0 ? "+" : ""}${formatNumber(suggestion.appliedChange)}).${suggestion.limited ? ` Por seguridad, cada revisión se limita a ${EXPENDITURE_CONFIG.maxAdjustment} kcal.` : ""}`;
+    return `Con ${sourceText}, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} El objetivo pasaría de ${formatNumber(Math.round(suggestion.currentTarget))} a ${formatNumber(Math.round(nextTarget))} kcal por día (${suggestion.appliedChange > 0 ? "+" : ""}${formatNumber(suggestion.appliedChange)}).${suggestion.limited ? ` Por seguridad, cada revisión se limita a ${EXPENDITURE_CONFIG.maxAdjustment} kcal.` : ""}`;
   }
+  function adaptiveReviewDisplay(suggestion) {
+    const registeredDays = Math.max(suggestion?.intakeDays || 0, suggestion?.weighInCount || 0);
+    if (!suggestion?.ready) {
+      const remaining = Math.max(
+        0,
+        EXPENDITURE_CONFIG.minIntakeDays - (suggestion?.intakeDays || 0),
+        EXPENDITURE_CONFIG.minSpanDays - (suggestion?.spanDays || 0),
+        EXPENDITURE_CONFIG.minWeighIns - (suggestion?.weighInCount || 0)
+      );
+      return {
+        registeredDays,
+        reviewText: remaining > 0 ? `Faltan ${remaining} días de registro` : "Validando la tendencia"
+      };
+    }
+    if (!suggestion.calendarDue) {
+      const next = parseDate(suggestion.nextReviewDate);
+      const remaining = next ? Math.max(0, Math.ceil(daysBetween(parseDate(todayISO()), next))) : 0;
+      return { registeredDays, reviewText: remaining ? `Faltan ${remaining} días para revisar` : "Revisión próxima" };
+    }
+    if (!suggestion.hasNewData) {
+      const remaining = Math.max(
+        0,
+        EXPENDITURE_CONFIG.minNewIntakeDays - (suggestion.newIntakeDays || 0),
+        EXPENDITURE_CONFIG.minNewWeighIns - (suggestion.newWeighIns || 0)
+      );
+      return { registeredDays, reviewText: remaining ? `Faltan ${remaining} días de registro` : "Esperando registros nuevos" };
+    }
+    return {
+      registeredDays,
+      reviewText: suggestion.meaningful ? "Conviene revisar el ajuste" : "Todavía está dentro del rango"
+    };
+  }
+
   function renderAutomaticAdjustmentPreview(profile, plan, weighIns = state.weighIns) {
     const suggestion = automaticAdjustmentData(profile, plan, weighIns);
     const summary = $("#automatic-adjustment-summary");
@@ -4078,21 +4158,21 @@
     const button = $("#run-auto-adjustment");
     if (!summary || !facts || !button) return suggestion;
     summary.textContent = automaticAdjustmentSummary(suggestion);
-    facts.innerHTML = `<div><span>Gasto adaptativo</span><b>${suggestion.ready ? `${formatNumber(Math.round(suggestion.adaptiveMaintenance))} kcal` : "Aprendiendo"}</b></div><div><span>Confianza</span><b>${suggestion.confidenceLabel}</b></div><div><span>Datos útiles</span><b>${suggestion.intakeDays || 0} d · ${suggestion.weighInCount || 0} p</b></div><div><span>Próxima revisión</span><b>${!suggestion.ready ? "Al completar datos" : suggestion.reviewDue ? "Disponible" : suggestion.calendarDue ? "Faltan datos nuevos" : formatDate(suggestion.nextReviewDate)}</b></div>`;
-    const actionAvailable = Boolean(suggestion.ready && suggestion.reviewDue);
-    button.hidden = !actionAvailable;
-    button.disabled = false;
-    if (actionAvailable) button.textContent = suggestion.meaningful ? "Aplicar reajuste" : "Registrar revisión";
+    const display = adaptiveReviewDisplay(suggestion);
+    facts.innerHTML = `<div><span>Gasto adaptativo</span><b>${suggestion.ready ? `${formatNumber(Math.round(suggestion.adaptiveMaintenance))} kcal` : "Aprendiendo"}</b></div><div><span>Confianza</span><b>${suggestion.confidenceLabel}</b></div><div><span>Registro acumulado</span><b>${display.registeredDays} días</b></div><div><span>Revisión</span><b>${display.reviewText}</b></div>`;
+    const reviewReached = Boolean(suggestion.ready && suggestion.reviewDue);
+    const actionable = Boolean(reviewReached && suggestion.meaningful);
+    button.hidden = !reviewReached;
+    button.disabled = !actionable;
+    if (reviewReached) button.textContent = actionable ? "Revisar ajuste automático" : "Todavía está dentro del rango";
     return suggestion;
   }
   function applyAutomaticAdjustment(suggestion, profile = state.profile) {
-    if (!suggestion?.ready || !suggestion.reviewDue) return null;
-    const adjusted = Boolean(suggestion.meaningful);
-    if (adjusted) {
-      profile.calibrationOffset = suggestion.newOffset;
-      profile.planStartDate = suggestion.latest?.date || todayISO();
-      profile.planStartWeight = Number(toNumber(suggestion.latestTrend, suggestion.latest?.weight).toFixed(2));
-    }
+    if (!suggestion?.ready || !suggestion.reviewDue || !suggestion.meaningful) return null;
+    const adjusted = true;
+    profile.calibrationOffset = suggestion.newOffset;
+    profile.planStartDate = suggestion.latest?.date || todayISO();
+    profile.planStartWeight = Number(toNumber(suggestion.latestTrend, suggestion.latest?.weight).toFixed(2));
     state.calibrationHistory = [...(state.calibrationHistory || []), {
       date: todayISO(),
       intakeDays: suggestion.intakeDays,
@@ -4106,9 +4186,9 @@
       confidence: Number(suggestion.confidenceScore.toFixed(3)),
       alpha: Number(suggestion.alpha.toFixed(3)),
       previousTarget: Math.round(suggestion.currentTarget),
-      targetChange: adjusted ? suggestion.appliedChange : 0,
-      newOffset: adjusted ? suggestion.newOffset : toNumber(profile.calibrationOffset, 0),
-      reviewOnly: !adjusted
+      targetChange: suggestion.appliedChange,
+      newOffset: suggestion.newOffset,
+      reviewOnly: false
     }].slice(-30);
     return { adjusted };
   }
@@ -4137,13 +4217,21 @@
       return;
     }
     if (!suggestion.hasNewData) {
-      setFeedback(feedback, `La fecha mínima ya llegó, pero se necesitan al menos ${EXPENDITURE_CONFIG.minNewIntakeDays} días de ingesta y ${EXPENDITURE_CONFIG.minNewWeighIns} pesajes posteriores a la última revisión.`);
+      const remaining = Math.max(
+        0,
+        EXPENDITURE_CONFIG.minNewIntakeDays - suggestion.newIntakeDays,
+        EXPENDITURE_CONFIG.minNewWeighIns - suggestion.newWeighIns
+      );
+      setFeedback(feedback, `La fecha mínima ya llegó, pero faltan ${remaining} días de registro para volver a revisar.`);
       return;
     }
-    const nextTarget = Math.round(suggestion.currentTarget + (suggestion.meaningful ? suggestion.appliedChange : 0));
-    const prompt = suggestion.meaningful
-      ? `M.A.S.A. propone llevar el objetivo diario a ${formatNumber(nextTarget)} kcal. La corrección es gradual y usa ${suggestion.intakeDays} días de ingestas, ${suggestion.weighInCount} pesajes y confianza ${suggestion.confidenceLabel.toLowerCase()}. ¿Aplicar el reajuste?`
-      : "La revisión semanal no encontró una diferencia suficiente para cambiar el objetivo. ¿Registrar la revisión sin cambios?";
+    if (!suggestion.meaningful) {
+      setFeedback(feedback, "Todavía está dentro del rango; no hace falta aplicar un ajuste.");
+      return;
+    }
+    const nextTarget = Math.round(suggestion.currentTarget + suggestion.appliedChange);
+    const registeredDays = Math.max(suggestion.intakeDays || 0, suggestion.weighInCount || 0);
+    const prompt = `M.A.S.A. propone llevar el objetivo diario a ${formatNumber(nextTarget)} kcal. La corrección es gradual y usa ${registeredDays} días de registro, con confianza ${suggestion.confidenceLabel.toLowerCase()}. ¿Aplicar el ajuste automático?`;
     if (!window.confirm(prompt)) return;
     state.weighIns = temporaryWeighIns;
     state.profile = draft;
@@ -4153,9 +4241,7 @@
     saveState(state);
     fillProfileForm();
     updateProfilePreview();
-    setFeedback(feedback, result.adjusted
-      ? `Reajuste aplicado. Nuevo objetivo aproximado: ${formatNumber(nextTarget)} kcal por día.`
-      : `Revisión registrada. El objetivo se mantiene; la próxima revisión será el ${formatDate(toISODate(addDays(parseDate(todayISO()), EXPENDITURE_CONFIG.reviewIntervalDays)))}.`);
+    setFeedback(feedback, `Ajuste automático aplicado. Nuevo objetivo aproximado: ${formatNumber(nextTarget)} kcal por día.`);
     render();
   }
   function renderRecalibration(profile, plan, weighIns) {
@@ -4184,18 +4270,22 @@
       title.textContent = "Revisión completa: el objetivo sigue bien calibrado.";
     }
     text.textContent = automaticAdjustmentSummary(data);
-    facts.innerHTML = `<div><span>Gasto estimado</span><b>${data.ready ? `${formatNumber(Math.round(data.adaptiveMaintenance))} kcal` : `${formatNumber(Math.round(plan.maintenance))} kcal iniciales`}</b></div><div><span>Confianza</span><b>${data.confidenceLabel}</b></div><div><span>Datos reunidos</span><b>${data.intakeDays || 0}/${EXPENDITURE_CONFIG.minIntakeDays} días · ${data.weighInCount || 0}/${EXPENDITURE_CONFIG.minWeighIns} pesajes</b></div><div><span>Estado</span><b>${data.ready ? data.reviewDue ? "Revisión lista" : data.calendarDue ? "Esperando datos nuevos" : `Espera hasta ${formatDate(data.nextReviewDate)}` : `${data.progress}% aprendido`}</b></div>`;
+    const display = adaptiveReviewDisplay(data);
+    facts.innerHTML = `<div><span>Gasto estimado</span><b>${data.ready ? `${formatNumber(Math.round(data.adaptiveMaintenance))} kcal` : `${formatNumber(Math.round(plan.maintenance))} kcal iniciales`}</b></div><div><span>Confianza</span><b>${data.confidenceLabel}</b></div><div><span>Registro acumulado</span><b>${display.registeredDays} días</b></div><div><span>Revisión</span><b>${display.reviewText}</b></div>`;
     progress.style.width = `${data.progress}%`;
     note.textContent = data.ready
-      ? `La corrección mezcla el gasto anterior con el observado usando β = ${formatNumber(data.alpha, 2)}. Las revisiones se separan por ${EXPENDITURE_CONFIG.reviewIntervalDays} días y exigen al menos ${EXPENDITURE_CONFIG.minNewIntakeDays} días de ingesta y ${EXPENDITURE_CONFIG.minNewWeighIns} pesajes posteriores a la revisión anterior.`
+      ? `La corrección mezcla el gasto anterior con el observado usando β = ${formatNumber(data.alpha, 2)}. Las revisiones se separan por ${EXPENDITURE_CONFIG.reviewIntervalDays} días y requieren registros nuevos desde la revisión anterior.`
       : "El cálculo necesita suficiente distancia entre fechas, días de ingesta y pesajes comparables; no reacciona a un peso aislado.";
+    const reviewReached = Boolean(data.ready && data.reviewDue);
     const actionAvailable = Boolean(recalibrationSuggestion);
-    button.hidden = !actionAvailable;
-    button.disabled = false;
-    if (actionAvailable) button.textContent = data.meaningful ? "Aplicar reajuste" : "Registrar revisión";
+    button.hidden = !reviewReached;
+    button.disabled = !actionAvailable;
+    if (reviewReached) button.textContent = actionAvailable ? "Revisar ajuste automático" : "Todavía está dentro del rango";
   }
   function applyRecalibration() {
     if (!recalibrationSuggestion) return;
+    const nextTarget = Math.round(recalibrationSuggestion.currentTarget + recalibrationSuggestion.appliedChange);
+    if (!window.confirm(`El objetivo diario pasará a aproximadamente ${formatNumber(nextTarget)} kcal. ¿Aplicar el ajuste automático?`)) return;
     const result = applyAutomaticAdjustment(recalibrationSuggestion, state.profile);
     if (!result) return;
     saveState(state);
@@ -4886,10 +4976,9 @@
   }
 
   function switchSettingsTab(tab) {
-    const chosen = ["profile", "weights", "account"].includes(tab) ? tab : "profile";
+    const chosen = tab === "account" || tab === "weights" ? "account" : "profile";
     $$('[data-settings-tab]').forEach(button => button.classList.toggle("active", button.dataset.settingsTab === chosen));
     $("#settings-profile").hidden = chosen !== "profile";
-    $("#settings-weights").hidden = chosen !== "weights";
     $("#settings-account").hidden = chosen !== "account";
     if (chosen === "account") window.MASA_CLOUD?.refreshAccountSecurity?.();
   }
@@ -4899,7 +4988,8 @@
     const form = $("#profile-form");
     const profile = state.profile;
     const latest = latestWeighIn();
-    form.elements.name.value = profile.name || "";
+    const accountName = $("#account-display-name");
+    if (accountName) accountName.value = profile.name || "";
     form.elements.birthDate.value = displayDate(profile.birthDate);
     form.elements.sex.value = profile.sex || "male";
     form.elements.heightCm.value = profile.heightCm || "";
@@ -4928,7 +5018,7 @@
     const form = $("#profile-form");
     return normalizeProfile({
       ...state.profile,
-      name: form.elements.name.value,
+      name: state.profile.name || "",
       birthDate: normalizeDate(form.elements.birthDate.value),
       sex: form.elements.sex.value,
       heightCm: form.elements.heightCm.value,
@@ -5113,6 +5203,27 @@
     document.body.classList.remove("modal-open");
     setFeedback($("#profile-feedback"), "");
     render();
+  }
+
+  function saveAccountIdentity(event) {
+    event.preventDefault();
+    const input = $("#account-display-name");
+    const name = String(input?.value || "").trim().slice(0, 60);
+    state.profile = normalizeProfile({ ...state.profile, name }, state.weighIns);
+    saveState(state);
+    if (input) input.value = name;
+    setFeedback($("#account-profile-feedback"), name ? "Nombre actualizado." : "Nombre eliminado.");
+    render();
+  }
+
+  function toggleAccountPassword() {
+    const button = $("#toggle-account-password");
+    const panel = $("#account-password-manager");
+    const expanded = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", String(!expanded));
+    button.querySelector("i").textContent = expanded ? "＋" : "−";
+    panel.hidden = expanded;
+    if (!expanded) window.MASA_CLOUD?.refreshAccountSecurity?.();
   }
 
   function addQuickWeight(event) {
@@ -5755,6 +5866,9 @@
     $("#quick-weight-form").addEventListener("submit", addQuickWeight);
     $("#edit-today-weight").addEventListener("click", showWeightEditor);
 
+    $("#account-identity-form").addEventListener("submit", saveAccountIdentity);
+    $("#toggle-account-password").addEventListener("click", toggleAccountPassword);
+
     $("#toggle-history-manager").addEventListener("click", () => {
       const button = $("#toggle-history-manager");
       const expanded = button.getAttribute("aria-expanded") === "true";
@@ -5876,7 +5990,12 @@
       $$('[data-chart-range]').forEach(item => item.classList.toggle("active", item === button));
       if (chartPayload) renderActiveProgressChart();
     }));
+    window.visualViewport?.addEventListener("resize", syncVisualViewport);
+    window.visualViewport?.addEventListener("scroll", syncVisualViewport);
+    window.addEventListener("orientationchange", () => window.setTimeout(syncVisualViewport, 120));
+    document.addEventListener("focusin", keepFocusedFieldVisible);
     window.addEventListener("resize", debounce(() => {
+      syncVisualViewport();
       syncCalorieRangeButtons();
       if (chartPayload && activeAppView === "progress") renderActiveProgressChart();
       if (activeDiaryView === "chart") drawCalorieChart(calculatePlan());
@@ -5946,6 +6065,7 @@
 
   function renderInitialApplication(initialState) {
     state = normalizeState(initialState || emptyState());
+    syncVisualViewport();
     window.MASA_CLOUD.cacheState(state);
     removeNumericGoalsBranding();
     bindEvents();

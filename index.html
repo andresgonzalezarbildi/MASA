@@ -10,13 +10,13 @@
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="assets/icon-192.png" rel="apple-touch-icon"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=30.5" rel="stylesheet"/>
-<link href="./css/auth.css?v=30.5" rel="stylesheet"/>
+<link href="./css/styles.css?v=30.6" rel="stylesheet"/>
+<link href="./css/auth.css?v=30.6" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer="" src="./js/config.js?v=30.5"></script>
-<script defer="" src="./js/cloud.js?v=30.5"></script>
+<script defer="" src="./js/config.js?v=30.6"></script>
+<script defer="" src="./js/cloud.js?v=30.6"></script>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
-<script defer="" src="./js/app.js?v=30.5"></script>
+<script defer="" src="./js/app.js?v=30.6"></script>
 </head>
 <body>
 
@@ -255,7 +255,7 @@
 <div class="plan-facts">
 <div><span>Objetivo</span><b id="target-weight">—</b></div>
 <div><span>Fecha pedida</span><b id="target-date">—</b></div>
-<div><span>Fecha estimada</span><b id="estimated-date">—</b></div>
+<div><span>Fecha estimada para el objetivo</span><b id="estimated-date">—</b></div>
 <div><span>Ritmo usado</span><b id="required-rate">—</b></div>
 </div>
 <span class="signal" id="goal-status">—</span>
@@ -270,7 +270,7 @@
 <div aria-label="Progreso del modelo adaptativo" class="recalibration-progress"><i id="recalibration-progress-fill"></i></div>
 <small id="recalibration-note">El cálculo usa el consumo realmente registrado y la tendencia observada del peso.</small>
 </div>
-<button class="primary-action" hidden id="apply-recalibration" type="button">Aplicar reajuste</button>
+<button class="primary-action" hidden id="apply-recalibration" type="button">Revisar ajuste automático</button>
 </section><section class="progress-section">
 <article class="chart-module">
 <div class="chart-title-row progress-chart-title-row">
@@ -344,7 +344,6 @@
 <button class="footer-about-button" id="open-about" type="button">Acerca de M.A.S.A.</button>
 <a href="/masa/privacy.html" target="_blank">Privacidad ↗</a>
 <a href="/masa/terms.html" target="_blank">Condiciones ↗</a>
-<a href="https://www.opennutrition.app/" rel="noopener" target="_blank">Datos: OpenNutrition ↗</a>
 <a href="https://andresgonzalez.netlify.app/" rel="noopener" target="_blank">Más herramientas ↗</a>
 </div>
 </footer>
@@ -426,8 +425,7 @@
 </div>
 <nav aria-label="Secciones de configuración" class="settings-tabs">
 <button class="active" data-settings-tab="profile" type="button">Perfil y plan</button>
-<button data-settings-tab="weights" type="button">Mis datos</button>
-<button data-settings-tab="account" type="button">Cuenta</button>
+<button data-settings-tab="account" type="button">Cuenta y datos</button>
 </nav>
 </div>
 <section class="settings-view" id="settings-profile">
@@ -435,8 +433,7 @@
 <form id="profile-form" novalidate="">
 <section class="form-block">
 <div class="form-block-title"><span>01</span><div><h3>Datos base</h3><p>Lo mínimo para calcular una referencia inicial.</p></div></div>
-<div class="form-grid">
-<label><span>Nombre <small>opcional</small></span><input autocomplete="name" maxlength="60" name="name" type="text"/></label>
+<div class="form-grid base-data-grid">
 <label><span>Fecha de nacimiento</span><div class="date-control"><input autocomplete="bday" class="date-input" inputmode="numeric" maxlength="10" name="birthDate" placeholder="dd/mm/aaaa" required="" type="text"/><button aria-label="Elegir fecha de nacimiento" class="calendar-trigger" data-calendar-for="birthDate" type="button">▦</button><input aria-hidden="true" class="native-date-picker" data-native-date="birthDate" tabindex="-1" type="date"/></div></label>
 <label><span>Sexo usado por la fórmula</span><select name="sex" required=""><option value="male">Masculino</option><option value="female">Femenino</option></select></label>
 <label><span>Altura</span><div class="unit-input"><input inputmode="numeric" max="230" min="120" name="heightCm" required="" step="1" type="number"/><i>cm</i></div></label>
@@ -504,9 +501,9 @@
 <h4>La fórmula inicia el cálculo; tus resultados reales lo corrigen.</h4>
 <p id="automatic-adjustment-summary">M.A.S.A. necesita varias semanas de datos para estimar tu gasto real.</p>
 </div>
-<div class="automatic-adjustment-facts" id="automatic-adjustment-facts"><div><span>Gasto adaptativo</span><b>Aprendiendo</b></div><div><span>Confianza</span><b>Inicial</b></div><div><span>Datos útiles</span><b>0 d · 0 p</b></div><div><span>Próxima revisión</span><b>—</b></div></div>
-<button class="primary-action" hidden id="run-auto-adjustment" type="button">Aplicar reajuste</button>
-<small>Usa hasta 42 días, una tendencia exponencial del peso, regresión lineal y correcciones de hasta 250 kcal. Los días completos aumentan la confianza. Después de cada revisión exige al menos 3 días de ingesta y 2 pesajes nuevos.</small>
+<div class="automatic-adjustment-facts" id="automatic-adjustment-facts"><div><span>Gasto adaptativo</span><b>Aprendiendo</b></div><div><span>Confianza</span><b>Inicial</b></div><div><span>Registro acumulado</span><b>0 días</b></div><div><span>Revisión</span><b>Faltan registros</b></div></div>
+<button class="primary-action" hidden id="run-auto-adjustment" type="button">Revisar ajuste automático</button>
+<small>Usa hasta 42 días, una tendencia exponencial del peso, regresión lineal y correcciones de hasta 250 kcal. Los días completos aumentan la confianza y cada revisión requiere registros nuevos.</small>
 <p class="feedback" id="automatic-adjustment-feedback" role="status"></p>
 </div>
 </section>
@@ -516,7 +513,7 @@
 <div><span>Proteína</span><b id="preview-protein">—</b></div>
 <div><span>Grasas</span><b id="preview-fat">—</b></div>
 <div><span>Carbohidratos</span><b id="preview-carbs">—</b></div>
-<div><span>Fecha estimada</span><b id="preview-date">—</b></div>
+<div><span>Fecha estimada para el objetivo</span><b id="preview-date">—</b></div>
 </section>
 <p class="feedback" id="profile-feedback" role="status"></p>
 <div class="profile-actions settings-sticky-actions action-pair">
@@ -526,60 +523,52 @@
 </form>
 </section>
 <section class="settings-view" hidden="" id="settings-account">
-<section class="form-block account-security-block">
-<div class="form-block-title"><span>01</span><div><h3>Cuenta y seguridad</h3><p id="account-security-description">Cambiá la contraseña validando primero la contraseña actual.</p></div></div>
-<div class="account-security-summary">
-<span>Cuenta conectada</span>
-<b id="security-account-email">—</b>
-</div>
+<section class="form-block account-overview-block">
+<div class="form-block-title"><span>01</span><div><h3>Cuenta</h3><p>Tu identidad visible, acceso y seguridad en un solo lugar.</p></div></div>
+<form class="account-identity-form" id="account-identity-form">
+<label><span>Nombre <small>opcional</small></span><input autocomplete="name" id="account-display-name" maxlength="60" name="displayName" type="text"/></label>
+<div class="account-email-compact"><span>Correo de la cuenta</span><b id="security-account-email">—</b></div>
+<button class="secondary-action" type="submit">Guardar nombre</button>
+</form>
+<p class="feedback" id="account-profile-feedback" role="status"></p>
+<button aria-expanded="false" class="history-manager-toggle account-password-toggle" id="toggle-account-password" type="button">
+<span><b>Acceso y contraseña</b><small id="account-security-description">Cambiá la contraseña solamente cuando lo necesites.</small></span>
+<i aria-hidden="true">＋</i>
+</button>
+<div class="account-password-manager" hidden="" id="account-password-manager">
 <p class="account-provider-note" hidden id="account-provider-note"></p>
 <form class="account-password-form" id="account-password-form">
 <label><span>Contraseña actual</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="currentPassword" required="" type="password"/><button aria-label="Mostrar contraseña actual" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <label><span>Nueva contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="newPassword" required="" type="password"/><button aria-label="Mostrar nueva contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <label><span>Repetir nueva contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="confirmPassword" required="" type="password"/><button aria-label="Mostrar contraseña repetida" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
-<div class="account-security-actions">
-<button class="primary-action" type="submit">Cambiar contraseña</button>
-</div>
+<div class="account-security-actions"><button class="primary-action" type="submit">Cambiar contraseña</button></div>
 </form>
 <p class="feedback" id="account-security-feedback" role="status"></p>
+</div>
 </section>
-</section>
-<section class="settings-view" hidden="" id="settings-weights">
+<section class="form-block account-data-block">
+<div class="form-block-title"><span>02</span><div><h3>Datos y respaldos</h3><p>Importá, exportá o corregí tus registros desde la misma sección de cuenta.</p></div></div>
 <div class="data-tools-grid">
 <article class="data-tool">
 <span>01</span><h3>Pesajes</h3><p>Importá o exportá tu historial en Excel. Los días repetidos se actualizan y la plantilla usa fechas reales.</p>
-<div class="data-tool-actions">
-<button class="secondary-action" id="import-history" type="button">Importar Excel</button>
-<button class="secondary-action" id="export-weights" type="button">Exportar Excel</button>
-</div>
+<div class="data-tool-actions"><button class="secondary-action" id="import-history" type="button">Importar Excel</button><button class="secondary-action" id="export-weights" type="button">Exportar Excel</button></div>
 <a class="text-link" download="" href="plantilla-pesajes.xlsx">Descargar plantilla Excel</a>
 </article>
 <article class="data-tool intake-data-tool">
-<span>02</span>
-<h3>Consumo de calorías</h3>
-<p>Exportá o importá el diario en Excel. Incluye una hoja con cada ingesta y otra con el resumen por día.</p>
-<div class="data-tool-actions">
-<button class="secondary-action" id="export-intakes" type="button">Exportar Excel</button>
-<button class="secondary-action" id="import-intakes" type="button">Importar Excel</button>
-</div>
+<span>02</span><h3>Consumo de calorías</h3><p>Exportá o importá el diario en Excel. Incluye una hoja con cada ingesta y otra con el resumen por día.</p>
+<div class="data-tool-actions"><button class="secondary-action" id="export-intakes" type="button">Exportar Excel</button><button class="secondary-action" id="import-intakes" type="button">Importar Excel</button></div>
 <a class="text-link" download="" href="plantilla-ingestas.xlsx">Descargar plantilla de ingestas</a>
 </article>
 <article class="data-tool library-data-tool">
 <span>03</span><h3>Recetas y alimentos propios</h3><p>Guardá o recuperá en JSON las recetas y los cambios que hiciste en tu biblioteca, sin importar el resto del perfil.</p>
-<div class="data-tool-actions">
-<button class="secondary-action" id="import-library" type="button">Importar biblioteca</button>
-<button class="secondary-action" id="export-library" type="button">Exportar biblioteca</button>
-</div>
+<div class="data-tool-actions"><button class="secondary-action" id="import-library" type="button">Importar biblioteca</button><button class="secondary-action" id="export-library" type="button">Exportar biblioteca</button></div>
 </article>
 </div>
 <button aria-expanded="false" class="history-manager-toggle" id="toggle-history-manager" type="button">
-<span><b>Gestionar pesajes</b><small id="history-count">0 registros · corregir o eliminar</small></span>
-<i aria-hidden="true">＋</i>
+<span><b>Gestionar pesajes</b><small id="history-count">0 registros · corregir o eliminar</small></span><i aria-hidden="true">＋</i>
 </button>
 <div class="history-manager" hidden="" id="history-manager">
-<div class="history-heading">
-<div><p class="eyebrow">GESTIONAR PESAJES</p><h3>Corregir o eliminar un registro</h3></div>
-</div>
+<div class="history-heading"><div><p class="eyebrow">GESTIONAR PESAJES</p><h3>Corregir o eliminar un registro</h3></div></div>
 <label class="history-date-picker"><span>Fecha ingresada</span><select id="history-date-select" aria-label="Elegir pesaje por fecha"></select></label>
 <div class="history-list" id="history-list"></div>
 <p class="empty-message" hidden="" id="history-empty">No hay pesajes cargados.</p>
@@ -587,6 +576,7 @@
 <section class="reset-data-panel" aria-labelledby="reset-data-title">
 <div><p class="eyebrow">ZONA DE BORRADO</p><h3 id="reset-data-title">Empezar de nuevo</h3><p>Elimina perfil, objetivo, pesajes, alimentos propios, recetas y todos los registros diarios de esta instalación.</p></div>
 <button class="danger-action" id="start-over" type="button">Borrar todos los datos</button>
+</section>
 </section>
 </section>
 </div>
