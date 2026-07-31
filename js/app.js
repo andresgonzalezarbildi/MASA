@@ -1404,12 +1404,13 @@
     const ledger = $("#meal-grid");
     const sidebar = document.querySelector(".records-sidebar");
     const compact = recorded && !weightEditorForced;
+    const mobileRecordLayout = window.matchMedia("(max-width: 859px)").matches;
     card.classList.toggle("compact-recorded-weight", compact);
-    if (compact && sidebar && card.parentElement !== sidebar) {
+    if ((mobileRecordLayout || compact) && sidebar && card.parentElement !== sidebar) {
       const quickTools = sidebar.querySelector(".diary-quick-tools");
       sidebar.insertBefore(card, quickTools || null);
     }
-    if (!compact && ledger && card.parentElement !== ledger) ledger.prepend(card);
+    if (!mobileRecordLayout && !compact && ledger && card.parentElement !== ledger) ledger.prepend(card);
     const selectedLabel = selectedDiaryDate === operationalDayISO() ? "hoy" : `el ${formatDate(selectedDiaryDate)}`;
     $("#record-weight-title").textContent = recorded ? `Peso de ${selectedLabel}` : `Registrar peso de ${selectedLabel}`;
     $("#weight-context").textContent = recorded
@@ -6067,6 +6068,7 @@
     window.addEventListener("resize", debounce(() => {
       syncVisualViewport();
       syncCalorieRangeButtons();
+      renderRecordWeight();
       if (chartPayload && activeAppView === "progress") renderActiveProgressChart();
       if (activeDiaryView === "chart") drawCalorieChart(calculatePlan());
     }, 100));

@@ -1010,7 +1010,7 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
 .diary-workspace { grid-template-columns: minmax(0, 1fr) minmax(340px, 410px); gap: 24px; }
 .records-sidebar { min-width: 0; display: grid; gap: 20px; align-self: start; }
 .records-sidebar .diary-summary { position: static; }
-.records-sidebar .diary-total span::after { content: " en la fecha seleccionada"; }
+.records-sidebar .diary-total span::after { content: ""; }
 .records-sidebar .daily-panel {
   padding: 24px 22px 28px;
   overflow: hidden;
@@ -2243,10 +2243,10 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
   .records-sidebar .diary-total strong { font-size: 43px; }
 }
 
-/* En zoom alto o pantallas angostas, los controles pasan antes de las comidas. */
+/* En mobile, primero se muestran las comidas y debajo el resumen, el peso y la edición. */
 @media (max-width: 859px) {
   .records-sidebar {
-    order: -1;
+    order: initial;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
@@ -3690,5 +3690,22 @@ body.legal-page { min-height: 100vh; }
   html.web-runtime .about-sheet {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+  }
+}
+
+
+/* --- Ajuste móvil: cabecera mínima y controles debajo de las comidas --- */
+@media (max-width: 720px) {
+  .diary-heading > div:first-child > .eyebrow,
+  .diary-heading .diary-view-switch {
+    display: none;
+  }
+
+  .diary-heading h2 {
+    margin-bottom: 0;
+  }
+
+  .records-sidebar {
+    margin-top: 4px;
   }
 }
