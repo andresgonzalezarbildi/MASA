@@ -173,6 +173,34 @@
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
+  // MASA_SECURITY_INPUT_GUARDS_V1
+  const INPUT_LIMITS = Object.freeze({
+    text: 120,
+    shortText: 40,
+    calories: 10_000,
+    macro: 10_000,
+    quantity: 100_000
+  });
+
+  function cleanInputText(value, maxLength = INPUT_LIMITS.text) {
+    return String(value ?? "")
+      .replace(/[\u0000-\u001f\u007f]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, maxLength);
+  }
+
+  function boundedInputNumber(value, min, max, fallback = NaN) {
+    const number = toNumber(value, NaN);
+    if (!Number.isFinite(number) || number < min || number > max) return fallback;
+    return number;
+  }
+
+  function isCalorieOnlyEntry(entry) {
+    return entry?.entryMode === "calories"
+      || (!entry?.sourceId && String(entry?.serving || "").toLowerCase() === "carga libre" && toNumber(entry?.quantity, 0) <= 0);
+  }
+
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
@@ -707,6 +735,7 @@
       ...entryFood,
       id: item.id || createId(),
       sourceId: item.sourceId || "",
+      entryMode: isCalorieOnlyEntry(item) ? "calories" : "quantity",
       quantity: Math.max(0, toNumber(item.quantity, 0)),
       quantityUnit: String(item.quantityUnit || "").trim(),
       meal: ["breakfast", "lunch", "snack", "dinner", "extras"].includes(item.meal) ? item.meal : "extras"
@@ -1143,23 +1172,32 @@
         const editing = editingDiaryEntryId === item.id;
         row.className = `meal-item${editing ? " editing" : ""}`;
         if (editing) {
-          const source = diaryEntrySource(item);
-          const options = source ? foodQuantityOptions(source) : [parseServingDefinition(item.serving)];
-          const selectedOption = options.find(option => option.value === item.quantityUnit) || options[0];
-          row.innerHTML = `<form class="meal-inline-edit" data-diary-edit-form="${escapeHTML(item.id)}">
-            <div class="meal-inline-edit-title"><b>${escapeHTML(item.name)}</b><small data-diary-edit-preview>${formatNumber(Math.round(item.calories))} kcal</small></div>
-            <label><span>Cantidad</span><input name="amount" type="number" min="0.01" step="any" inputmode="decimal" value="${escapeHTML(item.quantity || selectedOption.baseAmount)}" required></label>
-            <label><span>Unidad</span><select name="unit" ${options.length === 1 ? "disabled" : ""}>${options.map(option => `<option value="${escapeHTML(option.value)}" ${option.value === selectedOption.value ? "selected" : ""}>${escapeHTML(option.plural)}</option>`).join("")}</select></label>
-            <div class="meal-inline-edit-actions"><button class="primary-action" type="submit">Guardar</button></div>
-          </form>`;
+          const calorieOnly = isCalorieOnlyEntry(item);
+          if (calorieOnly) {
+            row.innerHTML = `<form class="meal-inline-edit" data-diary-edit-form="${escapeHTML(item.id)}">
+              <div class="meal-inline-edit-title"><b>${escapeHTML(item.name)}</b><small data-diary-edit-preview>${formatNumber(Math.round(item.calories))} kcal</small></div>
+              <label><span>Calorías</span><div class="unit-input"><input name="calories" type="number" min="1" max="10000" step="1" inputmode="numeric" value="${escapeHTML(Math.round(item.calories))}" required><i>kcal</i></div></label>
+              <div class="meal-inline-edit-actions"><button class="primary-action" type="submit">Guardar</button></div>
+            </form>`;
+          } else {
+            const source = diaryEntrySource(item);
+            const options = source ? foodQuantityOptions(source) : [parseServingDefinition(item.serving)];
+            const selectedOption = options.find(option => option.value === item.quantityUnit) || options[0];
+            row.innerHTML = `<form class="meal-inline-edit" data-diary-edit-form="${escapeHTML(item.id)}">
+              <div class="meal-inline-edit-title"><b>${escapeHTML(item.name)}</b><small data-diary-edit-preview>${formatNumber(Math.round(item.calories))} kcal</small></div>
+              <label><span>Cantidad</span><input name="amount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(item.quantity || selectedOption.baseAmount)}" required></label>
+              <label><span>Unidad</span><select name="unit" ${options.length === 1 ? "disabled" : ""}>${options.map(option => `<option value="${escapeHTML(option.value)}" ${option.value === selectedOption.value ? "selected" : ""}>${escapeHTML(option.plural)}</option>`).join("")}</select></label>
+              <div class="meal-inline-edit-actions"><button class="primary-action" type="submit">Guardar</button></div>
+            </form>`;
+          }
         } else {
-          const canEditQuantity = toNumber(item.quantity, 0) > 0;
-          if (canEditQuantity) {
+          const canEditEntry = isCalorieOnlyEntry(item) || toNumber(item.quantity, 0) > 0;
+          if (canEditEntry) {
             row.classList.add("meal-item-editable");
             row.dataset.editDiary = item.id;
-            row.setAttribute("aria-label", `Editar cantidad de ${item.name}`);
+            row.setAttribute("aria-label", isCalorieOnlyEntry(item) ? `Editar calorías de ${item.name}` : `Editar cantidad de ${item.name}`);
           }
-          row.innerHTML = `<div><b>${escapeHTML(item.name)}</b><small><span class="meal-serving">${escapeHTML(item.serving || "1 porción")}</span> · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span><button type="button" data-remove-diary="${item.id}" aria-label="Eliminar ${escapeHTML(item.name)}">×</button>`;
+          row.innerHTML = `<div><b>${escapeHTML(item.name)}</b><small><span class="meal-serving">${escapeHTML(item.serving || "1 porción")}</span> · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span><button type="button" data-remove-diary="${escapeHTML(item.id)}" aria-label="Eliminar ${escapeHTML(item.name)}">×</button>`;
         }
         container.appendChild(row);
       });
@@ -2632,9 +2670,9 @@
   function addQuickCalories(event) {
     event.preventDefault();
     const form = event.currentTarget;
-    const name = String(form.elements.name.value || "").trim();
-    const calories = toNumber(form.elements.calories.value, NaN);
-    if (!name || !Number.isFinite(calories) || calories <= 0) {
+    const name = cleanInputText(form.elements.name.value);
+    const calories = boundedInputNumber(form.elements.calories.value, 1, INPUT_LIMITS.calories);
+    if (!name || !Number.isFinite(calories)) {
       form.reportValidity();
       return;
     }
@@ -2644,6 +2682,9 @@
       calories,
       protein: 0, fat: 0, carbs: 0,
       serving: "carga libre",
+      entryMode: "calories",
+      quantity: 0,
+      quantityUnit: "",
       meal: activeMeal
     });
     if (!item) return;
@@ -3549,11 +3590,17 @@
 
   function updateDiaryEditPreview(form) {
     const entry = todayDiary().find(item => item.id === form.dataset.diaryEditForm);
+    if (!entry) return;
+    const label = form.querySelector("[data-diary-edit-preview]");
+    if (isCalorieOnlyEntry(entry)) {
+      const calories = boundedInputNumber(form.elements.calories?.value, 1, INPUT_LIMITS.calories, 0);
+      if (label) label.textContent = `${formatNumber(Math.round(calories))} kcal`;
+      return;
+    }
     const source = diaryEntrySource(entry);
-    if (!entry || !source) return;
+    if (!source) return;
     const unit = form.elements.unit?.value || entry.quantityUnit;
     const preview = quantityPreview(source, toNumber(form.elements.amount.value, 0), unit);
-    const label = form.querySelector("[data-diary-edit-preview]");
     if (label) label.textContent = `${formatNumber(Math.round(preview.calories))} kcal`;
   }
 
@@ -3578,7 +3625,7 @@
     if (editCard) {
       editingDiaryEntryId = editCard.dataset.editDiary;
       renderDiary(calculatePlan());
-      requestAnimationFrame(() => document.querySelector('[data-diary-edit-form] input[name="amount"]')?.select());
+      requestAnimationFrame(() => document.querySelector('[data-diary-edit-form] input[name="calories"], [data-diary-edit-form] input[name="amount"]')?.select());
       return;
     }
 
@@ -3593,7 +3640,7 @@
 
   function handleDiaryEntryEditInput(event) {
     const form = event.target.closest("[data-diary-edit-form]");
-    if (!form || !["amount", "unit"].includes(event.target.name)) return;
+    if (!form || !["amount", "unit", "calories"].includes(event.target.name)) return;
     updateDiaryEditPreview(form);
   }
 
@@ -3605,22 +3652,45 @@
     const index = entries.findIndex(item => item.id === form.dataset.diaryEditForm);
     if (index < 0) return;
     const entry = entries[index];
-    const source = diaryEntrySource(entry);
-    const amount = toNumber(form.elements.amount.value, NaN);
-    const unit = form.elements.unit?.value || entry.quantityUnit;
-    if (!source || !Number.isFinite(amount) || amount <= 0) return;
-    const preview = quantityPreview(source, amount, unit);
-    const option = preview.option;
-    entries[index] = normalizeDiaryEntry({
-      ...entry,
-      quantity: amount,
-      quantityUnit: option.value,
-      serving: `${formatQuantityAmount(amount)} ${quantityUnitText(option, amount)}`,
-      calories: preview.calories,
-      protein: preview.protein,
-      fat: preview.fat,
-      carbs: preview.carbs
-    });
+    if (isCalorieOnlyEntry(entry)) {
+      const calories = boundedInputNumber(form.elements.calories?.value, 1, INPUT_LIMITS.calories);
+      if (!Number.isFinite(calories)) {
+        form.reportValidity();
+        return;
+      }
+      entries[index] = normalizeDiaryEntry({
+        ...entry,
+        entryMode: "calories",
+        quantity: 0,
+        quantityUnit: "",
+        serving: "carga libre",
+        calories,
+        protein: 0,
+        fat: 0,
+        carbs: 0
+      });
+    } else {
+      const source = diaryEntrySource(entry);
+      const amount = boundedInputNumber(form.elements.amount?.value, 0.01, INPUT_LIMITS.quantity);
+      const unit = form.elements.unit?.value || entry.quantityUnit;
+      if (!source || !Number.isFinite(amount)) {
+        form.reportValidity();
+        return;
+      }
+      const preview = quantityPreview(source, amount, unit);
+      const option = preview.option;
+      entries[index] = normalizeDiaryEntry({
+        ...entry,
+        entryMode: "quantity",
+        quantity: amount,
+        quantityUnit: option.value,
+        serving: `${formatQuantityAmount(amount)} ${quantityUnitText(option, amount)}`,
+        calories: preview.calories,
+        protein: preview.protein,
+        fat: preview.fat,
+        carbs: preview.carbs
+      });
+    }
     state.diary[selectedDiaryDate] = entries;
     editingDiaryEntryId = null;
     saveState(state);
@@ -6023,6 +6093,17 @@
   }
 
   window.MASAHandleAndroidBack = handleAndroidBack;
+
+  function guardNumericKey(event) {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || input.type !== "number") return;
+    const minimum = toNumber(input.min, NaN);
+    if (Number.isFinite(minimum) && minimum >= 0 && ["e", "E", "+", "-"].includes(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  document.addEventListener("keydown", guardNumericKey);
 
   function debounce(fn, delay) {
     let timer;

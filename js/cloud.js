@@ -7,6 +7,67 @@
   const LAST_USER_KEY = "masa-last-user-v1";
   const PAGE_SIZE = 1000;
   const BATCH_SIZE = 250;
+  // MASA_SECURITY_CLOUD_GUARDS_V1
+  const ALLOWED_TABLES = new Set([
+    "profiles",
+    "weigh_ins",
+    "foods",
+    "recipes",
+    "recipe_ingredients",
+    "diary_entries"
+  ]);
+  const MAX_SYNC_BYTES = 5_000_000;
+
+  function checkedTable(table) {
+    if (!ALLOWED_TABLES.has(table)) throw new Error(`Tabla no permitida: ${String(table)}`);
+    return table;
+  }
+
+  function safeDbText(value, maxLength = 120, fallback = "") {
+    const text = String(value ?? "")
+      .replace(/[\u0000-\u001f\u007f]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, maxLength);
+    return text || fallback;
+  }
+
+  function safeDbNumber(value, min, max, fallback = 0) {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= min && number <= max ? number : fallback;
+  }
+
+  function safeMeal(value) {
+    return ["breakfast", "lunch", "snack", "dinner", "extras"].includes(value) ? value : "extras";
+  }
+
+  function safeKind(value) {
+    return ["food", "recipe", "external"].includes(value) ? value : "food";
+  }
+
+  function assertSyncState(state) {
+    if (!state || typeof state !== "object" || Array.isArray(state)) {
+      throw new Error("El estado a sincronizar no es válido.");
+    }
+    const limits = [
+      [state.weighIns, 10_000, "pesajes"],
+      [state.foods, 5_000, "alimentos"],
+      [state.recipes, 1_000, "recetas"]
+    ];
+    for (const [rows, maximum, label] of limits) {
+      if (rows != null && (!Array.isArray(rows) || rows.length > maximum)) {
+        throw new Error(`Cantidad inválida de ${label}.`);
+      }
+    }
+    const diaryCount = Object.values(state.diary || {}).reduce(
+      (total, entries) => total + (Array.isArray(entries) ? entries.length : 0),
+      0
+    );
+    if (diaryCount > 100_000) throw new Error("El registro diario supera el límite permitido.");
+    const bytes = new Blob([JSON.stringify(state)]).size;
+    if (bytes > MAX_SYNC_BYTES) throw new Error("Los datos pendientes superan el tamaño máximo de sincronización.");
+  }
+
   const SYNC_DELAY_MS = 700;
   const OPERATION_TIMEOUT_MS = 12_000;
 
@@ -644,9 +705,9 @@
       setAuthMessage("");
       showLoadingGate("Creando la cuenta…");
       try {
-        if (password.length < 8) {
+        if (password.length < 10) {
           throw errorWithContext(
-            new Error("La contraseña debe tener al menos 8 caracteres."),
+            new Error("La contraseña debe tener al menos 10 caracteres."),
             "validation",
             "Registro",
             "MASA_PASSWORD_LENGTH"
@@ -714,9 +775,9 @@
       setAuthMessage("");
       showLoadingGate("Actualizando la contraseña…");
       try {
-        if (password.length < 8) {
+        if (password.length < 10) {
           throw errorWithContext(
-            new Error("La contraseña debe tener al menos 8 caracteres."),
+            new Error("La contraseña debe tener al menos 10 caracteres."),
             "validation",
             "Cambio de contraseña",
             "MASA_PASSWORD_LENGTH"
@@ -750,9 +811,9 @@
       setAccountSecurityBusy(true);
       setAccountSecurityFeedback("");
       try {
-        if (newPassword.length < 8) {
+        if (newPassword.length < 10) {
           throw errorWithContext(
-            new Error("La contraseña nueva debe tener al menos 8 caracteres."),
+            new Error("La contraseña nueva debe tener al menos 10 caracteres."),
             "validation",
             "Cambio de contraseña",
             "MASA_PASSWORD_LENGTH"
@@ -1022,7 +1083,7 @@
   async function fetchPaged(table, columns, apply = query => query) {
     const rows = [];
     for (let from = 0; ; from += PAGE_SIZE) {
-      let query = getClient().from(table).select(columns).range(from, from + PAGE_SIZE - 1);
+      let query = getClient().from(checkedTable(table)).select(columns).range(from, from + PAGE_SIZE - 1);
       query = apply(query);
       const data = throwIfError(await query, `No se pudo leer ${table}`) || [];
       rows.push(...data);
@@ -1260,7 +1321,7 @@
         servingAmount: nullableNumber(row.serving_amount, metadata.servingAmount || 1),
         servingUnit: row.serving_unit || metadata.servingUnit || "serving",
         servingUnitCustom: row.serving_unit_custom || metadata.servingUnitCustom || "",
-        quantity: Number(row.quantity),
+        quantity: metadata.entryMode === "calories" ? 0 : Number(row.quantity),
         quantityUnit: row.quantity_unit || metadata.quantityUnit || "",
         calories: Number(row.calories),
         protein: Number(row.protein),
@@ -1382,6 +1443,7 @@
   }
 
   async function syncState(state) {
+    assertSyncState(state);
     const user = currentUser();
     const nextSignatures = stateSignatures(state);
     const previous = syncedSignatures || {};
@@ -1432,7 +1494,7 @@
     const profile = plainObject(state.profile) ? state.profile : {};
     const row = {
       user_id: userId,
-      display_name: profile.name || session?.user?.user_metadata?.name || null,
+      display_name: safeDbText(profile.name || session?.user?.user_metadata?.name, 120) || null,
       configured: Boolean(state.configured),
       schema_version: Number(state.version) || SCHEMA_VERSION,
       profile_data: {
@@ -1454,9 +1516,9 @@
   async function syncWeighIns(userId, weighIns) {
     const rows = weighIns.map(item => ({
       user_id: userId,
-      legacy_id: String(item.id || crypto.randomUUID()),
+      legacy_id: safeDbText(item.id || crypto.randomUUID(), 160),
       logged_on: item.date,
-      weight_kg: Number(item.weight),
+      weight_kg: safeDbNumber(item.weight, 20, 400, 0),
       metadata: item
     }));
     throwIfError(
@@ -1471,16 +1533,16 @@
       owner_id: userId,
       legacy_id: String(food.id || crypto.randomUUID()),
       source: "user",
-      name: food.name,
-      brand: food.brand || null,
-      serving_text: food.serving || null,
+      name: safeDbText(food.name, 120, "Alimento"),
+      brand: safeDbText(food.brand, 80) || null,
+      serving_text: safeDbText(food.serving, 120) || null,
       serving_amount: numberOrNull(food.servingAmount),
-      serving_unit: food.servingUnit || null,
-      serving_unit_custom: food.servingUnitCustom || null,
-      calories: nonNegative(food.calories),
-      protein: nonNegative(food.protein),
-      fat: nonNegative(food.fat),
-      carbs: nonNegative(food.carbs),
+      serving_unit: safeDbText(food.servingUnit, 40) || null,
+      serving_unit_custom: safeDbText(food.servingUnitCustom, 40) || null,
+      calories: safeDbNumber(food.calories, 0, 10000, 0),
+      protein: safeDbNumber(food.protein, 0, 10000, 0),
+      fat: safeDbNumber(food.fat, 0, 10000, 0),
+      carbs: safeDbNumber(food.carbs, 0, 10000, 0),
       is_active: true,
       metadata: food
     }));
@@ -1491,15 +1553,15 @@
     const rows = recipes.map(recipe => ({
       user_id: userId,
       legacy_id: String(recipe.id || crypto.randomUUID()),
-      name: recipe.name,
-      yield_amount: positiveNumber(recipe.recipeYield, 1),
-      yield_unit: recipe.recipeYieldUnit || recipe.servingUnit || null,
-      yield_unit_custom: recipe.recipeYieldUnitCustom || recipe.servingUnitCustom || null,
+      name: safeDbText(recipe.name, 120, "Receta"),
+      yield_amount: safeDbNumber(recipe.recipeYield, 0.01, 100000, 1),
+      yield_unit: safeDbText(recipe.recipeYieldUnit || recipe.servingUnit, 40) || null,
+      yield_unit_custom: safeDbText(recipe.recipeYieldUnitCustom || recipe.servingUnitCustom, 40) || null,
       serving_amount: numberOrNull(recipe.recipeServingAmount ?? recipe.servingAmount),
-      calories: nonNegative(recipe.calories),
-      protein: nonNegative(recipe.protein),
-      fat: nonNegative(recipe.fat),
-      carbs: nonNegative(recipe.carbs),
+      calories: safeDbNumber(recipe.calories, 0, 10000, 0),
+      protein: safeDbNumber(recipe.protein, 0, 10000, 0),
+      fat: safeDbNumber(recipe.fat, 0, 10000, 0),
+      carbs: safeDbNumber(recipe.carbs, 0, 10000, 0),
       metadata: recipe
     }));
 
@@ -1520,13 +1582,13 @@
           recipe_id: recipeId,
           food_id: foodMap.get(localFoodId) || null,
           position,
-          ingredient_name: ingredient.name || "Ingrediente",
-          quantity: positiveNumber(ingredient.amount, 1),
-          quantity_unit: ingredient.unit || null,
-          calories: nonNegative(ingredient.calories),
-          protein: nonNegative(ingredient.protein),
-          fat: nonNegative(ingredient.fat),
-          carbs: nonNegative(ingredient.carbs),
+          ingredient_name: safeDbText(ingredient.name, 120, "Ingrediente"),
+          quantity: safeDbNumber(ingredient.amount, 0.01, 100000, 1),
+          quantity_unit: safeDbText(ingredient.unit, 40) || null,
+          calories: safeDbNumber(ingredient.calories, 0, 10000, 0),
+          protein: safeDbNumber(ingredient.protein, 0, 10000, 0),
+          fat: safeDbNumber(ingredient.fat, 0, 10000, 0),
+          carbs: safeDbNumber(ingredient.carbs, 0, 10000, 0),
           metadata: ingredient
         });
       });
@@ -1545,19 +1607,19 @@
           user_id: userId,
           legacy_id: String(entry.id || crypto.randomUUID()),
           entry_date: date,
-          meal: entry.meal || "extras",
-          name: entry.name || "Registro",
-          kind: entry.kind || "food",
-          serving_text: entry.serving || null,
+          meal: safeMeal(entry.meal),
+          name: safeDbText(entry.name, 120, "Registro"),
+          kind: safeKind(entry.kind),
+          serving_text: safeDbText(entry.serving, 120) || null,
           serving_amount: numberOrNull(entry.servingAmount),
-          serving_unit: entry.servingUnit || null,
-          serving_unit_custom: entry.servingUnitCustom || null,
-          quantity: positiveNumber(entry.quantity, 1),
-          quantity_unit: entry.quantityUnit || null,
-          calories: nonNegative(entry.calories),
-          protein: nonNegative(entry.protein),
-          fat: nonNegative(entry.fat),
-          carbs: nonNegative(entry.carbs),
+          serving_unit: safeDbText(entry.servingUnit, 40) || null,
+          serving_unit_custom: safeDbText(entry.servingUnitCustom, 40) || null,
+          quantity: safeDbNumber(entry.quantity, 0.01, 100000, 1),
+          quantity_unit: safeDbText(entry.quantityUnit, 40) || null,
+          calories: safeDbNumber(entry.calories, 0, 10000, 0),
+          protein: safeDbNumber(entry.protein, 0, 10000, 0),
+          fat: safeDbNumber(entry.fat, 0, 10000, 0),
+          carbs: safeDbNumber(entry.carbs, 0, 10000, 0),
           source_food_id: foodMap.get(sourceId) || null,
           source_recipe_id: recipeMap.get(sourceId) || null,
           metadata: entry
@@ -1580,7 +1642,7 @@
 
     for (const batch of chunks(staleIds, BATCH_SIZE)) {
       throwIfError(
-        await getClient().from(table).delete().in("id", batch),
+        await getClient().from(checkedTable(table)).delete().in("id", batch),
         `No se pudieron borrar registros anteriores de ${table}`
       );
     }
@@ -1588,7 +1650,7 @@
     const resultMap = new Map();
     for (const batch of chunks(rows, BATCH_SIZE)) {
       const saved = throwIfError(
-        await getClient().from(table).upsert(batch, { onConflict: conflict }).select("id,legacy_id"),
+        await getClient().from(checkedTable(table)).upsert(batch, { onConflict: conflict }).select("id,legacy_id"),
         `No se pudo guardar ${table}`
       ) || [];
       saved.forEach(row => resultMap.set(String(row.legacy_id), row.id));
@@ -1598,7 +1660,7 @@
 
   async function insertChunks(table, rows, context) {
     for (const batch of chunks(rows, BATCH_SIZE)) {
-      throwIfError(await getClient().from(table).insert(batch), context);
+      throwIfError(await getClient().from(checkedTable(table)).insert(batch), context);
     }
   }
 

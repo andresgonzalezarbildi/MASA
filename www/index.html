@@ -41,8 +41,8 @@
 <span>Continuar con Google</span>
 </button>
 <div class="auth-divider"><span>o usar correo</span></div>
-<label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email" name="email" required="" spellcheck="false" type="email"/></label>
-<label><span>Contraseña</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="password" required="" type="password"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
+<label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email" name="email" required="" spellcheck="false" type="email" maxlength="254"/></label>
+<label><span>Contraseña</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="password" required="" type="password" maxlength="128"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <button class="primary-action" type="submit">Entrar</button>
 <button class="text-action auth-forgot" id="forgot-password" type="button">Olvidé mi contraseña</button>
 </form>
@@ -53,12 +53,12 @@
 </button>
 <div class="auth-divider"><span>o crearla con correo</span></div>
 <label><span>Nombre <small>opcional</small></span><input autocomplete="name" maxlength="60" name="name" type="text"/></label>
-<label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email" name="email" required="" spellcheck="false" type="email"/></label>
-<label><span>Contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="password" required="" type="password"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
+<label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email" name="email" required="" spellcheck="false" type="email" maxlength="254"/></label>
+<label><span>Contraseña</span><div class="password-field"><input autocomplete="new-password" name="password" required="" type="password" maxlength="128" minlength="10"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <button class="primary-action" type="submit">Crear cuenta</button>
 </form>
 <form class="auth-form" hidden="" id="auth-recovery-form">
-<label><span>Nueva contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="password" required="" type="password"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
+<label><span>Nueva contraseña</span><div class="password-field"><input autocomplete="new-password" name="password" required="" type="password" maxlength="128" minlength="10"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <button class="primary-action" type="submit">Guardar contraseña</button>
 </form>
 <p aria-live="polite" class="auth-message" id="auth-message"></p>
@@ -132,7 +132,7 @@
 <div class="recorded-weight-actions"><button id="edit-today-weight" type="button">Editar</button></div>
 </div>
 <form id="quick-weight-form">
-<label class="weight-entry"><input id="quick-weight" inputmode="decimal" max="400" min="20" name="weight" placeholder="73,8" required="" step="0.1" type="number"/><span>kg</span></label>
+<label class="weight-entry"><input id="quick-weight" name="weight" placeholder="73,8" required="" step="0.1" type="number" min="20" max="400" inputmode="decimal"/><span>kg</span></label>
 <button class="weight-submit" type="submit">Guardar peso</button>
 </form>
 <p class="feedback" id="weight-feedback" role="status"></p>
@@ -435,11 +435,11 @@
 <div class="form-grid base-data-grid">
 <label><span>Fecha de nacimiento</span><div class="date-control"><input autocomplete="bday" class="date-input" inputmode="numeric" maxlength="10" name="birthDate" placeholder="dd/mm/aaaa" required="" type="text"/><button aria-label="Elegir fecha de nacimiento" class="calendar-trigger" data-calendar-for="birthDate" type="button">▦</button><input aria-hidden="true" class="native-date-picker" data-native-date="birthDate" tabindex="-1" type="date"/></div></label>
 <label><span>Sexo usado por la fórmula</span><select name="sex" required=""><option value="male">Masculino</option><option value="female">Femenino</option></select></label>
-<label><span>Altura</span><div class="unit-input"><input inputmode="numeric" max="230" min="120" name="heightCm" required="" step="1" type="number"/><i>cm</i></div></label>
-<label><span>Peso actual</span><div class="unit-input"><input inputmode="decimal" max="400" min="20" name="currentWeight" required="" step="0.1" type="number"/><i>kg</i></div><small>Se registra automáticamente con la fecha de hoy.</small></label>
+<label><span>Altura</span><div class="unit-input"><input name="heightCm" required="" step="1" type="number" min="120" max="230" inputmode="decimal"/><i>cm</i></div></label>
+<label><span>Peso actual</span><div class="unit-input"><input name="currentWeight" required="" step="0.1" type="number" min="20" max="400" inputmode="decimal"/><i>kg</i></div><small>Se registra automáticamente con la fecha de hoy.</small></label>
 <label>
 <span>Grasa corporal <small>opcional</small> <button aria-label="Información sobre grasa corporal" class="help-dot inline" data-tooltip="Dejala vacía si no tenés una medición razonable. Solo es necesaria para Cunningham, FFMI o un objetivo de porcentaje de grasa." type="button">?</button></span>
-<div class="unit-input"><input inputmode="decimal" max="60" min="2" name="bodyFat" placeholder="No lo sé" step="0.1" type="number"/><i>%</i></div>
+<div class="unit-input"><input name="bodyFat" placeholder="No lo sé" step="0.1" type="number" min="1" max="75" inputmode="decimal"/><i>%</i></div>
 </label>
 </div>
 </section>
@@ -468,11 +468,11 @@
 <div class="form-grid">
 <label><span>Tipo de objetivo</span><select name="goalType"><option value="loss">Bajar</option><option value="maintain">Mantener</option><option value="gain">Subir</option></select></label>
 <label><span>Medir objetivo por</span><select name="goalMetric"><option value="weight">Peso corporal</option><option value="bodyFat">Porcentaje de grasa</option></select></label>
-<label id="goal-weight-field"><span>Peso objetivo</span><div class="unit-input"><input inputmode="decimal" max="400" min="20" name="goalWeight" step="0.1" type="number"/><i>kg</i></div></label>
-<label hidden="" id="goal-bodyfat-field"><span>Grasa objetivo</span><div class="unit-input"><input inputmode="decimal" max="50" min="3" name="goalBodyFat" step="0.1" type="number"/><i>%</i></div></label>
+<label id="goal-weight-field"><span>Peso objetivo</span><div class="unit-input"><input name="goalWeight" step="0.1" type="number" min="20" max="400" inputmode="decimal"/><i>kg</i></div></label>
+<label hidden="" id="goal-bodyfat-field"><span>Grasa objetivo</span><div class="unit-input"><input name="goalBodyFat" step="0.1" type="number" min="1" max="75" inputmode="decimal"/><i>%</i></div></label>
 <label><span>Fecha objetivo</span><div class="date-control"><input autocomplete="off" class="date-input" inputmode="numeric" maxlength="10" name="goalDate" placeholder="dd/mm/aaaa" type="text"/><button aria-label="Elegir fecha objetivo" class="calendar-trigger" data-calendar-for="goalDate" type="button">▦</button><input aria-hidden="true" class="native-date-picker" data-native-date="goalDate" tabindex="-1" type="date"/></div><small>Si escribís solo día y mes, se completa el año actual.</small></label>
 <label><span>Ritmo semanal <button aria-label="Información sobre ritmo semanal" class="help-dot inline" data-tooltip="En automático se usa la fecha si es razonable. Como referencia, la app marca 0,5–1% semanal al bajar y 0,25–0,5% al subir." type="button">?</button></span><select name="rateMode"><option value="auto">Automático</option><option value="manual">Manual</option></select></label>
-<label hidden="" id="manual-rate-field"><span>Ritmo elegido</span><div class="unit-input"><input inputmode="decimal" max="2" min="0" name="weeklyRatePct" step="0.05" type="number"/><i>%</i></div></label>
+<label hidden="" id="manual-rate-field"><span>Ritmo elegido</span><div class="unit-input"><input name="weeklyRatePct" step="0.05" type="number" min="0" max="2" inputmode="decimal"/><i>%</i></div></label>
 </div>
 <div class="explanation-box" id="goal-explanation"></div>
 </section>
@@ -485,9 +485,9 @@
 <label class="choice-card"><input name="macroMode" type="radio" value="custom"/><span><b>Personalizado</b><small>Definí manualmente el porcentaje de cada macronutriente.</small></span></label>
 </fieldset>
 <div class="form-grid manual-macro-grid percent-macro-grid" hidden="" id="custom-macro-fields">
-<label><span>Proteína <button aria-label="Información sobre proteína personalizada" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de proteína. Cada gramo aporta 4 kcal." type="button">?</button></span><div class="unit-input"><input inputmode="numeric" max="70" min="5" name="proteinPct" step="1" type="number"/><i>%</i></div></label>
-<label><span>Grasas <button aria-label="Información sobre grasas personalizadas" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de grasas. Cada gramo aporta 9 kcal." type="button">?</button></span><div class="unit-input"><input inputmode="numeric" max="70" min="10" name="fatPct" step="1" type="number"/><i>%</i></div></label>
-<label><span>Carbohidratos <button aria-label="Información sobre carbohidratos personalizados" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de carbohidratos. Cada gramo aporta 4 kcal." type="button">?</button></span><div class="unit-input"><input inputmode="numeric" max="80" min="5" name="carbPct" step="1" type="number"/><i>%</i></div></label>
+<label><span>Proteína <button aria-label="Información sobre proteína personalizada" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de proteína. Cada gramo aporta 4 kcal." type="button">?</button></span><div class="unit-input"><input name="proteinPct" step="1" type="number" min="5" max="70" inputmode="decimal"/><i>%</i></div></label>
+<label><span>Grasas <button aria-label="Información sobre grasas personalizadas" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de grasas. Cada gramo aporta 9 kcal." type="button">?</button></span><div class="unit-input"><input name="fatPct" step="1" type="number" min="10" max="70" inputmode="decimal"/><i>%</i></div></label>
+<label><span>Carbohidratos <button aria-label="Información sobre carbohidratos personalizados" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de carbohidratos. Cada gramo aporta 4 kcal." type="button">?</button></span><div class="unit-input"><input name="carbPct" step="1" type="number" min="5" max="80" inputmode="decimal"/><i>%</i></div></label>
 </div>
 <div class="macro-sum-line" hidden="" id="macro-sum-line"><span>Distribución total</span><b id="macro-percent-sum">100%</b><small id="macro-mode-label">atlético</small></div>
 <div class="explanation-box" id="macro-explanation"></div>
@@ -537,9 +537,9 @@
 <div class="account-password-manager" hidden="" id="account-password-manager">
 <p class="account-provider-note" hidden id="account-provider-note"></p>
 <form class="account-password-form" id="account-password-form">
-<label><span>Contraseña actual</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="currentPassword" required="" type="password"/><button aria-label="Mostrar contraseña actual" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
-<label><span>Nueva contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="newPassword" required="" type="password"/><button aria-label="Mostrar nueva contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
-<label><span>Repetir nueva contraseña</span><div class="password-field"><input autocomplete="new-password" minlength="8" name="confirmPassword" required="" type="password"/><button aria-label="Mostrar contraseña repetida" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
+<label><span>Contraseña actual</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="currentPassword" required="" type="password" maxlength="128"/><button aria-label="Mostrar contraseña actual" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
+<label><span>Nueva contraseña</span><div class="password-field"><input autocomplete="new-password" name="newPassword" required="" type="password" maxlength="128" minlength="10"/><button aria-label="Mostrar nueva contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
+<label><span>Repetir nueva contraseña</span><div class="password-field"><input autocomplete="new-password" name="confirmPassword" required="" type="password" maxlength="128" minlength="10"/><button aria-label="Mostrar contraseña repetida" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
 <div class="account-security-actions"><button class="primary-action" type="submit">Cambiar contraseña</button></div>
 </form>
 <p class="feedback" id="account-security-feedback" role="status"></p>
@@ -601,7 +601,7 @@
 </div>
 <p class="food-add-feedback" hidden id="food-add-feedback" role="status"></p>
 <div class="food-search-row">
-<label class="food-search food-search-always"><span>Buscar alimentos o recetas</span><input autocomplete="off" id="food-search-input" placeholder="Ej.: arroz, huevo, café..." type="search"/></label>
+<label class="food-search food-search-always"><span>Buscar alimentos o recetas</span><input id="food-search-input" placeholder="Ej.: arroz, huevo, café..." type="search" maxlength="120" autocomplete="off"/></label>
 <button class="primary-action food-scan-action" id="scan-barcode-food" type="button">Escanear código</button>
 </div>
 <div class="food-library-actions food-global-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button></div>
@@ -631,8 +631,8 @@
 </section>
 <section class="food-mode" hidden="" id="food-mode-quick">
 <form class="compact-form" id="quick-calorie-form">
-<label><span>Descripción</span><input name="name" placeholder="Ej.: cena fuera" required="" type="text"/></label>
-<label><span>Calorías</span><div class="unit-input"><input max="10000" min="1" name="calories" required="" step="1" type="number"/><i>kcal</i></div></label>
+<label><span>Descripción</span><input name="name" placeholder="Ej.: cena fuera" required="" type="text" maxlength="120"/></label>
+<label><span>Calorías</span><div class="unit-input"><input name="calories" required="" step="1" type="number" min="1" max="10000" inputmode="decimal"/><i>kcal</i></div></label>
 <button class="primary-action" type="submit">Agregar</button>
 </form>
 </section>
@@ -646,7 +646,7 @@
 <div class="barcode-camera"><video autoplay muted playsinline id="barcode-video"></video><div aria-hidden="true" class="barcode-guide"></div></div>
 <p class="barcode-status" id="barcode-status" role="status">Preparando cámara…</p>
 <div class="barcode-tools"><button aria-pressed="false" class="secondary-action" hidden id="barcode-torch" type="button">Linterna</button></div>
-<form class="barcode-manual-form" id="barcode-manual-form"><label><span>Ingresar código manualmente</span><input autocomplete="off" inputmode="numeric" maxlength="14" name="barcode" placeholder="Ej.: 3017620422003" required type="text"/></label><button class="primary-action" type="submit">Buscar código</button></form>
+<form class="barcode-manual-form" id="barcode-manual-form"><label><span>Ingresar código manualmente</span><input autocomplete="off" name="barcode" placeholder="Ej.: 3017620422003" required type="text" minlength="8" maxlength="14" pattern="[0-9]{8,14}" inputmode="numeric"/></label><button class="primary-action" type="submit">Buscar código</button></form>
 <p class="data-attribution">Datos de productos por <a href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts</a>.</p>
 </div></div>
 <div aria-labelledby="food-editor-title" aria-modal="true" class="modal compact-modal" hidden="" id="food-editor-modal" role="dialog">
@@ -661,12 +661,12 @@
 </div>
 <form class="form-grid editor-grid" id="food-editor-form">
 <div class="food-editor-scan-row full-field"><button class="secondary-action" id="scan-barcode-editor" type="button"><span aria-hidden="true">▥</span> Escanear código de barras</button></div>
-<label class="full-field"><span>Nombre</span><input name="name" required="" type="text"/></label>
-<input name="barcode" type="hidden"/>
-<label><span>Marca <small>(opcional)</small></span><input name="brand" type="text"/></label>
+<label class="full-field"><span>Nombre</span><input name="name" required="" type="text" maxlength="120"/></label>
+<input name="barcode" type="hidden" minlength="8" maxlength="14" pattern="[0-9]{8,14}" inputmode="numeric"/>
+<label><span>Marca <small>(opcional)</small></span><input name="brand" type="text" maxlength="120"/></label>
 <p class="explanation-box full-field" hidden id="food-editor-source-note"></p>
-<label><span>Calorías</span><div class="unit-input"><input min="0" name="calories" required="" step="1" type="number"/><i>kcal</i></div></label>
-<label><span>Cantidad base</span><input inputmode="decimal" min="0.01" name="servingAmount" required="" step="any" type="number" value="1"/></label>
+<label><span>Calorías</span><div class="unit-input"><input name="calories" required="" step="1" type="number" min="0" max="10000" inputmode="decimal"/><i>kcal</i></div></label>
+<label><span>Cantidad base</span><input name="servingAmount" required="" step="any" type="number" value="1" min="0.01" max="100000" inputmode="decimal"/></label>
 <label><span>Unidad</span><select name="servingUnit" required>
 <option value="g">gramos (g)</option>
 <option value="kg">kilogramos (kg)</option>
@@ -682,11 +682,11 @@
 <option value="package">paquete</option>
 <option value="custom">otra unidad…</option>
 </select></label>
-<label class="full-field custom-unit-field" hidden><span>Nombre de la unidad</span><input name="servingUnitCustom" placeholder="Ej.: scoop, barra, vaso..." type="text"/></label>
+<label class="full-field custom-unit-field" hidden><span>Nombre de la unidad</span><input name="servingUnitCustom" placeholder="Ej.: scoop, barra, vaso..." type="text" maxlength="40"/></label>
 <p class="field-note full-field">Las calorías y los macros ingresados corresponden a esa cantidad base.</p>
-<label><span>Proteína</span><div class="unit-input"><input min="0" name="protein" step="0.1" type="number"/><i>g</i></div></label>
-<label><span>Grasas</span><div class="unit-input"><input min="0" name="fat" step="0.1" type="number"/><i>g</i></div></label>
-<label><span>Carbohidratos</span><div class="unit-input"><input min="0" name="carbs" step="0.1" type="number"/><i>g</i></div></label>
+<label><span>Proteína</span><div class="unit-input"><input name="protein" step="0.1" type="number" min="0" max="10000" inputmode="decimal"/><i>g</i></div></label>
+<label><span>Grasas</span><div class="unit-input"><input name="fat" step="0.1" type="number" min="0" max="10000" inputmode="decimal"/><i>g</i></div></label>
+<label><span>Carbohidratos</span><div class="unit-input"><input name="carbs" step="0.1" type="number" min="0" max="10000" inputmode="decimal"/><i>g</i></div></label>
 <p class="form-error full-field" hidden id="food-editor-error"></p>
 <div class="profile-actions full-field action-pair"><button class="secondary-action" data-close-food-editor="" type="button">Cancelar</button><button class="primary-action" id="save-food-editor" type="submit">Guardar alimento</button></div>
 </form>
@@ -701,8 +701,8 @@
 </div>
 <form id="recipe-form">
 <div class="form-grid editor-grid recipe-meta-grid">
-<label class="full-field"><span>Nombre de la receta</span><input name="name" required="" type="text"/></label>
-<label><span>La receta rinde</span><input inputmode="decimal" min="0.01" name="yield" required="" step="any" type="number" value="1"/></label>
+<label class="full-field"><span>Nombre de la receta</span><input name="name" required="" type="text" maxlength="120"/></label>
+<label><span>La receta rinde</span><input name="yield" required="" step="any" type="number" value="1" min="0.01" max="100000" inputmode="decimal"/></label>
 <label><span>Unidad del rendimiento</span><select name="yieldUnit" required>
 <option value="serving">porciones</option>
 <option value="g">gramos (g)</option>
@@ -718,13 +718,13 @@
 <option value="package">paquetes</option>
 <option value="custom">otra unidad…</option>
 </select></label>
-<label><span>Cantidad base al registrar</span><input inputmode="decimal" min="0.01" name="servingAmount" required="" step="any" type="number" value="1"/></label>
-<label class="full-field custom-recipe-unit-field" hidden><span>Nombre de la unidad</span><input name="yieldUnitCustom" placeholder="Ej.: bowl, bandeja..." type="text"/></label>
+<label><span>Cantidad base al registrar</span><input name="servingAmount" required="" step="any" type="number" value="1" min="0.01" max="100000" inputmode="decimal"/></label>
+<label class="full-field custom-recipe-unit-field" hidden><span>Nombre de la unidad</span><input name="yieldUnitCustom" placeholder="Ej.: bowl, bandeja..." type="text" maxlength="40"/></label>
 <p class="field-note full-field">Ejemplo: si la receta rinde 800 g, podés dejar 100 g como cantidad base para registrarla.</p>
 </div>
 <div class="recipe-builder">
 <section class="recipe-search-panel">
-<label class="food-search"><span>Buscar ingrediente</span><input id="recipe-ingredient-search" placeholder="Ej.: harina, huevo, leche..." type="search"/></label>
+<label class="food-search"><span>Buscar ingrediente</span><input id="recipe-ingredient-search" placeholder="Ej.: harina, huevo, leche..." type="search" maxlength="120" autocomplete="off"/></label>
 <div class="recipe-search-actions"><button class="secondary-action" id="scan-barcode-recipe" type="button">Escanear código</button><button class="secondary-action" id="create-missing-ingredient" type="button">Crear alimento nuevo</button></div>
 <p class="data-attribution recipe-data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a>.</p>
 <div class="food-results recipe-ingredient-results" id="recipe-ingredient-results"></div>
@@ -761,7 +761,7 @@
 <div class="library-section-title"><div><h3>Catálogo personalizado</h3><span id="library-catalog-count">0</span></div><button aria-expanded="false" class="secondary-action" id="library-search-catalog" type="button">Buscar alimento de la base</button></div>
 <p class="mode-help">Alimentos generales que editaste u ocultaste. Podés restaurarlos cuando quieras.</p>
 <div class="library-catalog-search-panel" hidden id="library-catalog-search-panel">
-<label class="food-search"><span>Buscar cualquier alimento para editar</span><input autocomplete="off" id="library-catalog-search-input" placeholder="Ej.: arroz, huevo, yogur..." type="search"/></label>
+<label class="food-search"><span>Buscar cualquier alimento para editar</span><input id="library-catalog-search-input" placeholder="Ej.: arroz, huevo, yogur..." type="search" maxlength="120" autocomplete="off"/></label>
 <div class="library-list library-catalog-search-results" id="library-catalog-search-results"></div>
 </div>
 <div class="library-list" id="library-catalog-list"></div>
@@ -776,7 +776,7 @@
 <h2 id="daily-checkin-title">¿Te pesaste hoy?</h2>
 <p>Podés registrarlo ahora o saltear este paso. MASA no vuelve a preguntarlo hasta mañana.</p>
 <form id="daily-checkin-form">
-<label class="weight-entry"><input inputmode="decimal" max="400" min="20" name="weight" placeholder="73,8" step="0.1" type="number"/><span>kg</span></label>
+<label class="weight-entry"><input name="weight" placeholder="73,8" step="0.1" type="number" min="20" max="400" inputmode="decimal"/><span>kg</span></label>
 <div><button class="secondary-action" id="skip-daily-weight" type="button">Hoy no</button><button class="primary-action" type="submit">Registrar y continuar</button></div>
 </form>
 </div>
