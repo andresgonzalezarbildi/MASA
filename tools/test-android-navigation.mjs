@@ -28,6 +28,9 @@ assert.match(app, /function bindLegalNavigation\(\)/);
 assert.match(activity, /data-close-legal/);
 assert.match(legalPage, /window\.location\.replace/);
 assert.match(legalPage, /window\.MASAHandleAndroidBack/);
-assert.match(styles, /html\.native-runtime \.site-header[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+assert.doesNotMatch(styles, /html\.native-runtime \.site-header[\s\S]{0,500}grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+assert.match(styles, /html\.native-runtime \.footer-actions[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+assert.match(index, />Privacidad y condiciones<\/a>/);
+assert.doesNotMatch(index, />Privacidad ↗<\/a>[\s\S]*>Condiciones ↗<\/a>/);
 
 console.log("Android navigation, legal documents and diary source editing tests: OK");

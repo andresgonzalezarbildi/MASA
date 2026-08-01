@@ -3897,7 +3897,7 @@ html.soft-keyboard-focus [contenteditable="true"] {
   }
 }
 
-/* --- MASA v31.0.6: documentos legales integrados, zoom controlado y navegación Android 2×2 --- */
+/* --- MASA v31.0.7: documentos legales integrados y navegación inferior Android --- */
 html {
   max-width: 100%;
   -webkit-text-size-adjust: 100%;
@@ -4001,55 +4001,35 @@ html {
   .legal-modal-content .legal-document h2 { margin-bottom: 11px; }
 }
 
-/* En la APK, los cuatro accesos principales pasan a una cuadrícula 2×2.
-   Cada uno conserva un área táctil amplia y una separación real. */
+/* En Android, el menú superior conserva su diseño compacto original.
+   La separación adicional se aplica solamente a los accesos del pie. */
 @media (max-width: 590px) {
-  html.native-runtime .site-header {
-    display: grid !important;
+  html.native-runtime .footer-actions {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
-    gap: 8px;
-    min-height: 0;
-    padding-top: max(8px, var(--app-safe-top));
-    padding-bottom: 9px;
-  }
-  html.native-runtime .site-header > .brand,
-  html.native-runtime .site-header .app-nav button,
-  html.native-runtime .site-header .settings-trigger {
+    gap: 9px;
     width: 100%;
-    min-width: 0;
-    min-height: 44px;
-    margin: 0;
+  }
+  html.native-runtime .footer-actions > * {
+    display: flex;
+    align-items: center;
     justify-content: center;
+    min-height: 42px;
+    padding: 7px 8px;
     border: 1px solid var(--ink);
     background: var(--paper);
+    color: var(--ink);
+    font-size: 8px;
+    font-weight: 900;
+    line-height: 1.15;
+    text-align: center;
+    text-decoration: none;
     box-shadow: 3px 3px 0 rgba(23,26,33,.18);
   }
-  html.native-runtime .site-header > .brand { order: 1; gap: 8px; padding: 4px 8px; }
-  html.native-runtime .site-header .app-nav { display: contents; }
-  html.native-runtime .site-header .app-nav .primary-view { order: 2; }
-  html.native-runtime .site-header .app-nav .secondary-view { order: 3; }
-  html.native-runtime .site-header .header-actions { display: contents; }
-  html.native-runtime .site-header .settings-trigger { order: 4; }
-  html.native-runtime .site-header .brand-mark {
-    width: 42px;
-    height: 30px;
-    box-shadow: none;
+  html.native-runtime .footer-actions > :last-child {
+    grid-column: 1 / -1;
   }
-  html.native-runtime .site-header .brand-mark b { font-size: 18px; }
-  html.native-runtime .site-header .brand-mark i,
-  html.native-runtime .site-header .brand-mark strong { font-size: 8px; }
-  html.native-runtime .site-header .brand-name { display: block; }
-  html.native-runtime .site-header .brand-name b { font-size: 13px; letter-spacing: .1em; }
-  html.native-runtime .site-header .app-nav button {
-    padding: 0 10px;
-    font-size: 10px;
+  html.native-runtime .footer-about-button {
+    border: 1px solid var(--ink);
   }
-  html.native-runtime .site-header .app-nav button.active {
-    background: var(--night);
-    color: var(--acid);
-    box-shadow: 3px 3px 0 var(--coral);
-  }
-  html.native-runtime .site-header .settings-trigger { box-shadow: 3px 3px 0 var(--violet); }
-  html.native-runtime .site-header .settings-trigger b { font-size: 10px; }
 }

@@ -1,7 +1,7 @@
 {
   "name": "masa",
   "private": true,
-  "version": "31.0.6",
+  "version": "31.0.7",
   "type": "module",
   "scripts": {
     "mobile:prepare": "node tools/prepare-mobile.mjs",
