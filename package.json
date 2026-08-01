@@ -1,7 +1,7 @@
 {
   "name": "masa",
   "private": true,
-  "version": "30.6.0",
+  "version": "31.0.2",
   "type": "module",
   "scripts": {
     "mobile:prepare": "node tools/prepare-mobile.mjs",
@@ -13,7 +13,8 @@
     "test:auth": "node tools/test-auth-flow.mjs",
     "test:mobile-html": "node tools/test-mobile-html.mjs",
     "test": "npm run test:auth && npm run test:mobile-html",
-    "supabase:auth-config": "node tools/configure-supabase-auth.mjs"
+    "supabase:auth-config": "node tools/configure-supabase-auth.mjs",
+    "test:labels": "node tools/test-nutrition-label-parser.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.4.2",

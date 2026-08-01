@@ -22,6 +22,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         SplashScreen.installSplashScreen(this);
         registerPlugin(MasaAuthPlugin.class);
+        registerPlugin(MasaNutritionLabelPlugin.class);
         super.onCreate(savedInstanceState);
         initialAuthUrl = getIntent() != null && getIntent().getDataString() != null
             ? getIntent().getDataString()

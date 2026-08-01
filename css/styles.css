@@ -3709,3 +3709,89 @@ body.legal-page { min-height: 100vh; }
     margin-top: 4px;
   }
 }
+
+/* --- MASA v31: equivalencias y lectura de rótulos --- */
+.food-scan-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+#food-modal .food-scan-actions .food-scan-action {
+  min-width: 122px;
+}
+.food-editor-scan-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.equivalence-editor {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 2px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  background: rgba(141,124,255,.06);
+}
+.equivalence-editor-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.equivalence-editor-head h3 { margin: 0; font-size: 16px; }
+.equivalence-editor-head p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.equivalence-editor-head button { flex: 0 0 auto; min-height: 36px; }
+.equivalence-list { display: grid; gap: 8px; }
+.equivalence-empty { margin: 0; padding: 9px; color: var(--muted); border: 1px dashed var(--line); font-size: 11px; }
+.equivalence-row {
+  display: grid;
+  grid-template-columns: 90px minmax(130px, 1fr) minmax(110px, .8fr) auto minmax(145px, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 9px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.equivalence-row label { display: grid; gap: 4px; min-width: 0; }
+.equivalence-row label > span { font-size: 8px; font-weight: 900; text-transform: uppercase; }
+.equivalence-row input,
+.equivalence-row select { width: 100%; min-width: 0; min-height: 38px; }
+.equivalence-equals { align-self: center; padding-top: 15px; font: 900 20px/1 var(--font-mono); }
+.equivalence-base-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; }
+.equivalence-base-input input { border-right: 0; }
+.equivalence-base-input i {
+  min-width: 48px;
+  display: grid;
+  place-items: center;
+  padding: 0 8px;
+  border: 1px solid var(--ink);
+  background: var(--night);
+  color: var(--paper);
+  font: normal 800 10px/1.1 var(--font-mono);
+  text-align: center;
+}
+#recipe-modal .recipe-search-actions { gap: 7px; flex-wrap: wrap; }
+#recipe-modal .recipe-search-actions button { flex: 1 1 150px; }
+
+@media (max-width: 760px) {
+  .equivalence-editor-head { display: grid; }
+  .equivalence-editor-head button { width: 100%; }
+  .equivalence-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+  .equivalence-custom-unit { grid-column: 1 / -1; }
+  .equivalence-equals { display: none; }
+  .equivalence-row > label:nth-of-type(4) { grid-column: 1 / -1; }
+  .equivalence-row .danger-text-action { justify-self: end; }
+  #recipe-modal .recipe-search-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 470px) {
+  #food-modal .food-search-row { grid-template-columns: minmax(0, 1fr) 126px; }
+  #food-modal .food-scan-actions { gap: 4px; }
+  #food-modal .food-scan-actions .food-scan-action { min-width: 0; padding-inline: 3px; }
+  .food-editor-scan-row { grid-template-columns: 1fr; }
+  .equivalence-editor { padding: 9px; }
+  .equivalence-row { grid-template-columns: 1fr; }
+  .equivalence-row > label:nth-of-type(4) { grid-column: auto; }
+  .equivalence-row .danger-text-action { width: 100%; justify-self: stretch; }
+  #recipe-modal .recipe-search-actions { grid-template-columns: 1fr; }
+}

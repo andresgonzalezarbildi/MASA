@@ -49,6 +49,10 @@
   let recipeEditorReturnTarget = "";
   let libraryReturnTarget = "";
   let foodEditorPrefill = null;
+  let foodEditorEquivalences = [];
+  let recipeEditorEquivalences = [];
+  let foodEditorRescanMode = "barcode";
+  let nutritionLabelScanBusy = false;
   let barcodeReader = null;
   let barcodeScannerControls = null;
   let barcodeReturnTarget = "food";
@@ -381,6 +385,37 @@
     return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
   }
 
+  function normalizeEquivalence(item = {}) {
+    const amount = Math.max(0, toNumber(item.amount, 0));
+    const baseAmount = Math.max(0, toNumber(item.baseAmount, 0));
+    if (amount <= 0 || baseAmount <= 0) return null;
+    const rawUnit = String(item.unit || "unit").trim() || "unit";
+    const unit = ["g", "kg", "ml", "l", "unit", "serving", "cup", "tablespoon", "teaspoon", "plate", "slice", "package", "custom"].includes(rawUnit)
+      ? rawUnit
+      : canonicalEditableUnit(rawUnit);
+    const customUnit = String(item.customUnit || item.unitCustom || (unit === "custom" && rawUnit !== "custom" ? rawUnit : "")).trim();
+    if (unit === "custom" && !customUnit) return null;
+    return {
+      id: String(item.id || createId()),
+      amount,
+      unit,
+      customUnit,
+      baseAmount
+    };
+  }
+
+  function normalizeEquivalences(items = []) {
+    if (!Array.isArray(items)) return [];
+    const seen = new Set();
+    return items.map(normalizeEquivalence).filter(item => {
+      if (!item) return false;
+      const key = `${item.unit}:${normalizeHeader(item.customUnit)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 20);
+  }
+
   function normalizeRecipeIngredient(item = {}) {
     const name = String(item.name || "").trim();
     const amount = Math.max(0, toNumber(item.amount, 0));
@@ -395,6 +430,7 @@
       amount,
       unit: String(item.unit || "serving").trim() || "serving",
       serving: String(item.serving || "").trim(),
+      quantityFactor: Math.max(0, toNumber(item.quantityFactor, 0)),
       calories,
       protein: Math.max(0, toNumber(item.protein, 0)),
       fat: Math.max(0, toNumber(item.fat, 0)),
@@ -419,6 +455,7 @@
     if (item.servingUnit) result.servingUnit = String(item.servingUnit);
     if (item.servingUnitCustom) result.servingUnitCustom = String(item.servingUnitCustom).trim();
     if (item.serving) result.serving = String(item.serving).trim();
+    result.equivalences = normalizeEquivalences(item.equivalences);
     result.updatedAt = normalizeTimestamp(item.updatedAt) || new Date().toISOString();
     return result;
   }
@@ -585,6 +622,7 @@
       servingAmount,
       servingUnit,
       servingUnitCustom,
+      equivalences: normalizeEquivalences(item.equivalences),
       kind,
       ingredients,
       recipeYield: kind === "recipe" ? Math.max(0.01, toNumber(item.recipeYield, 1) || 1) : 1,
@@ -661,6 +699,7 @@
       servingAmount,
       servingUnit: unit,
       servingUnitCustom: customUnit,
+      equivalences: normalizeEquivalences(override.equivalences),
       userOverride: true
     };
   }
@@ -1591,6 +1630,421 @@
     }
   }
 
+  function normalizeNutritionLabelText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[|¦]/g, " ")
+      .replace(/[^a-z0-9.,%]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function nutritionLabelRows(result) {
+    const positioned = (Array.isArray(result?.lines) ? result.lines : [])
+      .map(line => {
+        const top = Number(line?.top);
+        const bottom = Number(line?.bottom);
+        const left = Number(line?.left);
+        const right = Number(line?.right);
+        const value = String(line?.text || "").trim();
+        if (!value || ![top, bottom, left, right].every(Number.isFinite)) return null;
+        const height = Math.max(1, bottom - top);
+        return { text: value, top, bottom, left, right, height, centerY: (top + bottom) / 2 };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.centerY - b.centerY || a.left - b.left);
+
+    const rows = [];
+    positioned.forEach(line => {
+      let bestRow = null;
+      let bestDistance = Infinity;
+      for (let index = Math.max(0, rows.length - 4); index < rows.length; index += 1) {
+        const row = rows[index];
+        const overlap = Math.max(0, Math.min(row.bottom, line.bottom) - Math.max(row.top, line.top));
+        const overlapRatio = overlap / Math.max(1, Math.min(row.height, line.height));
+        const distance = Math.abs(row.centerY - line.centerY);
+        const sameVisualRow = overlapRatio >= 0.28 || distance <= Math.max(row.height, line.height) * 0.62;
+        if (sameVisualRow && distance < bestDistance) {
+          bestRow = row;
+          bestDistance = distance;
+        }
+      }
+      if (!bestRow) {
+        rows.push({
+          lines: [line],
+          top: line.top,
+          bottom: line.bottom,
+          height: line.height,
+          centerY: line.centerY
+        });
+        return;
+      }
+      bestRow.lines.push(line);
+      bestRow.top = Math.min(bestRow.top, line.top);
+      bestRow.bottom = Math.max(bestRow.bottom, line.bottom);
+      bestRow.height = Math.max(1, bestRow.bottom - bestRow.top);
+      bestRow.centerY = bestRow.lines.reduce((sum, item) => sum + item.centerY, 0) / bestRow.lines.length;
+    });
+
+    return rows
+      .sort((a, b) => a.centerY - b.centerY)
+      .map(row => row.lines.sort((a, b) => a.left - b.left).map(line => line.text).join(" ").trim())
+      .filter(Boolean);
+  }
+
+  function nutritionLabelLines(result) {
+    const values = [];
+    const seen = new Set();
+    const append = value => {
+      const text = String(value || "").trim();
+      const key = normalizeNutritionLabelText(text);
+      if (!text || !key || seen.has(key)) return;
+      seen.add(key);
+      values.push(text);
+    };
+
+    nutritionLabelRows(result).forEach(append);
+    (Array.isArray(result?.lines) ? result.lines : []).forEach(line => append(line?.text));
+    String(result?.text || "").split(/\r?\n/).forEach(append);
+    return values;
+  }
+
+  function normalizeLabelNumber(value) {
+    let normalized = String(value || "").trim().replace(/\s/g, "").replace(",", ".");
+    if (/^[oO]\d/.test(normalized)) normalized = `0${normalized.slice(1)}`;
+    normalized = normalized.replace(/(\d)[oO](?=\d|$)/g, "$10");
+    return normalized;
+  }
+
+  function decimalFromLabel(value) {
+    const parsed = Number(normalizeLabelNumber(value));
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+
+  function measureFromLabelText(value) {
+    const normalized = normalizeNutritionLabelText(value);
+    const matches = [...normalized.matchAll(/(\d+(?:[.,]\d+)?)\s*(kg|kilogramos?|g|gr|gramos?|ml|mililitros?|l|litros?)\b/gi)];
+    if (!matches.length) return null;
+
+    const portionIndex = normalized.search(/porcion|racion|tamano de porcion|cantidad por porcion/);
+    let match = portionIndex >= 0 ? matches.find(candidate => (candidate.index || 0) >= portionIndex) : null;
+    if (!match && /(?:por|cada)\s*100\s*(?:g|ml)/.test(normalized)) {
+      match = matches.find(candidate => Math.abs(decimalFromLabel(candidate[1]) - 100) < 0.001) || null;
+    }
+    match ||= matches[0];
+
+    let amount = decimalFromLabel(match[1]);
+    let unit = normalizeHeader(match[2]);
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+    if (/^kg|kilogram/.test(unit)) { amount *= 1000; unit = "g"; }
+    else if (/^l$|litro/.test(unit)) { amount *= 1000; unit = "ml"; }
+    else if (/^ml|mililitro/.test(unit)) unit = "ml";
+    else unit = "g";
+    return { amount, unit };
+  }
+
+  function labelWindow(lines, index, labelPattern) {
+    const candidates = [
+      lines[index],
+      `${lines[index]} ${lines[index + 1] || ""}`,
+      `${lines[index]} ${lines[index + 1] || ""} ${lines[index + 2] || ""}`,
+      `${lines[index - 1] || ""} ${lines[index]}`
+    ];
+    return candidates.map(value => {
+      const normalized = normalizeNutritionLabelText(value);
+      const match = normalized.match(labelPattern);
+      return match ? normalized.slice((match.index || 0) + match[0].length).trim() : normalized;
+    });
+  }
+
+  function firstNonPercentNumber(value) {
+    const matches = [...String(value || "").matchAll(/(\d+(?:[.,]\d+)?)(?:\s*(%|kcal|cal|kj|g|gr|gramos?|mg))?/gi)];
+    for (const match of matches) {
+      if (String(match[2] || "").toLowerCase() === "%") continue;
+      const parsed = decimalFromLabel(match[1]);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return NaN;
+  }
+
+  function nutrientFromLabelLines(lines, labelPattern) {
+    for (let index = 0; index < lines.length; index += 1) {
+      const normalizedLine = normalizeNutritionLabelText(lines[index]);
+      labelPattern.lastIndex = 0;
+      if (!labelPattern.test(normalizedLine)) continue;
+      labelPattern.lastIndex = 0;
+      for (const tail of labelWindow(lines, index, labelPattern)) {
+        const gramMatch = tail.match(/(\d+(?:[.,]\d+)?)\s*(?:g|gr|gramos?)\b/i);
+        if (gramMatch) return decimalFromLabel(gramMatch[1]);
+        const number = firstNonPercentNumber(tail);
+        if (Number.isFinite(number)) return number;
+      }
+    }
+    return NaN;
+  }
+
+  function caloriesFromLabelLines(lines) {
+    const labelPattern = /calorias?|valor\s+energetico|energia|kcal/i;
+    for (let index = 0; index < lines.length; index += 1) {
+      const normalized = normalizeNutritionLabelText(lines[index]);
+      if (!labelPattern.test(normalized)) continue;
+      for (const tail of labelWindow(lines, index, labelPattern)) {
+        const kcalMatch = tail.match(/(\d+(?:[.,]\d+)?)\s*(?:kcal|cal)\b/i);
+        if (kcalMatch) return decimalFromLabel(kcalMatch[1]);
+      }
+      for (const tail of labelWindow(lines, index, labelPattern)) {
+        const kjMatch = tail.match(/(\d+(?:[.,]\d+)?)\s*kj\b/i);
+        const values = [...tail.matchAll(/(\d+(?:[.,]\d+)?)(?!\s*%)/g)].map(match => decimalFromLabel(match[1])).filter(Number.isFinite);
+        if (kjMatch && values.length >= 2) {
+          const kj = decimalFromLabel(kjMatch[1]);
+          const kcalCandidate = values.find(value => value !== kj && value > 0 && value < 1000);
+          if (Number.isFinite(kcalCandidate)) return kcalCandidate;
+        }
+        if (kjMatch) return decimalFromLabel(kjMatch[1]) / 4.184;
+        const number = firstNonPercentNumber(tail);
+        if (Number.isFinite(number)) return number;
+      }
+    }
+    return NaN;
+  }
+
+  function parseNutritionLabel(result) {
+    const lines = nutritionLabelLines(result);
+    const servingPattern = /porcion|racion|tamano\s+de\s+porcion|cantidad\s+por\s+porcion|(?:por|cada)\s*100\s*(?:g|ml)/;
+    let serving = null;
+    for (let index = 0; index < lines.length && !serving; index += 1) {
+      if (!servingPattern.test(normalizeNutritionLabelText(lines[index]))) continue;
+      serving = measureFromLabelText(`${lines[index]} ${lines[index + 1] || ""}`);
+    }
+
+    const values = {
+      servingAmount: serving?.amount || 100,
+      servingUnit: serving?.unit || "g",
+      calories: caloriesFromLabelLines(lines),
+      protein: nutrientFromLabelLines(lines, /prote[i1l]nas?|proteinas?|protein/i),
+      fat: nutrientFromLabelLines(lines, /grasas?\s*(?:total(?:es)?)?|lipidos?\s*(?:total(?:es)?)?/i),
+      carbs: nutrientFromLabelLines(lines, /carbohidratos?(?:\s+totales)?|hidratos?\s+de\s+carbono|carbohidrat/i),
+      servingDetected: Boolean(serving),
+      rawText: String(result?.text || lines.join("\n")).trim(),
+      lineCount: lines.length,
+      ocrMeta: {
+        rotation: Number(result?.rotation || 0),
+        pass: String(result?.pass || "original"),
+        score: Number(result?.score || 0),
+        width: Number(result?.imageWidth || 0),
+        height: Number(result?.imageHeight || 0)
+      }
+    };
+    values.found = [values.calories, values.protein, values.fat, values.carbs].filter(Number.isFinite).length;
+    return values;
+  }
+
+  function nutritionLabelNote(parsed) {
+    const found = [];
+    if (parsed.servingDetected) found.push("porción");
+    if (Number.isFinite(parsed.calories)) found.push("calorías");
+    if (Number.isFinite(parsed.protein)) found.push("proteínas");
+    if (Number.isFinite(parsed.fat)) found.push("grasas");
+    if (Number.isFinite(parsed.carbs)) found.push("carbohidratos");
+    const prefix = found.length ? `Se reconocieron ${found.join(", ")}.` : "No se reconocieron valores con suficiente claridad.";
+    const servingWarning = parsed.servingDetected ? "" : " No se detectó la porción y se dejó 100 g como base.";
+    return `${prefix}${servingWarning} Revisá todos los campos contra el envase antes de guardar.`;
+  }
+
+
+  function applyNutritionLabelToOpenEditor(parsed) {
+    const form = $("#food-editor-form");
+    if (Number.isFinite(parsed.calories)) form.elements.calories.value = roundEditorNumber(parsed.calories, 0);
+    if (Number.isFinite(parsed.protein)) form.elements.protein.value = roundEditorNumber(parsed.protein, 1);
+    if (Number.isFinite(parsed.fat)) form.elements.fat.value = roundEditorNumber(parsed.fat, 1);
+    if (Number.isFinite(parsed.carbs)) form.elements.carbs.value = roundEditorNumber(parsed.carbs, 1);
+    form.elements.servingAmount.value = roundEditorNumber(parsed.servingAmount, 2);
+    setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, parsed.servingUnit);
+    renderEquivalenceEditor("food");
+    const sourceNote = $("#food-editor-source-note");
+    sourceNote.hidden = false;
+    sourceNote.textContent = nutritionLabelNote(parsed);
+    sourceNote.classList.remove("success");
+    sourceNote.classList.add("warning");
+    foodEditorRescanMode = "label";
+    $("#rescan-food-editor").hidden = false;
+    $("#close-food-editor").hidden = true;
+  }
+
+  function selectNutritionLabelPhoto() {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.setAttribute("capture", "environment");
+      input.hidden = true;
+
+      let settled = false;
+      const onWindowFocus = () => {
+        window.setTimeout(() => {
+          if (!settled && !input.files?.length) finish(reject, new Error("Escaneo cancelado."));
+        }, 800);
+      };
+      const finish = (callback, value) => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener("focus", onWindowFocus);
+        input.remove();
+        callback(value);
+      };
+
+      input.addEventListener("change", () => {
+        const file = input.files?.[0];
+        if (!file) {
+          finish(reject, new Error("Escaneo cancelado."));
+          return;
+        }
+        finish(resolve, file);
+      }, { once: true });
+
+      input.addEventListener("cancel", () => {
+        finish(reject, new Error("Escaneo cancelado."));
+      }, { once: true });
+
+      window.addEventListener("focus", onWindowFocus);
+      document.body.appendChild(input);
+      input.click();
+    });
+  }
+
+  async function nutritionLabelPhotoToDataUrl(file) {
+    const maxSide = 2600;
+    let source;
+    let revokeUrl = "";
+
+    if (typeof createImageBitmap === "function") {
+      try {
+        source = await createImageBitmap(file, { imageOrientation: "from-image" });
+      } catch {
+        source = await createImageBitmap(file);
+      }
+    } else {
+      revokeUrl = URL.createObjectURL(file);
+      source = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("No se pudo abrir la imagen tomada."));
+        image.src = revokeUrl;
+      });
+    }
+
+    try {
+      const width = Number(source.width || source.naturalWidth || 0);
+      const height = Number(source.height || source.naturalHeight || 0);
+      if (!width || !height) throw new Error("La foto no tiene un tamaño válido.");
+
+      const scale = Math.min(1, maxSide / Math.max(width, height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(width * scale));
+      canvas.height = Math.max(1, Math.round(height * scale));
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("No se pudo preparar la foto para leerla.");
+      context.drawImage(source, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", 0.96);
+    } finally {
+      if (typeof source?.close === "function") source.close();
+      if (revokeUrl) URL.revokeObjectURL(revokeUrl);
+    }
+  }
+
+  async function scanNutritionLabel(target = "food") {
+    if (nutritionLabelScanBusy) return;
+    if (!window.MASA_NATIVE?.isNative?.() || typeof window.MASA_NATIVE.scanNutritionLabel !== "function") {
+      window.alert("La lectura automática de rótulos está disponible en la aplicación Android. En la web podés cargar los valores manualmente.");
+      return;
+    }
+    nutritionLabelScanBusy = true;
+    document.querySelectorAll("#scan-label-food, #scan-label-recipe, #scan-label-editor").forEach(button => { button.disabled = true; });
+    try {
+      const photo = await selectNutritionLabelPhoto();
+      const imageDataUrl = await nutritionLabelPhotoToDataUrl(photo);
+      const result = await window.MASA_NATIVE.scanNutritionLabel(imageDataUrl);
+      const parsed = parseNutritionLabel(result);
+      const diagnostic = {
+        createdAt: new Date().toISOString(),
+        parsed,
+        native: {
+          rotation: result?.rotation,
+          pass: result?.pass,
+          score: result?.score,
+          keywordCount: result?.keywordCount,
+          imageWidth: result?.imageWidth,
+          imageHeight: result?.imageHeight,
+          text: result?.text,
+          lines: result?.lines
+        }
+      };
+      window.__MASA_LAST_LABEL_DIAGNOSTIC = diagnostic;
+      try { sessionStorage.setItem("masa-last-label-diagnostic", JSON.stringify(diagnostic)); } catch {}
+      if (!parsed.found) {
+        const rawText = String(result?.text || "").trim();
+        console.warn("OCR de rótulo sin valores interpretables:", diagnostic);
+        if (rawText) {
+          const shouldCopy = window.confirm("La cámara sí reconoció texto, pero no pudo ubicar los valores nutricionales. ¿Copiar el diagnóstico para poder revisarlo?");
+          if (shouldCopy) {
+            const report = JSON.stringify(diagnostic, null, 2);
+            try {
+              await navigator.clipboard.writeText(report);
+              window.alert("Diagnóstico copiado. Pegalo en el chat para revisar exactamente qué leyó el teléfono.");
+            } catch {
+              window.prompt("Copiá este diagnóstico:", report);
+            }
+          }
+        } else {
+          window.alert(`El OCR no detectó texto en la foto. Rotación probada: ${Number(result?.rotation || 0)}°. Acercá la tabla hasta que ocupe casi toda la imagen y evitá reflejos.`);
+        }
+        return;
+      }
+      if (target === "food-editor") {
+        applyNutritionLabelToOpenEditor(parsed);
+        return;
+      }
+      const prefill = {
+        name: "",
+        source: "nutrition-label-ocr",
+        servingAmount: parsed.servingAmount,
+        servingUnit: parsed.servingUnit,
+        servingUnitCustom: "",
+        calories: Number.isFinite(parsed.calories) ? parsed.calories : "",
+        protein: Number.isFinite(parsed.protein) ? parsed.protein : "",
+        fat: Number.isFinite(parsed.fat) ? parsed.fat : "",
+        carbs: Number.isFinite(parsed.carbs) ? parsed.carbs : "",
+        equivalences: []
+      };
+      if (target === "recipe") $("#recipe-modal").hidden = true;
+      else $("#food-modal").hidden = true;
+      openFoodEditor({
+        returnTarget: target,
+        prefillFood: prefill,
+        sourceNote: nutritionLabelNote(parsed),
+        sourceNoteType: "warning",
+        allowRescan: true,
+        rescanMode: "label",
+        title: "Revisar rótulo nutricional",
+        description: "La cámara completó los valores que pudo reconocer. Confirmalos antes de guardar."
+      });
+    } catch (error) {
+      const cancelled = /cancel/i.test(String(error?.message || error || ""));
+      if (!cancelled) {
+        const detail = String(error?.message || error || "").trim();
+        console.warn("No se pudo leer el rótulo nutricional:", error);
+        window.alert(detail && detail.length < 180
+          ? `No se pudo leer el rótulo: ${detail}`
+          : "No se pudo abrir o procesar la foto del rótulo. Probá nuevamente con la tabla completa y enfocada.");
+      }
+    } finally {
+      nutritionLabelScanBusy = false;
+      document.querySelectorAll("#scan-label-food, #scan-label-recipe, #scan-label-editor").forEach(button => { button.disabled = false; });
+    }
+  }
+
   function openBarcodeScanner(target = "food") {
     barcodeReturnTarget = target === "recipe" ? "recipe" : target === "food-editor" ? "food-editor" : "food";
     if (barcodeReturnTarget === "recipe") $("#recipe-modal").hidden = true;
@@ -1655,6 +2109,7 @@
       sourceNote: note,
       sourceNoteType: options.sourceNoteType || "",
       allowRescan: Boolean(options.allowRescan),
+      rescanMode: "barcode",
       title: options.title || "",
       description: options.description || ""
     });
@@ -2311,6 +2766,114 @@
     return `${formatQuantityAmount(amount)} ${label}`;
   }
 
+  const EQUIVALENCE_UNIT_CHOICES = [
+    ["g", "gramos (g)"], ["kg", "kilogramos (kg)"], ["ml", "mililitros (ml)"], ["l", "litros (l)"],
+    ["unit", "unidad"], ["serving", "porción"], ["cup", "taza"], ["tablespoon", "cucharada"],
+    ["teaspoon", "cucharadita"], ["plate", "plato"], ["slice", "feta"], ["package", "paquete"], ["custom", "otra unidad…"]
+  ];
+
+  function equivalenceBaseUnitLabel(type) {
+    const form = type === "recipe" ? $("#recipe-form") : $("#food-editor-form");
+    const select = type === "recipe" ? form?.elements.yieldUnit : form?.elements.servingUnit;
+    const custom = type === "recipe" ? form?.elements.yieldUnitCustom : form?.elements.servingUnitCustom;
+    if (!select) return "unidad base";
+    return editableUnitNames(select.value, select.value === "custom" ? custom?.value : "")[1];
+  }
+
+  function equivalenceDraft(type) {
+    return type === "recipe" ? recipeEditorEquivalences : foodEditorEquivalences;
+  }
+
+  function renderEquivalenceEditor(type) {
+    const container = type === "recipe" ? $("#recipe-equivalence-list") : $("#food-equivalence-list");
+    if (!container) return;
+    const draft = equivalenceDraft(type);
+    const baseLabel = equivalenceBaseUnitLabel(type);
+    container.innerHTML = "";
+    if (!draft.length) {
+      container.innerHTML = '<p class="equivalence-empty">No agregaste equivalencias.</p>';
+      return;
+    }
+    draft.forEach((equivalence, index) => {
+      const row = document.createElement("article");
+      row.className = "equivalence-row";
+      row.dataset.equivalenceIndex = index;
+      row.dataset.equivalenceType = type;
+      row.innerHTML = `
+        <label><span>Cantidad</span><input name="equivalenceAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.amount)}"></label>
+        <label><span>Unidad alternativa</span><select name="equivalenceUnit">${EQUIVALENCE_UNIT_CHOICES.map(([value, label]) => `<option value="${value}" ${value === equivalence.unit ? "selected" : ""}>${escapeHTML(label)}</option>`).join("")}</select></label>
+        <label class="equivalence-custom-unit" ${equivalence.unit === "custom" ? "" : "hidden"}><span>Nombre</span><input name="equivalenceCustomUnit" maxlength="40" placeholder="Ej.: vaso" value="${escapeHTML(equivalence.customUnit || "")}"></label>
+        <span class="equivalence-equals" aria-hidden="true">=</span>
+        <label><span>Equivale a</span><div class="equivalence-base-input"><input name="equivalenceBaseAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.baseAmount)}"><i>${escapeHTML(baseLabel)}</i></div></label>
+        <button class="danger-text-action" data-remove-equivalence="${index}" type="button">Quitar</button>`;
+      container.appendChild(row);
+    });
+  }
+
+  function addEquivalence(type) {
+    const draft = equivalenceDraft(type);
+    if (draft.length >= 20) return;
+    const form = type === "recipe" ? $("#recipe-form") : $("#food-editor-form");
+    const baseUnit = type === "recipe" ? form?.elements.yieldUnit?.value : form?.elements.servingUnit?.value;
+    const alternativeUnit = baseUnit === "unit" ? "serving" : "unit";
+    draft.push({ id: createId(), amount: 1, unit: alternativeUnit, customUnit: "", baseAmount: 1 });
+    renderEquivalenceEditor(type);
+    const container = type === "recipe" ? $("#recipe-equivalence-list") : $("#food-equivalence-list");
+    container?.querySelector(`[data-equivalence-index="${draft.length - 1}"] input`)?.select();
+  }
+
+  function updateEquivalenceDraft(event) {
+    const row = event.target.closest("[data-equivalence-index]");
+    if (!row) return;
+    const type = row.dataset.equivalenceType;
+    const item = equivalenceDraft(type)[Number(row.dataset.equivalenceIndex)];
+    if (!item) return;
+    item.amount = toNumber(row.querySelector('[name="equivalenceAmount"]')?.value, 0);
+    item.unit = row.querySelector('[name="equivalenceUnit"]')?.value || "unit";
+    item.customUnit = String(row.querySelector('[name="equivalenceCustomUnit"]')?.value || "").trim();
+    item.baseAmount = toNumber(row.querySelector('[name="equivalenceBaseAmount"]')?.value, 0);
+    const customField = row.querySelector(".equivalence-custom-unit");
+    if (customField) customField.hidden = item.unit !== "custom";
+  }
+
+  function removeEquivalence(event) {
+    const button = event.target.closest("[data-remove-equivalence]");
+    if (!button) return;
+    const row = button.closest("[data-equivalence-type]");
+    const type = row?.dataset.equivalenceType;
+    if (!type) return;
+    equivalenceDraft(type).splice(Number(button.dataset.removeEquivalence), 1);
+    renderEquivalenceEditor(type);
+  }
+
+  function validatedEquivalences(type, baseUnit, baseCustom, errorElement) {
+    const normalized = [];
+    const seen = new Set();
+    const baseKey = `${baseUnit}:${normalizeHeader(baseCustom)}`;
+    for (const raw of equivalenceDraft(type)) {
+      const item = normalizeEquivalence(raw);
+      if (!item) {
+        errorElement.textContent = "Completá cantidades mayores a cero y el nombre de cada unidad personalizada.";
+        errorElement.hidden = false;
+        return null;
+      }
+      const key = `${item.unit}:${normalizeHeader(item.customUnit)}`;
+      if (key === baseKey) {
+        errorElement.textContent = "La unidad alternativa debe ser distinta de la unidad base.";
+        errorElement.hidden = false;
+        return null;
+      }
+      if (seen.has(key)) {
+        errorElement.textContent = "No repitas la misma unidad alternativa.";
+        errorElement.hidden = false;
+        return null;
+      }
+      seen.add(key);
+      normalized.push(item);
+    }
+    return normalized;
+  }
+
   function setEditableUnitFields(select, customInput, unit, customUnit = "") {
     const optionExists = [...select.options].some(option => option.value === unit);
     select.value = optionExists ? unit : "custom";
@@ -2347,12 +2910,39 @@
     return { value: "serving", baseAmount, singular, plural, unitKey, customUnit };
   }
 
+  function baseFoodQuantityOption(item) {
+    const parsed = parseServingDefinition(item.serving);
+    const baseAmount = Math.max(0.01, toNumber(item.servingAmount, parsed.baseAmount) || parsed.baseAmount);
+    const unitKey = item.servingUnit || parsed.unitKey;
+    const customUnit = item.servingUnitCustom || parsed.customUnit;
+    const [singular, plural] = editableUnitNames(unitKey, customUnit);
+    return { value: "serving", baseAmount, defaultAmount: baseAmount, singular, plural, unitKey, customUnit };
+  }
+
+  function equivalenceQuantityOption(item, equivalence) {
+    const baseServingAmount = Math.max(0.01, toNumber(item.servingAmount, parseServingDefinition(item.serving).baseAmount) || 1);
+    const [singular, plural] = editableUnitNames(equivalence.unit, equivalence.customUnit);
+    return {
+      value: `equivalence:${equivalence.id}`,
+      baseAmount: Math.max(0.000001, equivalence.amount * baseServingAmount / equivalence.baseAmount),
+      defaultAmount: equivalence.amount,
+      singular,
+      plural,
+      unitKey: equivalence.unit,
+      customUnit: equivalence.customUnit,
+      equivalenceId: equivalence.id
+    };
+  }
+
   function foodQuantityOptions(item) {
-    if (item.kind !== "external" || item.userOverride) return [parseServingDefinition(item.serving)];
+    if (item.kind !== "external" || item.userOverride) {
+      return [baseFoodQuantityOption(item), ...normalizeEquivalences(item.equivalences).map(equivalence => equivalenceQuantityOption(item, equivalence))];
+    }
 
     const options = [{
       value: "g",
       baseAmount: Math.max(0.1, toNumber(item.metricQuantity, 100) || 100),
+      defaultAmount: Math.max(0.1, toNumber(item.metricQuantity, 100) || 100),
       singular: "g",
       plural: "g"
     }];
@@ -2364,6 +2954,7 @@
       options.push({
         value: "common",
         baseAmount: commonQuantity,
+        defaultAmount: 1,
         singular,
         plural
       });
@@ -2378,14 +2969,14 @@
     const savedOption = options.find(option => option.value === usage?.unit);
 
     if (usage && savedOption && toNumber(usage.amount, 0) > 0) {
-      return { amount: toNumber(usage.amount, savedOption.baseAmount), unit: savedOption.value };
+      return { amount: toNumber(usage.amount, savedOption.defaultAmount ?? savedOption.baseAmount), unit: savedOption.value };
     }
 
     const databaseOption = item.kind === "external"
       ? options.find(option => option.value === "common")
       : null;
     const option = databaseOption || options[0];
-    return { amount: option.baseAmount, unit: option.value };
+    return { amount: option.defaultAmount ?? option.baseAmount, unit: option.value };
   }
 
   function formatQuantityAmount(value) {
@@ -2433,7 +3024,7 @@
     if (context === "frequent") usageDetail = ` · ${stats.uses} ${stats.uses === 1 ? "consumo" : "consumos"}`;
 
     const originBadge = item.kind === "food"
-      ? `<span class="food-origin-badge food-origin-own">${item.source === "openfoodfacts" ? "Escaneado" : "Propio"}</span>`
+      ? `<span class="food-origin-badge food-origin-own">${item.source === "openfoodfacts" ? "Código" : item.source === "nutrition-label-ocr" ? "Rótulo" : "Propio"}</span>`
       : item.kind === "external" && item.userOverride
         ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
         : "";
@@ -2907,6 +3498,8 @@
       ? catalogFoodForEditing(editingCatalogFoodId)
       : editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
     const displayItem = item || foodEditorPrefill;
+    foodEditorEquivalences = clone(displayItem?.equivalences || []);
+    foodEditorRescanMode = options.rescanMode === "label" ? "label" : "barcode";
 
     $("#food-editor-title").textContent = options.title || (item ? "Editar alimento" : foodEditorPrefill ? "Revisar alimento escaneado" : "Nuevo alimento");
     $("#food-editor-description").textContent = options.description || (editingCatalogFoodId
@@ -2947,8 +3540,10 @@
       if (options.prefillName) form.elements.name.value = options.prefillName;
     }
 
+    renderEquivalenceEditor("food");
     if (foodEditorReturnTarget === "library") $("#library-modal").hidden = true;
     if (foodEditorReturnTarget === "recipe") $("#recipe-modal").hidden = true;
+    if (foodEditorReturnTarget === "food") $("#food-modal").hidden = true;
     $("#food-editor-modal").hidden = false;
     document.body.classList.add("modal-open");
     focusOnOpen(form.elements.name);
@@ -2961,6 +3556,8 @@
     editingFoodId = null;
     editingCatalogFoodId = null;
     foodEditorPrefill = null;
+    foodEditorEquivalences = [];
+    foodEditorRescanMode = "barcode";
     $("#rescan-food-editor").hidden = true;
     $("#close-food-editor").hidden = false;
     $("#food-editor-source-note").classList.remove("warning", "success");
@@ -3006,8 +3603,17 @@
       recipe.ingredients = (recipe.ingredients || []).map(ingredient => {
         if (ingredient.foodId !== food.id && ingredient.sourceId !== sourceId) return ingredient;
         const options = foodQuantityOptions(food);
-        const option = options.find(candidate => candidate.value === ingredient.unit) || options[0];
-        const preview = quantityPreview(food, ingredient.amount, option.value);
+        const option = options.find(candidate => candidate.value === ingredient.unit);
+        const fallbackFactor = Math.max(0, toNumber(ingredient.quantityFactor, 0));
+        const preview = option
+          ? quantityPreview(food, ingredient.amount, option.value)
+          : {
+              calories: food.calories * fallbackFactor,
+              protein: food.protein * fallbackFactor,
+              fat: food.fat * fallbackFactor,
+              carbs: food.carbs * fallbackFactor,
+              factor: fallbackFactor
+            };
         changed = true;
         return normalizeRecipeIngredient({
           ...ingredient,
@@ -3015,8 +3621,9 @@
           foodId: food.id,
           kind: food.kind,
           name: food.name,
-          unit: option.value,
-          serving: `${formatQuantityAmount(ingredient.amount)} ${quantityUnitText(option, ingredient.amount)}`,
+          unit: option?.value || ingredient.unit,
+          serving: option ? `${formatQuantityAmount(ingredient.amount)} ${quantityUnitText(option, ingredient.amount)}` : ingredient.serving,
+          quantityFactor: preview.factor,
           calories: preview.calories,
           protein: preview.protein,
           fat: preview.fat,
@@ -3054,6 +3661,8 @@
       return;
     }
     const servingAmount = Math.max(0.01, roundEditorNumber(form.elements.servingAmount.value, 2) || 1);
+    const equivalences = validatedEquivalences("food", unitData.unit, unitData.customUnit, editorError);
+    if (!equivalences) return;
     const calories = roundEditorNumber(form.elements.calories.value, 0);
     const protein = roundEditorNumber(form.elements.protein.value, 1);
     const fat = roundEditorNumber(form.elements.fat.value, 1);
@@ -3069,6 +3678,7 @@
         servingAmount,
         servingUnit: unitData.unit,
         servingUnitCustom: unitData.customUnit,
+        equivalences,
         protein,
         fat,
         carbs
@@ -3081,6 +3691,7 @@
       $("#food-editor-modal").hidden = true;
       editingCatalogFoodId = null;
       editingFoodId = null;
+      foodEditorEquivalences = [];
       foodEditorReturnTarget = "";
       if (target === "library") {
         renderLibraryManager();
@@ -3111,6 +3722,7 @@
       servingAmount,
       servingUnit: unitData.unit,
       servingUnitCustom: unitData.customUnit,
+      equivalences,
       protein,
       fat,
       carbs,
@@ -3130,6 +3742,7 @@
     editingFoodId = null;
     editingCatalogFoodId = null;
     foodEditorPrefill = null;
+    foodEditorEquivalences = [];
     foodEditorReturnTarget = "";
 
     if (target === "recipe") {
@@ -3163,6 +3776,7 @@
     form.reset();
     const recipe = editingRecipeId ? state.recipes.find(item => item.id === editingRecipeId) : null;
     recipeDraftIngredients = recipe?.ingredients ? clone(recipe.ingredients) : [];
+    recipeEditorEquivalences = clone(recipe?.equivalences || []);
     activeRecipeIngredientSelection = null;
 
     $("#recipe-title").textContent = recipe ? "Editar receta" : "Crear receta por ingredientes";
@@ -3187,6 +3801,7 @@
     if (recipeEditorReturnTarget === "library") $("#library-modal").hidden = true;
     $("#recipe-modal").hidden = false;
     document.body.classList.add("modal-open");
+    renderEquivalenceEditor("recipe");
     renderRecipeIngredientResults();
     renderRecipeIngredientList();
     focusOnOpen(form.elements.name);
@@ -3196,6 +3811,7 @@
     $("#recipe-modal").hidden = true;
     activeRecipeIngredientSelection = null;
     recipeDraftIngredients = [];
+    recipeEditorEquivalences = [];
     editingRecipeId = null;
     const target = recipeEditorReturnTarget;
     recipeEditorReturnTarget = "";
@@ -3251,7 +3867,7 @@
     button.dataset.selectRecipeIngredient = item.id;
     button.dataset.foodKind = item.kind;
     const originBadge = item.kind === "food"
-      ? `<span class="food-origin-badge food-origin-own">${item.source === "openfoodfacts" ? "Escaneado" : "Propio"}</span>`
+      ? `<span class="food-origin-badge food-origin-own">${item.source === "openfoodfacts" ? "Código" : item.source === "nutrition-label-ocr" ? "Rótulo" : "Propio"}</span>`
       : item.kind === "external" && item.userOverride
         ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
         : "";
@@ -3311,6 +3927,7 @@
       amount,
       unit: option.value,
       serving: `${formatQuantityAmount(amount)} ${quantityUnitText(option, amount)}`,
+      quantityFactor: preview.factor,
       calories: preview.calories,
       protein: preview.protein,
       fat: preview.fat,
@@ -3325,6 +3942,7 @@
       duplicate.protein += ingredient.protein;
       duplicate.fat += ingredient.fat;
       duplicate.carbs += ingredient.carbs;
+      duplicate.quantityFactor = Math.max(0, toNumber(duplicate.quantityFactor, 0)) + preview.factor;
       duplicate.serving = `${formatQuantityAmount(duplicate.amount)} ${quantityUnitText(option, duplicate.amount)}`;
     } else {
       recipeDraftIngredients.push(ingredient);
@@ -3440,6 +4058,7 @@
         unit: option.value,
         name: food.name,
         serving: `${formatQuantityAmount(amount)} ${quantityUnitText(option, amount)}`,
+        quantityFactor: preview.factor,
         calories: preview.calories,
         protein: preview.protein,
         fat: preview.fat,
@@ -3448,6 +4067,7 @@
     } else {
       const factor = amount / Math.max(0.01, ingredient.amount);
       ingredient.amount = amount;
+      ingredient.quantityFactor = Math.max(0, toNumber(ingredient.quantityFactor, 0)) * factor;
       ingredient.calories *= factor;
       ingredient.protein *= factor;
       ingredient.fat *= factor;
@@ -3527,6 +4147,8 @@
       form.elements.yieldUnitCustom.focus();
       return;
     }
+    const equivalences = validatedEquivalences("recipe", unitData.unit, unitData.customUnit, error);
+    if (!equivalences) return;
     const totals = recipeDraftIngredients.length ? recipeTotals() : null;
     const factor = servingAmount / yieldCount;
     const item = normalizeFood({
@@ -3541,6 +4163,7 @@
       recipeYieldUnit: unitData.unit,
       recipeYieldUnitCustom: unitData.customUnit,
       recipeServingAmount: servingAmount,
+      equivalences,
       ingredients: clone(recipeDraftIngredients),
       calories: totals ? totals.calories * factor : previous.calories,
       protein: totals ? totals.protein * factor : previous.protein,
@@ -3560,6 +4183,7 @@
     $("#recipe-modal").hidden = true;
     editingRecipeId = null;
     recipeDraftIngredients = [];
+    recipeEditorEquivalences = [];
     activeRecipeIngredientSelection = null;
     recipeEditorReturnTarget = "";
 
@@ -3580,13 +4204,17 @@
   function diaryEntrySource(entry) {
     const sourceId = String(entry?.sourceId || "");
     if (!sourceId) return normalizeFood(entry);
-    return state.foods.find(item => item.id === sourceId)
+    const current = state.foods.find(item => item.id === sourceId)
       || state.recipes.find(item => item.id === sourceId)
       || externalFoodsById.get(sourceId)
       || externalFoodsById.get(`external:${sourceId}`)
       || catalogFoodForEditing(sourceId)
-      || catalogFoodForEditing(`external:${sourceId}`)
-      || normalizeFood(entry);
+      || catalogFoodForEditing(`external:${sourceId}`);
+    const historical = normalizeFood(entry);
+    if (current && entry?.quantityUnit && !foodQuantityOptions(current).some(option => option.value === entry.quantityUnit)) {
+      return historical || current;
+    }
+    return current || historical;
   }
 
   function updateDiaryEditPreview(form) {
@@ -5856,6 +6484,7 @@
   function handleFoodEditorUnitChange() {
     const form = $("#food-editor-form");
     setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, form.elements.servingUnit.value);
+    renderEquivalenceEditor("food");
   }
 
   function handleRecipeYieldUnitChange() {
@@ -5868,6 +6497,7 @@
     const nextDefault = defaultServingAmountForUnit(select.value);
     if (Math.abs(currentAmount - previousDefault) < 0.0001) form.elements.servingAmount.value = nextDefault;
     select.dataset.currentUnit = select.value;
+    renderEquivalenceEditor("recipe");
     renderRecipeTotals();
   }
 
@@ -5994,7 +6624,10 @@
     $("#scan-barcode-food").addEventListener("click", () => openBarcodeScanner("food"));
     $("#scan-barcode-recipe").addEventListener("click", () => openBarcodeScanner("recipe"));
     $("#scan-barcode-editor").addEventListener("click", () => openBarcodeScanner("food-editor"));
-    $("#rescan-food-editor").addEventListener("click", () => openBarcodeScanner("food-editor"));
+    $("#scan-label-food").addEventListener("click", () => scanNutritionLabel("food"));
+    $("#scan-label-recipe").addEventListener("click", () => scanNutritionLabel("recipe"));
+    $("#scan-label-editor").addEventListener("click", () => scanNutritionLabel("food-editor"));
+    $("#rescan-food-editor").addEventListener("click", () => foodEditorRescanMode === "label" ? scanNutritionLabel("food-editor") : openBarcodeScanner("food-editor"));
     $("#close-barcode").addEventListener("click", () => closeBarcodeScanner(true));
     $$('[data-close-barcode]').forEach(element => element.addEventListener("click", () => closeBarcodeScanner(true)));
     $("#barcode-manual-form").addEventListener("submit", submitManualBarcode);
@@ -6028,13 +6661,22 @@
     $$('[data-close-food-editor]').forEach(element => element.addEventListener("click", closeFoodEditor));
     $("#food-editor-form").addEventListener("submit", saveCustomFood);
     $("#food-editor-form").elements.servingUnit.addEventListener("change", handleFoodEditorUnitChange);
+    $("#food-editor-form").elements.servingUnitCustom.addEventListener("input", () => renderEquivalenceEditor("food"));
+    $("#add-food-equivalence").addEventListener("click", () => addEquivalence("food"));
+    $("#food-equivalence-list").addEventListener("input", updateEquivalenceDraft);
+    $("#food-equivalence-list").addEventListener("change", updateEquivalenceDraft);
+    $("#food-equivalence-list").addEventListener("click", removeEquivalence);
     $("#close-recipe").addEventListener("click", closeRecipeEditor);
     $$('[data-close-recipe]').forEach(element => element.addEventListener("click", closeRecipeEditor));
     $("#recipe-form").addEventListener("submit", saveRecipe);
     $("#recipe-form").elements.yield.addEventListener("input", renderRecipeTotals);
     $("#recipe-form").elements.servingAmount.addEventListener("input", renderRecipeTotals);
     $("#recipe-form").elements.yieldUnit.addEventListener("change", handleRecipeYieldUnitChange);
-    $("#recipe-form").elements.yieldUnitCustom.addEventListener("input", renderRecipeTotals);
+    $("#recipe-form").elements.yieldUnitCustom.addEventListener("input", () => { renderEquivalenceEditor("recipe"); renderRecipeTotals(); });
+    $("#add-recipe-equivalence").addEventListener("click", () => addEquivalence("recipe"));
+    $("#recipe-equivalence-list").addEventListener("input", updateEquivalenceDraft);
+    $("#recipe-equivalence-list").addEventListener("change", updateEquivalenceDraft);
+    $("#recipe-equivalence-list").addEventListener("click", removeEquivalence);
     $("#recipe-ingredient-search").addEventListener("input", queueRecipeIngredientSearch);
     $("#recipe-ingredient-results").addEventListener("click", handleRecipeIngredientSearchClick);
     $("#recipe-ingredient-results").addEventListener("input", handleRecipeIngredientSearchInput);

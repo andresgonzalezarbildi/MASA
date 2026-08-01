@@ -10,13 +10,13 @@
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="assets/icon-192.png" rel="apple-touch-icon"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=30.6" rel="stylesheet"/>
+<link href="./css/styles.css?v=31.0.2" rel="stylesheet"/>
 <link href="./css/auth.css?v=30.6" rel="stylesheet"/>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer="" src="./js/config.js?v=30.6"></script>
 <script defer="" src="./js/cloud.js?v=30.6"></script>
 <script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
-<script defer="" src="./js/app.js?v=30.6"></script>
+<script defer="" src="./js/app.js?v=31.0.2"></script>
 </head>
 <body>
 
@@ -603,7 +603,10 @@
 <p class="food-add-feedback" hidden id="food-add-feedback" role="status"></p>
 <div class="food-search-row">
 <label class="food-search food-search-always"><span>Buscar alimentos o recetas</span><input id="food-search-input" placeholder="Ej.: arroz, huevo, café..." type="search" maxlength="120" autocomplete="off"/></label>
-<button class="primary-action food-scan-action" id="scan-barcode-food" type="button">Escanear código</button>
+<div class="food-scan-actions">
+<button class="primary-action food-scan-action" id="scan-barcode-food" type="button">Código</button>
+<button class="secondary-action food-scan-action" id="scan-label-food" type="button">Rótulo</button>
+</div>
 </div>
 <div class="food-library-actions food-global-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button></div>
 <p class="data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a>.</p>
@@ -661,7 +664,10 @@
 </div>
 </div>
 <form class="form-grid editor-grid" id="food-editor-form">
-<div class="food-editor-scan-row full-field"><button class="secondary-action" id="scan-barcode-editor" type="button"><span aria-hidden="true">▥</span> Escanear código de barras</button></div>
+<div class="food-editor-scan-row full-field">
+<button class="secondary-action" id="scan-barcode-editor" type="button"><span aria-hidden="true">▥</span> Código de barras</button>
+<button class="secondary-action" id="scan-label-editor" type="button"><span aria-hidden="true">▤</span> Rótulo nutricional</button>
+</div>
 <label class="full-field"><span>Nombre</span><input name="name" required="" type="text" maxlength="120"/></label>
 <input name="barcode" type="hidden" minlength="8" maxlength="14" pattern="[0-9]{8,14}" inputmode="numeric"/>
 <label><span>Marca <small>(opcional)</small></span><input name="brand" type="text" maxlength="120"/></label>
@@ -685,6 +691,10 @@
 </select></label>
 <label class="full-field custom-unit-field" hidden><span>Nombre de la unidad</span><input name="servingUnitCustom" placeholder="Ej.: scoop, barra, vaso..." type="text" maxlength="40"/></label>
 <p class="field-note full-field">Las calorías y los macros ingresados corresponden a esa cantidad base.</p>
+<section class="equivalence-editor full-field" aria-labelledby="food-equivalence-title">
+<div class="equivalence-editor-head"><div><h3 id="food-equivalence-title">Unidades y equivalencias</h3><p>Agregá formas alternativas de registrar el alimento, por ejemplo: 1 unidad = 200 g.</p></div><button class="secondary-action" id="add-food-equivalence" type="button">Agregar equivalencia</button></div>
+<div class="equivalence-list" id="food-equivalence-list"></div>
+</section>
 <label><span>Proteína</span><div class="unit-input"><input name="protein" step="0.1" type="number" min="0" max="10000" inputmode="decimal"/><i>g</i></div></label>
 <label><span>Grasas</span><div class="unit-input"><input name="fat" step="0.1" type="number" min="0" max="10000" inputmode="decimal"/><i>g</i></div></label>
 <label><span>Carbohidratos</span><div class="unit-input"><input name="carbs" step="0.1" type="number" min="0" max="10000" inputmode="decimal"/><i>g</i></div></label>
@@ -722,11 +732,15 @@
 <label><span>Cantidad base al registrar</span><input name="servingAmount" required="" step="any" type="number" value="1" min="0.01" max="100000" inputmode="decimal"/></label>
 <label class="full-field custom-recipe-unit-field" hidden><span>Nombre de la unidad</span><input name="yieldUnitCustom" placeholder="Ej.: bowl, bandeja..." type="text" maxlength="40"/></label>
 <p class="field-note full-field">Ejemplo: si la receta rinde 800 g, podés dejar 100 g como cantidad base para registrarla.</p>
+<section class="equivalence-editor full-field" aria-labelledby="recipe-equivalence-title">
+<div class="equivalence-editor-head"><div><h3 id="recipe-equivalence-title">Unidades y equivalencias</h3><p>Agregá otras formas de registrar la receta, por ejemplo: 1 porción = 200 g.</p></div><button class="secondary-action" id="add-recipe-equivalence" type="button">Agregar equivalencia</button></div>
+<div class="equivalence-list" id="recipe-equivalence-list"></div>
+</section>
 </div>
 <div class="recipe-builder">
 <section class="recipe-search-panel">
 <label class="food-search"><span>Buscar ingrediente</span><input id="recipe-ingredient-search" placeholder="Ej.: harina, huevo, leche..." type="search" maxlength="120" autocomplete="off"/></label>
-<div class="recipe-search-actions"><button class="secondary-action" id="scan-barcode-recipe" type="button">Escanear código</button><button class="secondary-action" id="create-missing-ingredient" type="button">Crear alimento nuevo</button></div>
+<div class="recipe-search-actions"><button class="secondary-action" id="scan-barcode-recipe" type="button">Código de barras</button><button class="secondary-action" id="scan-label-recipe" type="button">Rótulo nutricional</button><button class="secondary-action" id="create-missing-ingredient" type="button">Crear alimento nuevo</button></div>
 <p class="data-attribution recipe-data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a>.</p>
 <div class="food-results recipe-ingredient-results" id="recipe-ingredient-results"></div>
 </section>

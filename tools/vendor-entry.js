@@ -10,6 +10,7 @@ import {
 
 const isNative = () => Boolean(window.Capacitor?.isNativePlatform?.());
 const MasaAuthPlugin = registerPlugin("MasaAuth");
+const MasaNutritionLabelPlugin = registerPlugin("MasaNutritionLabel");
 
 window.supabase = { createClient };
 window.MASA_NATIVE = {
@@ -26,6 +27,11 @@ window.MASA_NATIVE = {
     if (!isNative()) return "";
     const result = await MasaAuthPlugin.getInitialAuthUrl();
     return String(result?.url || "");
+  },
+  async scanNutritionLabel(imageDataUrl) {
+    if (!isNative()) throw new Error("La lectura de rótulos requiere la aplicación Android.");
+    if (!imageDataUrl) throw new Error("No se recibió la foto del rótulo.");
+    return MasaNutritionLabelPlugin.scan({ imageDataUrl: String(imageDataUrl) });
   },
   async scanBarcode() {
     return CapacitorBarcodeScanner.scanBarcode({
