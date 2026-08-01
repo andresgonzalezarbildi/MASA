@@ -142,15 +142,33 @@
     return !isNativeRuntime() && window.matchMedia("(max-width: 800px)").matches;
   }
 
+  function usesSoftKeyboardLayout() {
+    return isNativeRuntime() || window.matchMedia("(max-width: 1000px), (pointer: coarse)").matches;
+  }
+
+  function isKeyboardField(element) {
+    if (!element?.matches?.("input, textarea, [contenteditable='true']")) return false;
+    if (element.matches("textarea, [contenteditable='true']")) return true;
+    return !["button", "checkbox", "color", "file", "hidden", "image", "radio", "range", "reset", "submit"].includes(String(element.type || "text").toLowerCase());
+  }
+
+  function syncNativeOnlyControls(nativeRuntime) {
+    document.querySelectorAll("[data-native-only]").forEach(element => {
+      element.hidden = !nativeRuntime;
+    });
+  }
+
   function syncVisualViewport() {
     const viewport = window.visualViewport;
-    const height = Math.max(320, Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight));
+    const height = Math.max(180, Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight));
     const offsetTop = Math.max(0, Math.round(viewport?.offsetTop || 0));
     const root = document.documentElement;
-    root.classList.toggle("native-runtime", isNativeRuntime());
-    root.classList.toggle("web-runtime", !isNativeRuntime());
+    const nativeRuntime = isNativeRuntime();
+    root.classList.toggle("native-runtime", nativeRuntime);
+    root.classList.toggle("web-runtime", !nativeRuntime);
     root.style.setProperty("--visual-viewport-height", `${height}px`);
     root.style.setProperty("--visual-viewport-top", `${offsetTop}px`);
+    syncNativeOnlyControls(nativeRuntime);
   }
 
   function focusOnOpen(element) {
@@ -158,13 +176,33 @@
     requestAnimationFrame(() => element.focus());
   }
 
+  function revealFocusedField(field) {
+    if (!isKeyboardField(field) || !document.contains(field)) return;
+    syncVisualViewport();
+    field.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" });
+  }
+
   function keepFocusedFieldVisible(event) {
     const field = event.target;
-    if (!isMobileWebRuntime() || !field?.matches?.("input, select, textarea") || !field.closest(".modal, .confirm-modal")) return;
+    if (!usesSoftKeyboardLayout() || !isKeyboardField(field)) return;
+    document.documentElement.classList.add("soft-keyboard-focus");
+    [80, 220, 420].forEach(delay => window.setTimeout(() => revealFocusedField(field), delay));
+  }
+
+  function clearKeyboardFocusState() {
     window.setTimeout(() => {
+      if (isKeyboardField(document.activeElement)) return;
+      document.documentElement.classList.remove("soft-keyboard-focus");
       syncVisualViewport();
-      field.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" });
     }, 180);
+  }
+
+  function handleVisualViewportChange() {
+    syncVisualViewport();
+    const field = document.activeElement;
+    if (usesSoftKeyboardLayout() && isKeyboardField(field)) {
+      window.requestAnimationFrame(() => revealFocusedField(field));
+    }
   }
 
   function clone(value) {
@@ -6703,10 +6741,11 @@
       $$('[data-chart-range]').forEach(item => item.classList.toggle("active", item === button));
       if (chartPayload) renderActiveProgressChart();
     }));
-    window.visualViewport?.addEventListener("resize", syncVisualViewport);
-    window.visualViewport?.addEventListener("scroll", syncVisualViewport);
-    window.addEventListener("orientationchange", () => window.setTimeout(syncVisualViewport, 120));
+    window.visualViewport?.addEventListener("resize", handleVisualViewportChange);
+    window.visualViewport?.addEventListener("scroll", handleVisualViewportChange);
+    window.addEventListener("orientationchange", () => window.setTimeout(handleVisualViewportChange, 120));
     document.addEventListener("focusin", keepFocusedFieldVisible);
+    document.addEventListener("focusout", clearKeyboardFocusState);
     window.addEventListener("resize", debounce(() => {
       syncVisualViewport();
       syncCalorieRangeButtons();

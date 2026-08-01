@@ -594,6 +594,12 @@ if (await exists(manifest)) {
     /\s*<meta-data\s+android:name=["']com\.google\.mlkit\.vision\.DEPENDENCIES["']\s+android:value=["']ocr["']\s*\/>/g,
     ""
   );
+  if (!source.includes('android:windowSoftInputMode="adjustResize"')) {
+    source = source.replace(
+      /(android:launchMode=["']singleTask["'])/,
+      `$1\n            android:windowSoftInputMode="adjustResize"`
+    );
+  }
   if (!source.includes('android:scheme="masa"')) {
     const launcherEnd = `            </intent-filter>`;
     const deepLinkFilter = `${launcherEnd}

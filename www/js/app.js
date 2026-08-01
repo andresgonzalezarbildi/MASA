@@ -1,62 +1,6907 @@
-(()=>{"use strict";const Bt="masa-state-v10",xn="masa-tips-seen-v1",Mn=["masa-state-v9","masa-state-v8","masa-state-v7","masa-state-v6","masa-state-v5","peso-claro-state-v2","peso-claro-state-v1"],E=Object.freeze({emaAlpha:.1,windowDays:42,minIntakeDays:14,minSpanDays:18,minWeighIns:8,reviewIntervalDays:7,minNewIntakeDays:3,minNewWeighIns:2,maxAdjustment:250,minMeaningfulAdjustment:30}),Cn=["breakfast","lunch","snack","dinner","extras"],Ui=new URL("../data/opennutrition-es-general.json",document.currentScript?.src||window.location.href).href,Pi="https://world.openfoodfacts.org/api/v2/product",Ri=new URL("/api/open-food-facts/",window.location.origin).href;let Qe=[],Wt=new Map,De=[],je=new Map,ba=[],pe="idle",va="",ya=null,Y=null,kn=null,Nn=null,$n=null,he=null,B=[],Ae=null,K=null,xe=null,Z="",Je="",qi="",_e=null,xt=[],zt=[],Ht="barcode",wa=!1,Yt=null,Ze=null,Be="food",Kt=!1,We=!1;const En={name:"",birthDate:"",sex:"male",heightCm:"",bodyFat:"",formula:"mifflin",activityFactor:1.35,calibrationOffset:0,goalType:"loss",goalMetric:"weight",goalWeight:"",goalBodyFat:"",goalDate:"",rateMode:"auto",weeklyRatePct:.5,macroMode:"athletic",proteinPct:"",fatPct:"",carbPct:"",trendWindow:7,planStartDate:"",planStartWeight:""},Oi={"1.2":"Bajo \xB7 1,20","1.35":"Ligero \xB7 1,35","1.5":"Medio \xB7 1,50","1.7":"Alto \xB7 1,70","1.9":"Muy alto \xB7 1,90"},ji={"1.2":"Rutina mayormente sentada, pocos pasos y entrenamiento inexistente o espor\xE1dico.","1.35":"Trabajo principalmente sentado, con caminatas habituales o 2\u20133 sesiones semanales.","1.5":"Movimiento frecuente durante el d\xEDa o 3\u20135 sesiones semanales. Es un punto medio razonable para muchas personas activas.","1.7":"Trabajo f\xEDsico, muchos pasos diarios o entrenamiento exigente y frecuente.","1.9":"Trabajo f\xEDsico m\xE1s entrenamiento intenso casi diario. Es poco habitual y suele sobreestimarse."},_i={mifflin:"Mifflin\u2013St Jeor",harris:"Harris\u2013Benedict",cunningham:"Cunningham"};let d,xa=0,et=!1,Ma="history",W=null,Mt="3m",tt="weight",at=null,Ca=!1,ee="breakfast",Te="recent",ze="today",Ie="record",Sn=14,Ue=!1,be=null,L=ve(),Me=null,ka=ve(),Na=null;const o=e=>document.querySelector(e),S=e=>Array.from(document.querySelectorAll(e));function $a(){try{return!!(window.Capacitor?.isNativePlatform?.()||window.location.protocol==="capacitor:")}catch{return window.location.protocol==="capacitor:"}}function Ln(){return!$a()&&window.matchMedia("(max-width: 800px)").matches}function nt(){const e=window.visualViewport,t=Math.max(320,Math.round(e?.height||window.innerHeight||document.documentElement.clientHeight)),a=Math.max(0,Math.round(e?.offsetTop||0)),n=document.documentElement;n.classList.toggle("native-runtime",$a()),n.classList.toggle("web-runtime",!$a()),n.style.setProperty("--visual-viewport-height",`${t}px`),n.style.setProperty("--visual-viewport-top",`${a}px`)}function it(e){!e||Ln()||requestAnimationFrame(()=>e.focus())}function Bi(e){const t=e.target;!Ln()||!t?.matches?.("input, select, textarea")||!t.closest(".modal, .confirm-modal")||window.setTimeout(()=>{nt(),t.scrollIntoView({behavior:"auto",block:"center",inline:"nearest"})},180)}function Ce(e){return JSON.parse(JSON.stringify(e))}function m(e,t=""){if(e===""||e===null||e===void 0)return t;const a=Number(String(e).trim().replace(",","."));return Number.isFinite(a)?a:t}const Ct=Object.freeze({text:120,shortText:40,calories:1e4,macro:1e4,quantity:1e5});function Wi(e,t=Ct.text){return String(e??"").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,t)}function Gt(e,t,a,n=NaN){const i=m(e,NaN);return!Number.isFinite(i)||i<t||i>a?n:i}function rt(e){return e?.entryMode==="calories"||!e?.sourceId&&String(e?.serving||"").toLowerCase()==="carga libre"&&m(e?.quantity,0)<=0}function P(e,t,a){return Math.min(a,Math.max(t,e))}function G(){return globalThis.crypto?.randomUUID?globalThis.crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`}function te(e){return`${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,"0")}-${String(e.getDate()).padStart(2,"0")}`}function R(){return te(new Date)}function ve(e=new Date){const t=new Date(e);return t.setHours(t.getHours()-3),te(t)}function zi(e=new Date){return e.getHours()>=3}function I(e){if(e instanceof Date&&!Number.isNaN(e.getTime()))return te(e);const t=String(e||"").trim().replace(/^"|"$/g,"");let a=t.match(/^(\d{4})-(\d{2})-(\d{2})/);if(a)return Ea(`${a[1]}-${a[2]}-${a[3]}`)?`${a[1]}-${a[2]}-${a[3]}`:"";if(a=t.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/),a){let n=a[3]?Number(a[3]):new Date().getFullYear();n<100&&(n+=2e3);const i=`${n}-${String(a[2]).padStart(2,"0")}-${String(a[1]).padStart(2,"0")}`;return Ea(i)?i:""}if(a=t.match(/^(\d{2})(\d{2})(\d{2}|\d{4})$/),a){let n=Number(a[3]);n<100&&(n+=2e3);const i=`${n}-${a[2]}-${a[1]}`;return Ea(i)?i:""}return""}function Ea(e){const t=String(e).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!t)return!1;const a=new Date(Number(t[1]),Number(t[2])-1,Number(t[3]),12);return a.getFullYear()===Number(t[1])&&a.getMonth()===Number(t[2])-1&&a.getDate()===Number(t[3])}function k(e){const t=I(e);if(!t)return null;const[a,n,i]=t.split("-").map(Number);return new Date(a,n-1,i,12,0,0,0)}function ot(e){const t=I(e);if(!t)return"";const[a,n,i]=t.split("-");return`${i}/${n}/${a}`}function j(e){return ot(e)||"\u2014"}function Gs(e){const t=e instanceof Date?e:k(e);return t?new Intl.DateTimeFormat("es-UY",{month:"long",year:"numeric"}).format(t):"\u2014"}function X(e,t){const a=new Date(e);return a.setDate(a.getDate()+t),a}function Fn(e,t){return new Date(e.getFullYear(),e.getMonth()+t,1,12,0,0,0)}function Vs(e){return new Date(e.getFullYear(),e.getMonth()+1,0,12)}function ye(e,t){return(t-e)/864e5}function g(e,t=0){return Number.isFinite(Number(e))?Number(e).toLocaleString("es-UY",{minimumFractionDigits:t,maximumFractionDigits:t}):"\u2014"}function Q(e,t=0){const a=m(e,0),n=10**t;return Math.round((a+Number.EPSILON)*n)/n}function ae(e,t=1){return Number.isFinite(Number(e))?`${g(e,t)} kg`:"\u2014"}function Sa(e){return Number.isFinite(e)?`${e>0?"+":""}${g(e,2)} kg`:"\u2014"}function Hi(e){return[1.2,1.35,1.5,1.7,1.9].reduce((a,n)=>Math.abs(n-e)<Math.abs(a-e)?n:a,1.35)}function La(e={},t=[]){const a=[...t].sort((v,h)=>v.date.localeCompare(h.date)),n=a[0],i=a.at(-1),r=m(e.proteinGrams,NaN),s=m(e.fatGrams,NaN),c=m(e.carbGrams,NaN),l=r*4+s*9+c*4,u=[r,s,c].every(Number.isFinite)&&l>0,f=[e.proteinPct,e.fatPct,e.carbPct].every(v=>Number.isFinite(m(v,NaN))),p=e.macroMode==="manual"?"custom":e.macroMode==="auto"?"athletic":e.macroMode,w=p==="custom"&&(f||u)?"custom":["balanced","athletic"].includes(p)?p:"athletic",y=f?m(e.proteinPct):u?r*4/l*100:"",x=f?m(e.fatPct):u?s*9/l*100:"",b=f?m(e.carbPct):u?c*4/l*100:"";return{...Ce(En),...e,name:String(e.name||"").trim(),birthDate:I(e.birthDate),sex:e.sex==="female"?"female":"male",heightCm:m(e.heightCm),bodyFat:m(e.bodyFat),formula:["mifflin","harris","cunningham"].includes(e.formula)?e.formula:"mifflin",activityFactor:[1.2,1.35,1.5,1.7,1.9].includes(m(e.activityFactor))?m(e.activityFactor):Hi(m(e.activityFactor,1.35)),calibrationOffset:P(m(e.calibrationOffset,0),-900,900),goalType:["loss","maintain","gain"].includes(e.goalType)?e.goalType:"loss",goalMetric:["weight","bodyFat"].includes(e.goalMetric)?e.goalMetric:"weight",goalWeight:m(e.goalWeight),goalBodyFat:m(e.goalBodyFat),goalDate:I(e.goalDate),rateMode:["auto","manual"].includes(e.rateMode)?e.rateMode:"auto",weeklyRatePct:P(m(e.weeklyRatePct,e.goalType==="gain"?.25:.5),0,2),macroMode:w,proteinPct:w==="custom"?P(y,5,70):"",fatPct:w==="custom"?P(x,10,70):"",carbPct:w==="custom"?P(b,5,80):"",trendWindow:P(Math.round(m(e.trendWindow,7)),3,14),planStartDate:I(e.planStartDate)||n?.date||"",planStartWeight:m(e.planStartWeight,n?.weight||"")}}function kt(e){const t=String(e||"").trim();if(!t)return"";const a=new Date(t);return Number.isNaN(a.getTime())?"":a.toISOString()}function Dn(e={}){const t=Math.max(0,m(e.amount,0)),a=Math.max(0,m(e.baseAmount,0));if(t<=0||a<=0)return null;const n=String(e.unit||"unit").trim()||"unit",i=["g","kg","ml","l","unit","serving","cup","tablespoon","teaspoon","plate","slice","package","custom"].includes(n)?n:Qa(n),r=String(e.customUnit||e.unitCustom||(i==="custom"&&n!=="custom"?n:"")).trim();return i==="custom"&&!r?null:{id:String(e.id||G()),amount:t,unit:i,customUnit:r,baseAmount:a}}function Vt(e=[]){if(!Array.isArray(e))return[];const t=new Set;return e.map(Dn).filter(a=>{if(!a)return!1;const n=`${a.unit}:${_(a.customUnit)}`;return t.has(n)?!1:(t.add(n),!0)}).slice(0,20)}function Fa(e={}){const t=String(e.name||"").trim(),a=Math.max(0,m(e.amount,0)),n=Math.max(0,m(e.calories,0));return!t||a<=0?null:{id:e.id||G(),sourceId:String(e.sourceId||e.foodId||"").trim(),foodId:String(e.foodId||"").trim(),kind:["food","external"].includes(e.kind)?e.kind:"food",name:t,amount:a,unit:String(e.unit||"serving").trim()||"serving",serving:String(e.serving||"").trim(),quantityFactor:Math.max(0,m(e.quantityFactor,0)),calories:n,protein:Math.max(0,m(e.protein,0)),fat:Math.max(0,m(e.fat,0)),carbs:Math.max(0,m(e.carbs,0))}}function Xt(e={},t=""){const a=String(e.id||t||"").trim();if(!a)return null;const n={id:a,hidden:!!e.hidden},i=String(e.name||"").trim(),r=m(e.calories,NaN),s=m(e.servingAmount,NaN);return i&&(n.name=i),Number.isFinite(r)&&r>=0&&(n.calories=r),["protein","fat","carbs"].forEach(c=>{const l=m(e[c],NaN);Number.isFinite(l)&&l>=0&&(n[c]=l)}),Number.isFinite(s)&&s>0&&(n.servingAmount=s),e.servingUnit&&(n.servingUnit=String(e.servingUnit)),e.servingUnitCustom&&(n.servingUnitCustom=String(e.servingUnitCustom).trim()),e.serving&&(n.serving=String(e.serving).trim()),n.equivalences=Vt(e.equivalences),n.updatedAt=kt(e.updatedAt)||new Date().toISOString(),n}function ne(e){return String(e||"").replace(/\D/g,"")}function Qt(e){const t=ne(e);if(![8,12,13,14].includes(t.length))return!1;const a=[...t].map(Number),n=a.pop();let i=0;for(let r=a.length-1,s=0;r>=0;r--,s++)i+=a[r]*(s%2===0?3:1);return(10-i%10)%10===n}function ke(e={}){const t=Array.isArray(e)?{weighIns:e}:e,a=Array.isArray(t.weighIns)?t.weighIns.map(b=>({id:b.id||G(),date:I(b.date||b.fecha),weight:m(b.weight??b.peso??b.peso_kg,NaN)})).filter(b=>b.date&&Number.isFinite(b.weight)&&b.weight>0):[],n=new Map;a.forEach(b=>n.set(b.date,b));const i=[...n.values()].sort((b,v)=>b.date.localeCompare(v.date)),r=La(t.profile||{},i),s=Array.isArray(t.foods)?t.foods.map(ie).filter(Boolean):[],c=Array.isArray(t.recipes)?t.recipes.map(b=>ie({...b,kind:"recipe"})).filter(Boolean):[],l={};Object.entries(t.diary||{}).forEach(([b,v])=>{const h=I(b);!h||!Array.isArray(v)||(l[h]=v.map(lt).filter(Boolean))});const u={};Object.entries(t.completedDays||{}).forEach(([b,v])=>{const h=I(b);h&&v&&(u[h]=!0)});const f={};Object.entries(t.foodUsage||{}).forEach(([b,v])=>{const h=m(v?.amount,NaN);!b||!Number.isFinite(h)||h<=0||(f[b]={amount:h,unit:String(v?.unit||"").trim(),uses:Math.max(0,Math.round(m(v?.uses,0))),lastUsed:I(v?.lastUsed),lastUsedAt:kt(v?.lastUsedAt||v?.lastUsed)})});const p=new Set;Object.entries(f).forEach(([b,v])=>{const h=t.foodUsage?.[b]||{},M={};Cn.forEach(N=>{const $=h?.byMeal?.[N]||v?.byMeal?.[N],A=m($?.amount,NaN),U=Math.max(0,Math.round(m($?.uses,0)));!$||!Number.isFinite(A)&&U<=0||(M[N]={amount:Number.isFinite(A)&&A>0?A:m(v?.amount,1),unit:String($?.unit||v?.unit||"").trim(),uses:U,lastUsed:I($?.lastUsed),lastUsedAt:kt($?.lastUsedAt||$?.lastUsed)})}),Object.keys(M).length||p.add(b),v.byMeal=M}),p.size&&Object.entries(l).forEach(([b,v])=>{v.forEach((h,M)=>{const N=String(h?.sourceId||"").trim(),$=Cn.includes(h?.meal)?h.meal:"extras";if(!N||!p.has(N)||!f[N])return;const A=f[N],U=A.byMeal[$]||{},le=m(h?.quantity,A.amount),J=String(h?.quantityUnit||A.unit||"").trim(),ge=k(b),Se=ge?new Date(ge.getTime()+M*1e3).toISOString():`${b}T12:00:00.000Z`,Le=!U.lastUsedAt||Se>U.lastUsedAt;A.byMeal[$]={amount:Le&&le>0?le:m(U.amount,A.amount),unit:Le&&J?J:String(U.unit||A.unit||""),uses:Math.max(0,Math.round(m(U.uses,0)))+1,lastUsed:Le?b:U.lastUsed,lastUsedAt:Le?Se:U.lastUsedAt}})});const w={},y=t.catalogOverrides||t.externalFoodOverrides||{};return Object.entries(y).forEach(([b,v])=>{const h=Xt(v,b);h&&(w[h.id]=h)}),{version:20,configured:Nt(r,i),profile:r,weighIns:i,foods:s,recipes:c,diary:l,completedDays:u,foodUsage:f,catalogOverrides:w,calibrationHistory:Array.isArray(t.calibrationHistory)?t.calibrationHistory.slice(-20):[],lastCheckinDate:I(t.lastCheckinDate)}}function ie(e={}){const t=String(e.name||"").trim(),a=m(e.calories,NaN);if(!t||!Number.isFinite(a)||a<0)return null;const n=e.kind==="recipe"?"recipe":"food",i=n==="recipe"&&Array.isArray(e.ingredients)?e.ingredients.map(Fa).filter(Boolean):[],r=String(e.serving||"1 porci\xF3n").trim()||"1 porci\xF3n",s=qe(r),c=Math.max(.01,m(e.servingAmount??e.recipeServingAmount,s.baseAmount)||s.baseAmount),l=String(e.servingUnit||e.recipeYieldUnit||s.unitKey||"serving").trim(),u=["g","kg","ml","l","unit","serving","cup","tablespoon","teaspoon","plate","slice","package","custom"].includes(l)?l:Qa(l),f=String(e.servingUnitCustom||e.recipeYieldUnitCustom||s.customUnit||"").trim();return{id:e.id||G(),name:t,calories:a,barcode:ne(e.barcode||e.code),brand:String(e.brand||e.brands||"").trim(),source:String(e.source||"").trim(),sourceUrl:String(e.sourceUrl||"").trim(),sourceImportedAt:kt(e.sourceImportedAt),imageUrl:String(e.imageUrl||"").trim(),protein:Math.max(0,m(e.protein,0)),fat:Math.max(0,m(e.fat,0)),carbs:Math.max(0,m(e.carbs,0)),serving:r,servingAmount:c,servingUnit:u,servingUnitCustom:f,equivalences:Vt(e.equivalences),kind:n,ingredients:i,recipeYield:n==="recipe"?Math.max(.01,m(e.recipeYield,1)||1):1,recipeYieldUnit:n==="recipe"?u:"",recipeYieldUnitCustom:n==="recipe"?f:"",recipeServingAmount:n==="recipe"?c:0,uses:Math.max(0,Math.round(m(e.uses,0))),lastUsed:I(e.lastUsed),lastUsedAt:kt(e.lastUsedAt||e.lastUsed)}}function Yi(e={}){const t=String(e.name||"").trim(),a=e.per100g&&typeof e.per100g=="object"?e.per100g:{},n=m(a.calories,NaN);if(!t||!Number.isFinite(n)||n<0)return null;const i=Math.max(.1,m(e.serving?.metric?.quantity,100)||100),r=Math.max(0,m(e.serving?.common?.quantity,0)||0),s=String(e.serving?.common?.unit||"").trim(),c=i/100,l=Array.isArray(e.aliases)?[...new Set(e.aliases.map(u=>String(u||"").trim()).filter(Boolean))]:[];return{id:`external:${e.id||G()}`,catalogId:String(e.id||""),name:t,aliases:l,barcode:ne(e.barcode||e.code),brand:String(e.brand||e.brands||"").trim(),sourceName:String(e.sourceName||e.brand||e.brands||"").trim(),metricQuantity:i,commonQuantity:r,commonUnit:s,calories:Math.max(0,n*c),protein:Math.max(0,m(a.protein,0)*c),fat:Math.max(0,m(a.fat,0)*c),carbs:Math.max(0,m(a.carbs,0)*c),serving:`${g(i,i%1?1:0)} g`,kind:"external",uses:0,lastUsed:""}}function Da(e,t=null){if(!e||!t)return e;const a=Math.max(.01,m(t.servingAmount,e.metricQuantity||100)),n=t.servingUnit||"g",i=t.servingUnitCustom||"";return{...e,name:t.name||e.name,calories:Number.isFinite(m(t.calories,NaN))?m(t.calories):e.calories,protein:Number.isFinite(m(t.protein,NaN))?m(t.protein):e.protein,fat:Number.isFinite(m(t.fat,NaN))?m(t.fat):e.fat,carbs:Number.isFinite(m(t.carbs,NaN))?m(t.carbs):e.carbs,serving:t.serving||pt(a,n,i),servingAmount:a,servingUnit:n,servingUnitCustom:i,equivalences:Vt(t.equivalences),userOverride:!0}}function st(){const e=d?.catalogOverrides||{};De=Qe.filter(t=>!e[t.id]?.hidden).map(t=>Da(t,e[t.id])),je=new Map(De.map(t=>[t.id,t])),ba=De.map(t=>Ka(t))}function ct(e){const t=Wt.get(e);return t?Da(t,d.catalogOverrides?.[e]):null}async function Ki(){pe="loading",va="";try{let e=[],t="Supabase";try{e=await window.MASA_CLOUD.loadGlobalFoods()}catch(a){console.warn("No se pudo cargar el cat\xE1logo desde Supabase; se usar\xE1 la copia local.",a)}if(!Array.isArray(e)||!e.length){t="copia local";const a=await fetch(Ui,{cache:"no-store"});if(!a.ok)throw new Error(`HTTP ${a.status} al cargar el cat\xE1logo`);e=await a.json()}if(!Array.isArray(e))throw new Error("El cat\xE1logo no contiene una lista JSON");Qe=e.map(Yi).filter(Boolean),Wt=new Map(Qe.map(a=>[a.id,a])),st(),pe="ready",console.info(`Cat\xE1logo cargado desde ${t}: ${De.length.toLocaleString("es-UY")} alimentos.`)}catch(e){Qe=[],Wt=new Map,De=[],je=new Map,ba=[],pe="error",va=e instanceof Error?e.message:String(e),console.error("No se pudo cargar el cat\xE1logo:",e)}o("#food-modal")?.hidden||It(),o("#library-modal")?.hidden||de(),o("#recipe-modal")?.hidden||(me(),Ge())}function lt(e={}){const t=ie(e);if(!t)return null;const{ingredients:a,recipeYield:n,...i}=t;return{...i,id:e.id||G(),sourceId:e.sourceId||"",entryMode:rt(e)?"calories":"quantity",quantity:Math.max(0,m(e.quantity,0)),quantityUnit:String(e.quantityUnit||"").trim(),meal:["breakfast","lunch","snack","dinner","extras"].includes(e.meal)?e.meal:"extras"}}function Nt(e,t){return!!(k(e.birthDate)&&Number(e.heightCm)>0&&["male","female"].includes(e.sex)&&Array.isArray(t)&&t.length>0&&(e.goalType==="maintain"||(Number(e.goalWeight)>0||Number(e.goalBodyFat)>0)&&k(e.goalDate)))}function $t(){return ke({configured:!1,profile:En,weighIns:[]})}function Gi(){try{const e=localStorage.getItem(Bt);if(e)return ke(JSON.parse(e));for(const t of Mn){const a=localStorage.getItem(t);if(a)return ke(JSON.parse(a))}}catch{}return $t()}function Vi(e){return!!(e?.configured||e?.weighIns?.length||e?.foods?.length||e?.recipes?.length||Object.values(e?.diary||{}).some(t=>t?.length))}function Xi(){try{const e=localStorage.getItem(Bt);e&&localStorage.setItem(`masa-legacy-backup-${Date.now()}`,e),localStorage.removeItem(Bt),Mn.forEach(t=>localStorage.removeItem(t))}catch{}}function F(e=d){if(d=ke(e),xa+=1,Qe.length&&st(),window.MASA_CLOUD?.isAuthenticated())window.MASA_CLOUD.scheduleStateSync(d);else try{localStorage.setItem(Bt,JSON.stringify(d))}catch{}return d}function re(e=d.weighIns){return[...e].sort((t,a)=>t.date.localeCompare(a.date))}function Aa(e=d.weighIns){return re(e).at(-1)||null}function Ne(e,t){const a=new Map(e.map(n=>[n.date,{...n}]));return t.forEach(n=>{const i=I(n.date),r=m(n.weight,NaN);!i||!Number.isFinite(r)||r<=0||a.set(i,{id:n.id||a.get(i)?.id||G(),date:i,weight:r})}),[...a.values()].sort((n,i)=>n.date.localeCompare(i.date))}function An(e=d.weighIns,t=d.profile.trendWindow||7){const a=re(e);return a.map((n,i)=>{const r=a.slice(Math.max(0,i-t+1),i+1);return{...n,trend:r.reduce((s,c)=>s+c.weight,0)/r.length}})}function Tn(e=d.weighIns,t=21,a="weight"){const n=re(e).slice(-t);if(n.length<3)return null;const i=k(n[0].date),r=n.map(f=>({x:ye(i,k(f.date)),y:m(f[a],NaN)})).filter(f=>Number.isFinite(f.x)&&Number.isFinite(f.y));if(r.length<3)return null;const s=r.reduce((f,p)=>f+p.x,0)/r.length,c=r.reduce((f,p)=>f+p.y,0)/r.length,l=r.reduce((f,p)=>f+(p.x-s)*(p.y-c),0),u=r.reduce((f,p)=>f+(p.x-s)**2,0);return u?l/u*7:null}function In(e=d.weighIns,t=E.emaAlpha){const a=re(e);let n=null,i=null;return a.map(r=>{const s=k(r.date);if(!Number.isFinite(n))n=r.weight;else{const c=Math.max(1,Math.round(ye(i,s))),l=1-(1-t)**c;n+=l*(r.weight-n)}return i=s,{...r,trend:n}})}function Un(e=d.weighIns,t=60){return Tn(In(e),t,"trend")}function Qi(e){const t=k(e),a=new Date;if(!t||t>a)return null;let n=a.getFullYear()-t.getFullYear();return(a.getMonth()<t.getMonth()||a.getMonth()===t.getMonth()&&a.getDate()<t.getDate())&&(n-=1),n>=18&&n<=120?n:null}function Pn(e,t,a,n){return 10*t+6.25*a-5*n+(e==="female"?-161:5)}function Ji(e,t){const a=Qi(e.birthDate),n=m(e.heightCm,NaN),i=m(e.bodyFat,NaN);return[a,n,t].every(Number.isFinite)?e.formula==="cunningham"?Number.isFinite(i)&&i>1&&i<70?{value:500+22*(t*(1-i/100)),used:"cunningham",fallback:!1}:{value:Pn(e.sex,t,n,a),used:"mifflin",fallback:!0}:e.formula==="harris"?{value:e.sex==="female"?447.593+9.247*t+3.098*n-4.33*a:88.362+13.397*t+4.799*n-5.677*a,used:"harris",fallback:!1}:{value:Pn(e.sex,t,n,a),used:"mifflin",fallback:!1}:{value:null,used:e.formula,fallback:!1}}function Zi(e){return e==="loss"?{proteinPerKg:2.2,fatPerKg:1}:e==="gain"?{proteinPerKg:1.8,fatPerKg:1}:{proteinPerKg:1.8,fatPerKg:1}}function er(e,t){if(e.goalType==="maintain")return t;if(e.goalMetric==="bodyFat"){const a=m(e.bodyFat,NaN),n=m(e.goalBodyFat,NaN);return Number.isFinite(a)&&Number.isFinite(n)&&a>0&&n>0&&n<70?t*(1-a/100)/(1-n/100):null}return m(e.goalWeight,NaN)}function tr(e){return e==="loss"?{suggestedMin:.5,suggestedMax:1,defaultRate:.5}:e==="gain"?{suggestedMin:.25,suggestedMax:.5,defaultRate:.25}:{suggestedMin:0,suggestedMax:0,defaultRate:0}}function ar(e,t,a){const n=k(e.goalDate),i=k(R());if(!n||n<=i||!Number.isFinite(a)||t<=0||a<=0||e.goalType==="maintain")return null;const r=ye(i,n)/7;return r<=0?null:e.goalType==="loss"&&a<t?(1-(a/t)**(1/r))*100:e.goalType==="gain"&&a>t?((a/t)**(1/r)-1)*100:null}function Rn(e,t,a){const n=tr(e.goalType),i=ar(e,t,a);if(e.goalType==="maintain")return{selected:0,required:i,bounds:n,capped:!1};if(e.rateMode==="manual"){const r=P(m(e.weeklyRatePct,n.defaultRate),.01,2);return{selected:r,required:i,bounds:n,capped:r>n.suggestedMax}}return Number.isFinite(i)&&i>0?{selected:Math.min(i,n.suggestedMax),required:i,bounds:n,capped:i>n.suggestedMax}:{selected:n.defaultRate,required:i,bounds:n,capped:!1}}function nr(e,t,a,n){return e==="maintain"||!Number.isFinite(t)||!Number.isFinite(a)||!Number.isFinite(n)||n<=0?null:e==="loss"&&a<t?Math.log(a/t)/Math.log(1-n/100):e==="gain"&&a>t?Math.log(a/t)/Math.log(1+n/100):null}function qn(e,t,a,n,i,r){if(!a||!r||!Number.isFinite(t))return null;const s=Math.max(0,ye(a,r)/7);let c=t;return e.goalType==="loss"&&(c=t*(1-i/100)**s),e.goalType==="gain"&&(c=t*(1+i/100)**s),Number.isFinite(n)&&(e.goalType==="loss"&&(c=Math.max(n,c)),e.goalType==="gain"&&(c=Math.min(n,c))),c}function z(e=d.profile,t=d.weighIns,a=null){const n=Aa(t),i=Number.isFinite(m(a,NaN))?m(a):n?.weight;if(!Number.isFinite(i))return ir(e);const r=er(e,i),s=Rn(e,i,r),c=Ji(e,i),l=Number.isFinite(c.value)?c.value*m(e.activityFactor,1.35):null,u=Number.isFinite(l)?l+m(e.calibrationOffset,0):null,f=e.goalType==="maintain"?0:i*s.selected/100,p=e.goalType==="loss"?-f:e.goalType==="gain"?f:0,w=p*7700/7,y=Number.isFinite(u)?Math.max(1e3,u+w):null;let x,b,v,h;if(e.macroMode==="custom"){const H=m(e.proteinPct,NaN),Xe=m(e.fatPct,NaN),Oe=m(e.carbPct,NaN);x=Number.isFinite(y)&&Number.isFinite(H)?y*H/100/4:null,b=Number.isFinite(y)&&Number.isFinite(Xe)?y*Xe/100/9:null,v=Number.isFinite(y)&&Number.isFinite(Oe)?y*Oe/100/4:null,h={mode:"custom",proteinPerKg:Number.isFinite(x)?x/i:null,fatPercent:Xe}}else if(e.macroMode==="balanced"){const H={proteinPct:20,fatPct:30,carbPct:50};x=Number.isFinite(y)?y*H.proteinPct/100/4:null,b=Number.isFinite(y)?y*H.fatPct/100/9:null,v=Number.isFinite(y)?y*H.carbPct/100/4:null,h={mode:"balanced",...H}}else{const H=Zi(e.goalType);x=i*H.proteinPerKg;const Xe=i*H.fatPerKg,Oe=Number.isFinite(y)?Math.max(0,y-x*4):null;b=Number.isFinite(Oe)?Math.min(Xe,Oe/9):null,v=Number.isFinite(y)&&Number.isFinite(b)?Math.max(0,(y-x*4-b*9)/4):null,h={mode:"athletic",...H,effectiveFatPerKg:Number.isFinite(b)?b/i:null}}const M=[x*4,b*9,v*4].every(Number.isFinite)?x*4+b*9+v*4:null,N=Number.isFinite(y)&&y>0&&Number.isFinite(x)?x*4/y*100:null,$=Number.isFinite(y)&&y>0&&Number.isFinite(b)?b*9/y*100:null,A=Number.isFinite(y)&&y>0&&Number.isFinite(v)?v*4/y*100:null,U=m(e.heightCm,NaN)/100,le=m(e.bodyFat,NaN),J=Number.isFinite(U)&&U>0?i/U**2:null,ge=Number.isFinite(le)&&le>0&&le<70&&Number.isFinite(U)?i*(1-le/100)/U**2:null,Se=nr(e.goalType,i,r,s.selected),Le=Number.isFinite(Se)?X(k(R()),Se*7):null;return{weight:i,targetWeight:r,rate:s,rmr:c,baseMaintenance:l,maintenance:u,weeklyKg:f,signedWeeklyKg:p,dailyAdjustment:w,targetCalories:y,proteinG:x,fatG:b,carbsG:v,macroRule:h,macroCalories:M,proteinPct:N,fatPct:$,carbsPct:A,bmi:J,ffmi:ge,estimatedWeeks:Se,estimatedDate:Le}}function ir(e){return{weight:null,targetWeight:null,rate:Rn(e,1,1),rmr:{value:null,used:e.formula,fallback:!1},baseMaintenance:null,maintenance:null,weeklyKg:null,signedWeeklyKg:null,dailyAdjustment:null,targetCalories:null,proteinG:null,fatG:null,carbsG:null,macroRule:{mode:e.macroMode},macroCalories:null,proteinPct:null,fatPct:null,carbsPct:null,bmi:null,ffmi:null,estimatedDate:null}}function Xs(e,t=An()){const a=te(e);return[...t].reverse().find(n=>n.date<=a)?.trend??null}function rr(e,t,a){const n=k(e.planStartDate)||k(re()[0]?.date),i=m(e.planStartWeight,re()[0]?.weight);return!n||!Number.isFinite(i)?null:qn(e,i,n,t.targetWeight,t.rate.selected,a)}function or(e){return Number.isFinite(e)?e<18.5?"bajo seg\xFAn referencia general":e<25?"dentro de referencia general":e<30?"por encima de referencia general":"alto seg\xFAn referencia general":"sin c\xE1lculo"}function He(){return d.diary[L]||[]}function sr(e=L){const t=ve();if(e===t)return"Hoy";if(e===R()&&e!==t)return"D\xEDa siguiente";const a=te(X(k(t),-1));return e===a?"Ayer":j(e)}function Jt(e,t=!1){const a=I(e);a&&(L=a>R()?R():a,Ue=!1,Zt(z()),Dt(),Ie==="chart"&&requestAnimationFrame(()=>Lt(z())),t&&o("#daily-diary")?.scrollIntoView({behavior:"smooth",block:"start"}))}function On(e){const t=k(L)||new Date;Jt(te(X(t,e)))}function cr(){const e=o("#diary-native-date");e.max=R(),e.value=L,typeof e.showPicker=="function"?e.showPicker():e.click()}function Et(e=He()){return e.reduce((t,a)=>(t.calories+=m(a.calories,0),t.protein+=m(a.protein,0),t.fat+=m(a.fat,0),t.carbs+=m(a.carbs,0),t),{calories:0,protein:0,fat:0,carbs:0})}function jn(e){return{breakfast:"Desayuno",lunch:"Almuerzo",snack:"Merienda",dinner:"Cena",extras:"Snacks"}[e]||"Comida"}function Zt(e){const t=He(),a=Et(t),n=Number.isFinite(e.targetCalories)?e.targetCalories:0,i=k(L)||new Date;o("#diary-date-label").textContent=new Intl.DateTimeFormat("es-UY",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(i),o("#diary-date-status").textContent=sr(),o("#diary-native-date").value=L,o("#diary-native-date").max=R(),o("#diary-next-day").disabled=L>=R(),o("#diary-today-button").hidden=L===ve(),o("#diary-calories").textContent=g(Math.round(a.calories));const r=n-a.calories;o("#diary-remaining").textContent=n?`${g(Math.abs(Math.round(r)))} kcal ${r>=0?"disponibles":"por encima"}`:"Sin objetivo calculado",ea("calorie",a.calories,n,"kcal"),ea("protein",a.protein,e.proteinG,"g"),ea("fat",a.fat,e.fatG,"g"),ea("carb",a.carbs,e.carbsG,"g"),["breakfast","lunch","snack","dinner","extras"].forEach(c=>{const l=document.querySelector(`[data-meal-items="${c}"]`),u=t.filter(p=>p.meal===c),f=u.reduce((p,w)=>p+m(w.calories,0),0);if(document.querySelector(`[data-meal-total="${c}"]`).textContent=`${g(Math.round(f))} kcal`,l.innerHTML="",!u.length){l.innerHTML='<p class="meal-empty">Todav\xEDa no cargaste nada.</p>';return}u.forEach(p=>{const w=document.createElement("div"),y=be===p.id;if(w.className=`meal-item${y?" editing":""}`,y)if(rt(p))w.innerHTML=`<form class="meal-inline-edit" data-diary-edit-form="${C(p.id)}">
-              <div class="meal-inline-edit-title"><b>${C(p.name)}</b><small data-diary-edit-preview>${g(Math.round(p.calories))} kcal</small></div>
-              <label><span>Calor\xEDas</span><div class="unit-input"><input name="calories" type="number" min="1" max="10000" step="1" inputmode="numeric" value="${C(Math.round(p.calories))}" required><i>kcal</i></div></label>
+(() => {
+  "use strict";
+
+  const STORAGE_KEY = "masa-state-v10";
+  const TIPS_SEEN_KEY = "masa-tips-seen-v1";
+  const LEGACY_KEYS = ["masa-state-v9", "masa-state-v8", "masa-state-v7", "masa-state-v6", "masa-state-v5", "peso-claro-state-v2", "peso-claro-state-v1"];
+  const DAY_MS = 86_400_000;
+  const DIARY_ROLLOVER_HOUR = 3; // MASA_DIARY_ROLLOVER_3AM_V2
+  const KG_KCAL = 7700;
+  // MASA_ADAPTIVE_EXPENDITURE_V1
+  const EXPENDITURE_CONFIG = Object.freeze({
+    emaAlpha: 0.10,
+    windowDays: 42,
+    minIntakeDays: 14,
+    minSpanDays: 18,
+    minWeighIns: 8,
+    reviewIntervalDays: 7,
+    minNewIntakeDays: 3,
+    minNewWeighIns: 2,
+    maxAdjustment: 250,
+    minMeaningfulAdjustment: 30
+  });
+  const MEAL_USAGE_KEYS = ["breakfast", "lunch", "snack", "dinner", "extras"];
+  const EXTERNAL_FOOD_CATALOG_URL = new URL(
+    "../data/opennutrition-es-general.json",
+    document.currentScript?.src || window.location.href
+  ).href;
+  const OPEN_FOOD_FACTS_PRODUCT_URL = "https://world.openfoodfacts.org/api/v2/product";
+  const OPEN_FOOD_FACTS_PROXY_URL = new URL("/api/open-food-facts/", window.location.origin).href;
+
+  let externalFoodCatalog = [];
+  let externalFoodCatalogById = new Map();
+  let externalFoods = [];
+  let externalFoodsById = new Map();
+  let externalFoodSearchIndex = [];
+  let externalFoodsStatus = "idle";
+  let externalFoodsError = "";
+  let externalFoodsLoadPromise = null;
+  let activeFoodSelection = null;
+  let foodSearchTimer = null;
+  let recipeSearchTimer = null;
+  let libraryCatalogSearchTimer = null;
+  let activeRecipeIngredientSelection = null;
+  let recipeDraftIngredients = [];
+  let editingFoodId = null;
+  let editingCatalogFoodId = null;
+  let editingRecipeId = null;
+  let foodEditorReturnTarget = "";
+  let recipeEditorReturnTarget = "";
+  let libraryReturnTarget = "";
+  let foodEditorPrefill = null;
+  let foodEditorEquivalences = [];
+  let recipeEditorEquivalences = [];
+  let foodEditorRescanMode = "barcode";
+  let nutritionLabelScanBusy = false;
+  let barcodeReader = null;
+  let barcodeScannerControls = null;
+  let barcodeReturnTarget = "food";
+  let barcodeLookupBusy = false;
+  let barcodeTorchOn = false;
+
+  const DEFAULT_PROFILE = {
+    name: "",
+    birthDate: "",
+    sex: "male",
+    heightCm: "",
+    bodyFat: "",
+    formula: "mifflin",
+    activityFactor: 1.35,
+    calibrationOffset: 0,
+    goalType: "loss",
+    goalMetric: "weight",
+    goalWeight: "",
+    goalBodyFat: "",
+    goalDate: "",
+    rateMode: "auto",
+    weeklyRatePct: 0.5,
+    macroMode: "athletic",
+    proteinPct: "",
+    fatPct: "",
+    carbPct: "",
+    trendWindow: 7,
+    planStartDate: "",
+    planStartWeight: ""
+  };
+
+  const ACTIVITY_LABELS = {
+    "1.2": "Bajo · 1,20",
+    "1.35": "Ligero · 1,35",
+    "1.5": "Medio · 1,50",
+    "1.7": "Alto · 1,70",
+    "1.9": "Muy alto · 1,90"
+  };
+
+  const ACTIVITY_EXPLANATIONS = {
+    "1.2": "Rutina mayormente sentada, pocos pasos y entrenamiento inexistente o esporádico.",
+    "1.35": "Trabajo principalmente sentado, con caminatas habituales o 2–3 sesiones semanales.",
+    "1.5": "Movimiento frecuente durante el día o 3–5 sesiones semanales. Es un punto medio razonable para muchas personas activas.",
+    "1.7": "Trabajo físico, muchos pasos diarios o entrenamiento exigente y frecuente.",
+    "1.9": "Trabajo físico más entrenamiento intenso casi diario. Es poco habitual y suele sobreestimarse."
+  };
+
+  const FORMULA_LABELS = {
+    mifflin: "Mifflin–St Jeor",
+    harris: "Harris–Benedict",
+    cunningham: "Cunningham"
+  };
+
+  let state;
+  let stateRevision = 0;
+  let settingsRequired = false;
+  let importMode = "history";
+  let chartPayload = null;
+  let chartRange = "3m";
+  let activeProgressChart = "weight";
+  let recalibrationSuggestion = null;
+  let fillingProfileForm = false;
+  let activeMeal = "breakfast";
+  let activeFoodMode = "recent";
+  let activeAppView = "today";
+  let activeDiaryView = "record";
+  let calorieRange = 14;
+  let weightEditorForced = false;
+  let editingDiaryEntryId = null;
+  let selectedDiaryDate = operationalDayISO();
+  let selectedHistoryId = null;
+  let lastOperationalDay = operationalDayISO();
+  let operationalDayTimer = null;
+
+  const $ = selector => document.querySelector(selector);
+  const $$ = selector => Array.from(document.querySelectorAll(selector));
+
+  function isNativeRuntime() {
+    try {
+      return Boolean(window.Capacitor?.isNativePlatform?.() || window.location.protocol === "capacitor:");
+    } catch (_) {
+      return window.location.protocol === "capacitor:";
+    }
+  }
+
+  function isMobileWebRuntime() {
+    return !isNativeRuntime() && window.matchMedia("(max-width: 800px)").matches;
+  }
+
+  function usesSoftKeyboardLayout() {
+    return isNativeRuntime() || window.matchMedia("(max-width: 1000px), (pointer: coarse)").matches;
+  }
+
+  function isKeyboardField(element) {
+    if (!element?.matches?.("input, textarea, [contenteditable='true']")) return false;
+    if (element.matches("textarea, [contenteditable='true']")) return true;
+    return !["button", "checkbox", "color", "file", "hidden", "image", "radio", "range", "reset", "submit"].includes(String(element.type || "text").toLowerCase());
+  }
+
+  function syncNativeOnlyControls(nativeRuntime) {
+    document.querySelectorAll("[data-native-only]").forEach(element => {
+      element.hidden = !nativeRuntime;
+    });
+  }
+
+  function syncVisualViewport() {
+    const viewport = window.visualViewport;
+    const height = Math.max(180, Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight));
+    const offsetTop = Math.max(0, Math.round(viewport?.offsetTop || 0));
+    const root = document.documentElement;
+    const nativeRuntime = isNativeRuntime();
+    root.classList.toggle("native-runtime", nativeRuntime);
+    root.classList.toggle("web-runtime", !nativeRuntime);
+    root.style.setProperty("--visual-viewport-height", `${height}px`);
+    root.style.setProperty("--visual-viewport-top", `${offsetTop}px`);
+    syncNativeOnlyControls(nativeRuntime);
+  }
+
+  function focusOnOpen(element) {
+    if (!element || isMobileWebRuntime()) return;
+    requestAnimationFrame(() => element.focus());
+  }
+
+  function revealFocusedField(field) {
+    if (!isKeyboardField(field) || !document.contains(field)) return;
+    syncVisualViewport();
+    field.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" });
+  }
+
+  function keepFocusedFieldVisible(event) {
+    const field = event.target;
+    if (!usesSoftKeyboardLayout() || !isKeyboardField(field)) return;
+    document.documentElement.classList.add("soft-keyboard-focus");
+    [80, 220, 420].forEach(delay => window.setTimeout(() => revealFocusedField(field), delay));
+  }
+
+  function clearKeyboardFocusState() {
+    window.setTimeout(() => {
+      if (isKeyboardField(document.activeElement)) return;
+      document.documentElement.classList.remove("soft-keyboard-focus");
+      syncVisualViewport();
+    }, 180);
+  }
+
+  function handleVisualViewportChange() {
+    syncVisualViewport();
+    const field = document.activeElement;
+    if (usesSoftKeyboardLayout() && isKeyboardField(field)) {
+      window.requestAnimationFrame(() => revealFocusedField(field));
+    }
+  }
+
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function toNumber(value, fallback = "") {
+    if (value === "" || value === null || value === undefined) return fallback;
+    const parsed = Number(String(value).trim().replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  // MASA_SECURITY_INPUT_GUARDS_V1
+  const INPUT_LIMITS = Object.freeze({
+    text: 120,
+    shortText: 40,
+    calories: 10_000,
+    macro: 10_000,
+    quantity: 100_000
+  });
+
+  function cleanInputText(value, maxLength = INPUT_LIMITS.text) {
+    return String(value ?? "")
+      .replace(/[\u0000-\u001f\u007f]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, maxLength);
+  }
+
+  function boundedInputNumber(value, min, max, fallback = NaN) {
+    const number = toNumber(value, NaN);
+    if (!Number.isFinite(number) || number < min || number > max) return fallback;
+    return number;
+  }
+
+  function isCalorieOnlyEntry(entry) {
+    return entry?.entryMode === "calories"
+      || (!entry?.sourceId && String(entry?.serving || "").toLowerCase() === "carga libre" && toNumber(entry?.quantity, 0) <= 0);
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function createId() {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  function toISODate(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  }
+
+  function todayISO() {
+    return toISODate(new Date());
+  }
+
+  function operationalDayISO(date = new Date()) {
+    const shifted = new Date(date);
+    shifted.setHours(shifted.getHours() - DIARY_ROLLOVER_HOUR);
+    return toISODate(shifted);
+  }
+
+  function dailyRolloverReached(date = new Date()) {
+    return date.getHours() >= DIARY_ROLLOVER_HOUR;
+  }
+
+  function normalizeDate(value) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return toISODate(value);
+    const raw = String(value || "").trim().replace(/^"|"$/g, "");
+    let match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return validISO(`${match[1]}-${match[2]}-${match[3]}`) ? `${match[1]}-${match[2]}-${match[3]}` : "";
+    match = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/);
+    if (match) {
+      let year = match[3] ? Number(match[3]) : new Date().getFullYear();
+      if (year < 100) year += 2000;
+      const iso = `${year}-${String(match[2]).padStart(2, "0")}-${String(match[1]).padStart(2, "0")}`;
+      return validISO(iso) ? iso : "";
+    }
+    match = raw.match(/^(\d{2})(\d{2})(\d{2}|\d{4})$/);
+    if (match) {
+      let year = Number(match[3]);
+      if (year < 100) year += 2000;
+      const iso = `${year}-${match[2]}-${match[1]}`;
+      return validISO(iso) ? iso : "";
+    }
+    return "";
+  }
+
+  function validISO(value) {
+    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return false;
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
+    return date.getFullYear() === Number(match[1]) && date.getMonth() === Number(match[2]) - 1 && date.getDate() === Number(match[3]);
+  }
+
+  function parseDate(value) {
+    const iso = normalizeDate(value);
+    if (!iso) return null;
+    const [year, month, day] = iso.split("-").map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+  }
+
+  function displayDate(value) {
+    const iso = normalizeDate(value);
+    if (!iso) return "";
+    const [year, month, day] = iso.split("-");
+    return `${day}/${month}/${year}`;
+  }
+
+  function formatDate(value) {
+    const formatted = displayDate(value);
+    return formatted || "—";
+  }
+
+  function formatMonth(value) {
+    const date = value instanceof Date ? value : parseDate(value);
+    if (!date) return "—";
+    return new Intl.DateTimeFormat("es-UY", { month: "long", year: "numeric" }).format(date);
+  }
+
+  function addDays(date, days) {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+  }
+
+  function addMonths(date, months) {
+    return new Date(date.getFullYear(), date.getMonth() + months, 1, 12, 0, 0, 0);
+  }
+
+  function endOfMonth(date) {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0, 12);
+  }
+
+  function daysBetween(a, b) {
+    return (b - a) / DAY_MS;
+  }
+
+  function formatNumber(value, digits = 0) {
+    return Number.isFinite(Number(value))
+      ? Number(value).toLocaleString("es-UY", { minimumFractionDigits: digits, maximumFractionDigits: digits })
+      : "—";
+  }
+
+  function roundEditorNumber(value, digits = 0) {
+    const number = toNumber(value, 0);
+    const factor = 10 ** digits;
+    return Math.round((number + Number.EPSILON) * factor) / factor;
+  }
+
+  function formatKg(value, digits = 1) {
+    return Number.isFinite(Number(value)) ? `${formatNumber(value, digits)} kg` : "—";
+  }
+
+  function formatSignedKg(value) {
+    if (!Number.isFinite(value)) return "—";
+    return `${value > 0 ? "+" : ""}${formatNumber(value, 2)} kg`;
+  }
+
+  function nearestActivity(value) {
+    const options = [1.2, 1.35, 1.5, 1.7, 1.9];
+    return options.reduce((best, current) => Math.abs(current - value) < Math.abs(best - value) ? current : best, 1.35);
+  }
+
+  function normalizeProfile(raw = {}, weighIns = []) {
+    const sorted = [...weighIns].sort((a, b) => a.date.localeCompare(b.date));
+    const first = sorted[0];
+    const latest = sorted.at(-1);
+    const oldProtein = toNumber(raw.proteinGrams, NaN);
+    const oldFat = toNumber(raw.fatGrams, NaN);
+    const oldCarbs = toNumber(raw.carbGrams, NaN);
+    const oldMacroCalories = oldProtein * 4 + oldFat * 9 + oldCarbs * 4;
+    const hasOldMacros = [oldProtein, oldFat, oldCarbs].every(Number.isFinite) && oldMacroCalories > 0;
+    const hasPercentMacros = [raw.proteinPct, raw.fatPct, raw.carbPct].every(value => Number.isFinite(toNumber(value, NaN)));
+    const rawMacroMode = raw.macroMode === "manual" ? "custom" : raw.macroMode === "auto" ? "athletic" : raw.macroMode;
+    const macroMode = rawMacroMode === "custom" && (hasPercentMacros || hasOldMacros)
+      ? "custom"
+      : ["balanced", "athletic"].includes(rawMacroMode) ? rawMacroMode : "athletic";
+    const migratedProteinPct = hasPercentMacros ? toNumber(raw.proteinPct) : hasOldMacros ? oldProtein * 4 / oldMacroCalories * 100 : "";
+    const migratedFatPct = hasPercentMacros ? toNumber(raw.fatPct) : hasOldMacros ? oldFat * 9 / oldMacroCalories * 100 : "";
+    const migratedCarbPct = hasPercentMacros ? toNumber(raw.carbPct) : hasOldMacros ? oldCarbs * 4 / oldMacroCalories * 100 : "";
+
+    return {
+      ...clone(DEFAULT_PROFILE),
+      ...raw,
+      name: String(raw.name || "").trim(),
+      birthDate: normalizeDate(raw.birthDate),
+      sex: raw.sex === "female" ? "female" : "male",
+      heightCm: toNumber(raw.heightCm),
+      bodyFat: toNumber(raw.bodyFat),
+      formula: ["mifflin", "harris", "cunningham"].includes(raw.formula) ? raw.formula : "mifflin",
+      activityFactor: [1.2, 1.35, 1.5, 1.7, 1.9].includes(toNumber(raw.activityFactor))
+        ? toNumber(raw.activityFactor)
+        : nearestActivity(toNumber(raw.activityFactor, 1.35)),
+      calibrationOffset: clamp(toNumber(raw.calibrationOffset, 0), -900, 900),
+      goalType: ["loss", "maintain", "gain"].includes(raw.goalType) ? raw.goalType : "loss",
+      goalMetric: ["weight", "bodyFat"].includes(raw.goalMetric) ? raw.goalMetric : "weight",
+      goalWeight: toNumber(raw.goalWeight),
+      goalBodyFat: toNumber(raw.goalBodyFat),
+      goalDate: normalizeDate(raw.goalDate),
+      rateMode: ["auto", "manual"].includes(raw.rateMode) ? raw.rateMode : "auto",
+      weeklyRatePct: clamp(toNumber(raw.weeklyRatePct, raw.goalType === "gain" ? 0.25 : 0.5), 0, 2),
+      macroMode,
+      proteinPct: macroMode === "custom" ? clamp(migratedProteinPct, 5, 70) : "",
+      fatPct: macroMode === "custom" ? clamp(migratedFatPct, 10, 70) : "",
+      carbPct: macroMode === "custom" ? clamp(migratedCarbPct, 5, 80) : "",
+      trendWindow: clamp(Math.round(toNumber(raw.trendWindow, 7)), 3, 14),
+      planStartDate: normalizeDate(raw.planStartDate) || first?.date || "",
+      planStartWeight: toNumber(raw.planStartWeight, first?.weight || "")
+    };
+  }
+
+  function normalizeTimestamp(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
+  }
+
+  function normalizeEquivalence(item = {}) {
+    const amount = Math.max(0, toNumber(item.amount, 0));
+    const baseAmount = Math.max(0, toNumber(item.baseAmount, 0));
+    if (amount <= 0 || baseAmount <= 0) return null;
+    const rawUnit = String(item.unit || "unit").trim() || "unit";
+    const unit = ["g", "kg", "ml", "l", "unit", "serving", "cup", "tablespoon", "teaspoon", "plate", "slice", "package", "custom"].includes(rawUnit)
+      ? rawUnit
+      : canonicalEditableUnit(rawUnit);
+    const customUnit = String(item.customUnit || item.unitCustom || (unit === "custom" && rawUnit !== "custom" ? rawUnit : "")).trim();
+    if (unit === "custom" && !customUnit) return null;
+    return {
+      id: String(item.id || createId()),
+      amount,
+      unit,
+      customUnit,
+      baseAmount
+    };
+  }
+
+  function normalizeEquivalences(items = []) {
+    if (!Array.isArray(items)) return [];
+    const seen = new Set();
+    return items.map(normalizeEquivalence).filter(item => {
+      if (!item) return false;
+      const key = `${item.unit}:${normalizeHeader(item.customUnit)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 20);
+  }
+
+  function normalizeRecipeIngredient(item = {}) {
+    const name = String(item.name || "").trim();
+    const amount = Math.max(0, toNumber(item.amount, 0));
+    const calories = Math.max(0, toNumber(item.calories, 0));
+    if (!name || amount <= 0) return null;
+    return {
+      id: item.id || createId(),
+      sourceId: String(item.sourceId || item.foodId || "").trim(),
+      foodId: String(item.foodId || "").trim(),
+      kind: ["food", "external"].includes(item.kind) ? item.kind : "food",
+      name,
+      amount,
+      unit: String(item.unit || "serving").trim() || "serving",
+      serving: String(item.serving || "").trim(),
+      quantityFactor: Math.max(0, toNumber(item.quantityFactor, 0)),
+      calories,
+      protein: Math.max(0, toNumber(item.protein, 0)),
+      fat: Math.max(0, toNumber(item.fat, 0)),
+      carbs: Math.max(0, toNumber(item.carbs, 0))
+    };
+  }
+
+  function normalizeCatalogOverride(item = {}, fallbackId = "") {
+    const id = String(item.id || fallbackId || "").trim();
+    if (!id) return null;
+    const result = { id, hidden: Boolean(item.hidden) };
+    const name = String(item.name || "").trim();
+    const calories = toNumber(item.calories, NaN);
+    const servingAmount = toNumber(item.servingAmount, NaN);
+    if (name) result.name = name;
+    if (Number.isFinite(calories) && calories >= 0) result.calories = calories;
+    ["protein", "fat", "carbs"].forEach(key => {
+      const value = toNumber(item[key], NaN);
+      if (Number.isFinite(value) && value >= 0) result[key] = value;
+    });
+    if (Number.isFinite(servingAmount) && servingAmount > 0) result.servingAmount = servingAmount;
+    if (item.servingUnit) result.servingUnit = String(item.servingUnit);
+    if (item.servingUnitCustom) result.servingUnitCustom = String(item.servingUnitCustom).trim();
+    if (item.serving) result.serving = String(item.serving).trim();
+    result.equivalences = normalizeEquivalences(item.equivalences);
+    result.updatedAt = normalizeTimestamp(item.updatedAt) || new Date().toISOString();
+    return result;
+  }
+
+  function normalizeBarcode(value) {
+    return String(value || "").replace(/\D/g, "");
+  }
+
+  function validBarcode(value) {
+    const code = normalizeBarcode(value);
+    if (![8, 12, 13, 14].includes(code.length)) return false;
+    const digits = [...code].map(Number);
+    const check = digits.pop();
+    let sum = 0;
+    for (let index = digits.length - 1, position = 0; index >= 0; index--, position++) {
+      sum += digits[index] * (position % 2 === 0 ? 3 : 1);
+    }
+    return (10 - (sum % 10)) % 10 === check;
+  }
+
+  function normalizeState(raw = {}) {
+    const input = Array.isArray(raw) ? { weighIns: raw } : raw;
+    const weighIns = Array.isArray(input.weighIns)
+      ? input.weighIns.map(item => ({
+          id: item.id || createId(),
+          date: normalizeDate(item.date || item.fecha),
+          weight: toNumber(item.weight ?? item.peso ?? item.peso_kg, NaN)
+        })).filter(item => item.date && Number.isFinite(item.weight) && item.weight > 0)
+      : [];
+
+    const deduped = new Map();
+    weighIns.forEach(item => deduped.set(item.date, item));
+    const sorted = [...deduped.values()].sort((a, b) => a.date.localeCompare(b.date));
+    const profile = normalizeProfile(input.profile || {}, sorted);
+
+    const foods = Array.isArray(input.foods) ? input.foods.map(normalizeFood).filter(Boolean) : [];
+    const recipes = Array.isArray(input.recipes) ? input.recipes.map(item => normalizeFood({ ...item, kind: "recipe" })).filter(Boolean) : [];
+    const diary = {};
+    Object.entries(input.diary || {}).forEach(([date, entries]) => {
+      const iso = normalizeDate(date);
+      if (!iso || !Array.isArray(entries)) return;
+      diary[iso] = entries.map(normalizeDiaryEntry).filter(Boolean);
+    });
+
+    const completedDays = {};
+    Object.entries(input.completedDays || {}).forEach(([date, completed]) => {
+      const iso = normalizeDate(date);
+      if (iso && completed) completedDays[iso] = true;
+    });
+
+    const foodUsage = {};
+    Object.entries(input.foodUsage || {}).forEach(([sourceId, usage]) => {
+      const amount = toNumber(usage?.amount, NaN);
+      if (!sourceId || !Number.isFinite(amount) || amount <= 0) return;
+      foodUsage[sourceId] = {
+        amount,
+        unit: String(usage?.unit || "").trim(),
+        uses: Math.max(0, Math.round(toNumber(usage?.uses, 0))),
+        lastUsed: normalizeDate(usage?.lastUsed),
+        lastUsedAt: normalizeTimestamp(usage?.lastUsedAt || usage?.lastUsed)
+      };
+    });
+    // MASA_MEAL_USAGE_NORMALIZATION_V1
+    const legacyMealUsageKeys = new Set();
+    Object.entries(foodUsage).forEach(([sourceId, usage]) => {
+      const rawUsage = input.foodUsage?.[sourceId] || {};
+      const byMeal = {};
+      MEAL_USAGE_KEYS.forEach(meal => {
+        const mealUsage = rawUsage?.byMeal?.[meal] || usage?.byMeal?.[meal];
+        const mealAmount = toNumber(mealUsage?.amount, NaN);
+        const mealUses = Math.max(0, Math.round(toNumber(mealUsage?.uses, 0)));
+        if (!mealUsage || (!Number.isFinite(mealAmount) && mealUses <= 0)) return;
+        byMeal[meal] = {
+          amount: Number.isFinite(mealAmount) && mealAmount > 0 ? mealAmount : toNumber(usage?.amount, 1),
+          unit: String(mealUsage?.unit || usage?.unit || "").trim(),
+          uses: mealUses,
+          lastUsed: normalizeDate(mealUsage?.lastUsed),
+          lastUsedAt: normalizeTimestamp(mealUsage?.lastUsedAt || mealUsage?.lastUsed)
+        };
+      });
+      if (!Object.keys(byMeal).length) legacyMealUsageKeys.add(sourceId);
+      usage.byMeal = byMeal;
+    });
+    if (legacyMealUsageKeys.size) {
+      Object.entries(diary).forEach(([date, entries]) => {
+        entries.forEach((entry, index) => {
+          const sourceId = String(entry?.sourceId || "").trim();
+          const meal = MEAL_USAGE_KEYS.includes(entry?.meal) ? entry.meal : "extras";
+          if (!sourceId || !legacyMealUsageKeys.has(sourceId) || !foodUsage[sourceId]) return;
+          const usage = foodUsage[sourceId];
+          const previous = usage.byMeal[meal] || {};
+          const entryAmount = toNumber(entry?.quantity, usage.amount);
+          const entryUnit = String(entry?.quantityUnit || usage.unit || "").trim();
+          const parsedDate = parseDate(date);
+          const usedAt = parsedDate
+            ? new Date(parsedDate.getTime() + index * 1000).toISOString()
+            : `${date}T12:00:00.000Z`;
+          const isLatest = !previous.lastUsedAt || usedAt > previous.lastUsedAt;
+          usage.byMeal[meal] = {
+            amount: isLatest && entryAmount > 0 ? entryAmount : toNumber(previous.amount, usage.amount),
+            unit: isLatest && entryUnit ? entryUnit : String(previous.unit || usage.unit || ""),
+            uses: Math.max(0, Math.round(toNumber(previous.uses, 0))) + 1,
+            lastUsed: isLatest ? date : previous.lastUsed,
+            lastUsedAt: isLatest ? usedAt : previous.lastUsedAt
+          };
+        });
+      });
+    }
+
+    const catalogOverrides = {};
+    const rawCatalogOverrides = input.catalogOverrides || input.externalFoodOverrides || {};
+    Object.entries(rawCatalogOverrides).forEach(([id, value]) => {
+      const normalized = normalizeCatalogOverride(value, id);
+      if (normalized) catalogOverrides[normalized.id] = normalized;
+    });
+
+    const configured = profileIsComplete(profile, sorted);
+    return {
+      version: 20,
+      configured,
+      profile,
+      weighIns: sorted,
+      foods,
+      recipes,
+      diary,
+      completedDays,
+      foodUsage,
+      catalogOverrides,
+      calibrationHistory: Array.isArray(input.calibrationHistory) ? input.calibrationHistory.slice(-20) : [],
+      lastCheckinDate: normalizeDate(input.lastCheckinDate)
+    };
+  }
+
+  function normalizeFood(item = {}) {
+    const name = String(item.name || "").trim();
+    const calories = toNumber(item.calories, NaN);
+    if (!name || !Number.isFinite(calories) || calories < 0) return null;
+    const kind = item.kind === "recipe" ? "recipe" : "food";
+    const ingredients = kind === "recipe" && Array.isArray(item.ingredients)
+      ? item.ingredients.map(normalizeRecipeIngredient).filter(Boolean)
+      : [];
+    const rawServing = String(item.serving || "1 porción").trim() || "1 porción";
+    const parsedServing = parseServingDefinition(rawServing);
+    const servingAmount = Math.max(0.01, toNumber(item.servingAmount ?? item.recipeServingAmount, parsedServing.baseAmount) || parsedServing.baseAmount);
+    const storedUnit = String(item.servingUnit || item.recipeYieldUnit || parsedServing.unitKey || "serving").trim();
+    const servingUnit = ["g", "kg", "ml", "l", "unit", "serving", "cup", "tablespoon", "teaspoon", "plate", "slice", "package", "custom"].includes(storedUnit)
+      ? storedUnit
+      : canonicalEditableUnit(storedUnit);
+    const servingUnitCustom = String(item.servingUnitCustom || item.recipeYieldUnitCustom || parsedServing.customUnit || "").trim();
+    return {
+      id: item.id || createId(),
+      name,
+      calories,
+      barcode: normalizeBarcode(item.barcode || item.code),
+      brand: String(item.brand || item.brands || "").trim(),
+      source: String(item.source || "").trim(),
+      sourceUrl: String(item.sourceUrl || "").trim(),
+      sourceImportedAt: normalizeTimestamp(item.sourceImportedAt),
+      imageUrl: String(item.imageUrl || "").trim(),
+      protein: Math.max(0, toNumber(item.protein, 0)),
+      fat: Math.max(0, toNumber(item.fat, 0)),
+      carbs: Math.max(0, toNumber(item.carbs, 0)),
+      serving: rawServing,
+      servingAmount,
+      servingUnit,
+      servingUnitCustom,
+      equivalences: normalizeEquivalences(item.equivalences),
+      kind,
+      ingredients,
+      recipeYield: kind === "recipe" ? Math.max(0.01, toNumber(item.recipeYield, 1) || 1) : 1,
+      recipeYieldUnit: kind === "recipe" ? servingUnit : "",
+      recipeYieldUnitCustom: kind === "recipe" ? servingUnitCustom : "",
+      recipeServingAmount: kind === "recipe" ? servingAmount : 0,
+      uses: Math.max(0, Math.round(toNumber(item.uses, 0))),
+      lastUsed: normalizeDate(item.lastUsed),
+      lastUsedAt: normalizeTimestamp(item.lastUsedAt || item.lastUsed)
+    };
+  }
+
+  function normalizeExternalFood(item = {}) {
+    const name = String(item.name || "").trim();
+    const per100g = item.per100g && typeof item.per100g === "object" ? item.per100g : {};
+    const caloriesPer100g = toNumber(per100g.calories, NaN);
+
+    if (!name || !Number.isFinite(caloriesPer100g) || caloriesPer100g < 0) return null;
+
+    const metricQuantity = Math.max(
+      0.1,
+      toNumber(item.serving?.metric?.quantity, 100) || 100
+    );
+    const commonQuantity = Math.max(
+      0,
+      toNumber(item.serving?.common?.quantity, 0) || 0
+    );
+    const commonUnit = String(item.serving?.common?.unit || "").trim();
+    const factor = metricQuantity / 100;
+
+    const aliases = Array.isArray(item.aliases)
+      ? [...new Set(
+          item.aliases
+            .map(alias => String(alias || "").trim())
+            .filter(Boolean)
+        )]
+      : [];
+
+    return {
+      id: `external:${item.id || createId()}`,
+      catalogId: String(item.id || ""),
+      name,
+      aliases,
+      barcode: normalizeBarcode(item.barcode || item.code),
+      brand: String(item.brand || item.brands || "").trim(),
+      sourceName: String(item.sourceName || item.brand || item.brands || "").trim(),
+      metricQuantity,
+      commonQuantity,
+      commonUnit,
+      calories: Math.max(0, caloriesPer100g * factor),
+      protein: Math.max(0, toNumber(per100g.protein, 0) * factor),
+      fat: Math.max(0, toNumber(per100g.fat, 0) * factor),
+      carbs: Math.max(0, toNumber(per100g.carbs, 0) * factor),
+      serving: `${formatNumber(metricQuantity, metricQuantity % 1 ? 1 : 0)} g`,
+      kind: "external",
+      uses: 0,
+      lastUsed: ""
+    };
+  }
+
+  function effectiveCatalogFood(base, override = null) {
+    if (!base || !override) return base;
+    const servingAmount = Math.max(0.01, toNumber(override.servingAmount, base.metricQuantity || 100));
+    const unit = override.servingUnit || "g";
+    const customUnit = override.servingUnitCustom || "";
+    return {
+      ...base,
+      name: override.name || base.name,
+      calories: Number.isFinite(toNumber(override.calories, NaN)) ? toNumber(override.calories) : base.calories,
+      protein: Number.isFinite(toNumber(override.protein, NaN)) ? toNumber(override.protein) : base.protein,
+      fat: Number.isFinite(toNumber(override.fat, NaN)) ? toNumber(override.fat) : base.fat,
+      carbs: Number.isFinite(toNumber(override.carbs, NaN)) ? toNumber(override.carbs) : base.carbs,
+      serving: override.serving || servingLabel(servingAmount, unit, customUnit),
+      servingAmount,
+      servingUnit: unit,
+      servingUnitCustom: customUnit,
+      equivalences: normalizeEquivalences(override.equivalences),
+      userOverride: true
+    };
+  }
+
+  function rebuildExternalFoodCatalog() {
+    const overrides = state?.catalogOverrides || {};
+    externalFoods = externalFoodCatalog
+      .filter(base => !overrides[base.id]?.hidden)
+      .map(base => effectiveCatalogFood(base, overrides[base.id]));
+    externalFoodsById = new Map(externalFoods.map(item => [item.id, item]));
+    externalFoodSearchIndex = externalFoods.map(item => createFoodSearchEntry(item));
+  }
+
+  function catalogFoodForEditing(id) {
+    const base = externalFoodCatalogById.get(id);
+    if (!base) return null;
+    return effectiveCatalogFood(base, state.catalogOverrides?.[id]);
+  }
+
+  async function loadExternalFoods() {
+    externalFoodsStatus = "loading";
+    externalFoodsError = "";
+
+    try {
+      let raw = [];
+      let source = "Supabase";
+
+      try {
+        raw = await window.MASA_CLOUD.loadGlobalFoods();
+      } catch (cloudError) {
+        console.warn("No se pudo cargar el catálogo desde Supabase; se usará la copia local.", cloudError);
+      }
+
+      if (!Array.isArray(raw) || !raw.length) {
+        source = "copia local";
+        const response = await fetch(EXTERNAL_FOOD_CATALOG_URL, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status} al cargar el catálogo`);
+        raw = await response.json();
+      }
+
+      if (!Array.isArray(raw)) throw new Error("El catálogo no contiene una lista JSON");
+
+      externalFoodCatalog = raw.map(normalizeExternalFood).filter(Boolean);
+      externalFoodCatalogById = new Map(externalFoodCatalog.map(item => [item.id, item]));
+      rebuildExternalFoodCatalog();
+      externalFoodsStatus = "ready";
+      console.info(`Catálogo cargado desde ${source}: ${externalFoods.length.toLocaleString("es-UY")} alimentos.`);
+    } catch (error) {
+      externalFoodCatalog = [];
+      externalFoodCatalogById = new Map();
+      externalFoods = [];
+      externalFoodsById = new Map();
+      externalFoodSearchIndex = [];
+      externalFoodsStatus = "error";
+      externalFoodsError = error instanceof Error ? error.message : String(error);
+      console.error("No se pudo cargar el catálogo:", error);
+    }
+
+    if (!$("#food-modal")?.hidden) renderActiveFoodMode();
+    if (!$("#library-modal")?.hidden) renderLibraryManager();
+    if (!$("#recipe-modal")?.hidden) {
+      renderRecipeIngredientResults();
+      renderRecipeIngredientList();
+    }
+  }
+
+  function normalizeDiaryEntry(item = {}) {
+    const food = normalizeFood(item);
+    if (!food) return null;
+    const { ingredients: _ingredients, recipeYield: _recipeYield, ...entryFood } = food;
+    return {
+      ...entryFood,
+      id: item.id || createId(),
+      sourceId: item.sourceId || "",
+      entryMode: isCalorieOnlyEntry(item) ? "calories" : "quantity",
+      quantity: Math.max(0, toNumber(item.quantity, 0)),
+      quantityUnit: String(item.quantityUnit || "").trim(),
+      meal: ["breakfast", "lunch", "snack", "dinner", "extras"].includes(item.meal) ? item.meal : "extras"
+    };
+  }
+
+  function profileIsComplete(profile, weighIns) {
+    return Boolean(
+      parseDate(profile.birthDate) &&
+      Number(profile.heightCm) > 0 &&
+      ["male", "female"].includes(profile.sex) &&
+      Array.isArray(weighIns) && weighIns.length > 0 &&
+      (profile.goalType === "maintain" || ((Number(profile.goalWeight) > 0 || Number(profile.goalBodyFat) > 0) && Boolean(parseDate(profile.goalDate))))
+    );
+  }
+
+  function emptyState() {
+    return normalizeState({ configured: false, profile: DEFAULT_PROFILE, weighIns: [] });
+  }
+
+  function loadLegacyState() {
+    try {
+      const current = localStorage.getItem(STORAGE_KEY);
+      if (current) return normalizeState(JSON.parse(current));
+      for (const key of LEGACY_KEYS) {
+        const legacy = localStorage.getItem(key);
+        if (legacy) return normalizeState(JSON.parse(legacy));
+      }
+    } catch (_) {}
+    return emptyState();
+  }
+
+  function hasMeaningfulState(value) {
+    return Boolean(
+      value?.configured ||
+      value?.weighIns?.length ||
+      value?.foods?.length ||
+      value?.recipes?.length ||
+      Object.values(value?.diary || {}).some(entries => entries?.length)
+    );
+  }
+
+  function clearLegacyState() {
+    try {
+      const original = localStorage.getItem(STORAGE_KEY);
+      if (original) localStorage.setItem(`masa-legacy-backup-${Date.now()}`, original);
+      localStorage.removeItem(STORAGE_KEY);
+      LEGACY_KEYS.forEach(key => localStorage.removeItem(key));
+    } catch (_) {}
+  }
+
+  function saveState(next = state) {
+    state = normalizeState(next);
+    stateRevision += 1;
+    if (externalFoodCatalog.length) rebuildExternalFoodCatalog();
+    if (window.MASA_CLOUD?.isAuthenticated()) {
+      window.MASA_CLOUD.scheduleStateSync(state);
+    } else {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+    }
+    return state;
+  }
+
+  function sortedWeighIns(values = state.weighIns) {
+    return [...values].sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function latestWeighIn(values = state.weighIns) {
+    return sortedWeighIns(values).at(-1) || null;
+  }
+
+  function mergeWeighIns(existing, incoming) {
+    const map = new Map(existing.map(item => [item.date, { ...item }]));
+    incoming.forEach(item => {
+      const date = normalizeDate(item.date);
+      const weight = toNumber(item.weight, NaN);
+      if (!date || !Number.isFinite(weight) || weight <= 0) return;
+      map.set(date, { id: item.id || map.get(date)?.id || createId(), date, weight });
+    });
+    return [...map.values()].sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function rollingTrend(values = state.weighIns, windowSize = state.profile.trendWindow || 7) {
+    const sorted = sortedWeighIns(values);
+    return sorted.map((item, index) => {
+      const sample = sorted.slice(Math.max(0, index - windowSize + 1), index + 1);
+      return { ...item, trend: sample.reduce((sum, current) => sum + current.weight, 0) / sample.length };
+    });
+  }
+
+  function regressionRatePerWeek(values = state.weighIns, limit = 21, valueKey = "weight") {
+    const points = sortedWeighIns(values).slice(-limit);
+    if (points.length < 3) return null;
+    const origin = parseDate(points[0].date);
+    const data = points.map(item => ({
+      x: daysBetween(origin, parseDate(item.date)),
+      y: toNumber(item[valueKey], NaN)
+    })).filter(item => Number.isFinite(item.x) && Number.isFinite(item.y));
+    if (data.length < 3) return null;
+    const meanX = data.reduce((sum, item) => sum + item.x, 0) / data.length;
+    const meanY = data.reduce((sum, item) => sum + item.y, 0) / data.length;
+    const numerator = data.reduce((sum, item) => sum + (item.x - meanX) * (item.y - meanY), 0);
+    const denominator = data.reduce((sum, item) => sum + (item.x - meanX) ** 2, 0);
+    return denominator ? (numerator / denominator) * 7 : null;
+  }
+  function exponentialWeightTrend(values = state.weighIns, alpha = EXPENDITURE_CONFIG.emaAlpha) {
+    const sorted = sortedWeighIns(values);
+    let trend = null;
+    let previousDate = null;
+    return sorted.map(item => {
+      const date = parseDate(item.date);
+      if (!Number.isFinite(trend)) {
+        trend = item.weight;
+      } else {
+        const elapsedDays = Math.max(1, Math.round(daysBetween(previousDate, date)));
+        const effectiveAlpha = 1 - (1 - alpha) ** elapsedDays;
+        trend += effectiveAlpha * (item.weight - trend);
+      }
+      previousDate = date;
+      return { ...item, trend };
+    });
+  }
+  function expenditureRatePerWeek(values = state.weighIns, limit = 60) {
+    return regressionRatePerWeek(exponentialWeightTrend(values), limit, "trend");
+  }
+
+  function ageFromBirthDate(value) {
+    const birth = parseDate(value);
+    const today = new Date();
+    if (!birth || birth > today) return null;
+    let age = today.getFullYear() - birth.getFullYear();
+    if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age -= 1;
+    return age >= 18 && age <= 120 ? age : null;
+  }
+
+  function mifflin(sex, weight, height, age) {
+    return 10 * weight + 6.25 * height - 5 * age + (sex === "female" ? -161 : 5);
+  }
+
+  function formulaRmr(profile, weight) {
+    const age = ageFromBirthDate(profile.birthDate);
+    const height = toNumber(profile.heightCm, NaN);
+    const bodyFat = toNumber(profile.bodyFat, NaN);
+    if (![age, height, weight].every(Number.isFinite)) return { value: null, used: profile.formula, fallback: false };
+
+    if (profile.formula === "cunningham") {
+      if (Number.isFinite(bodyFat) && bodyFat > 1 && bodyFat < 70) {
+        const leanMass = weight * (1 - bodyFat / 100);
+        return { value: 500 + 22 * leanMass, used: "cunningham", fallback: false };
+      }
+      return { value: mifflin(profile.sex, weight, height, age), used: "mifflin", fallback: true };
+    }
+
+    if (profile.formula === "harris") {
+      const value = profile.sex === "female"
+        ? 447.593 + 9.247 * weight + 3.098 * height - 4.330 * age
+        : 88.362 + 13.397 * weight + 4.799 * height - 5.677 * age;
+      return { value, used: "harris", fallback: false };
+    }
+
+    return { value: mifflin(profile.sex, weight, height, age), used: "mifflin", fallback: false };
+  }
+
+  function athleticMacroRule(goalType) {
+    if (goalType === "loss") return { proteinPerKg: 2.2, fatPerKg: 1 };
+    if (goalType === "gain") return { proteinPerKg: 1.8, fatPerKg: 1 };
+    return { proteinPerKg: 1.8, fatPerKg: 1 };
+  }
+
+  function deriveTargetWeight(profile, currentWeight) {
+    if (profile.goalType === "maintain") return currentWeight;
+    if (profile.goalMetric === "bodyFat") {
+      const currentBodyFat = toNumber(profile.bodyFat, NaN);
+      const targetBodyFat = toNumber(profile.goalBodyFat, NaN);
+      if (Number.isFinite(currentBodyFat) && Number.isFinite(targetBodyFat) && currentBodyFat > 0 && targetBodyFat > 0 && targetBodyFat < 70) {
+        const leanMass = currentWeight * (1 - currentBodyFat / 100);
+        return leanMass / (1 - targetBodyFat / 100);
+      }
+      return null;
+    }
+    return toNumber(profile.goalWeight, NaN);
+  }
+
+  function rateBounds(goalType) {
+    if (goalType === "loss") return { suggestedMin: 0.5, suggestedMax: 1, defaultRate: 0.5 };
+    if (goalType === "gain") return { suggestedMin: 0.25, suggestedMax: 0.5, defaultRate: 0.25 };
+    return { suggestedMin: 0, suggestedMax: 0, defaultRate: 0 };
+  }
+
+  function requiredRateForDate(profile, currentWeight, targetWeight) {
+    const deadline = parseDate(profile.goalDate);
+    const today = parseDate(todayISO());
+    if (!deadline || deadline <= today || !Number.isFinite(targetWeight) || currentWeight <= 0 || targetWeight <= 0 || profile.goalType === "maintain") return null;
+    const weeks = daysBetween(today, deadline) / 7;
+    if (weeks <= 0) return null;
+    if (profile.goalType === "loss" && targetWeight < currentWeight) return (1 - (targetWeight / currentWeight) ** (1 / weeks)) * 100;
+    if (profile.goalType === "gain" && targetWeight > currentWeight) return ((targetWeight / currentWeight) ** (1 / weeks) - 1) * 100;
+    return null;
+  }
+
+  function chooseRate(profile, currentWeight, targetWeight) {
+    const bounds = rateBounds(profile.goalType);
+    const required = requiredRateForDate(profile, currentWeight, targetWeight);
+    if (profile.goalType === "maintain") return { selected: 0, required, bounds, capped: false };
+    if (profile.rateMode === "manual") {
+      const selected = clamp(toNumber(profile.weeklyRatePct, bounds.defaultRate), 0.01, 2);
+      return { selected, required, bounds, capped: selected > bounds.suggestedMax };
+    }
+    if (Number.isFinite(required) && required > 0) {
+      const selected = Math.min(required, bounds.suggestedMax);
+      return { selected, required, bounds, capped: required > bounds.suggestedMax };
+    }
+    return { selected: bounds.defaultRate, required, bounds, capped: false };
+  }
+
+  function weeksToTarget(goalType, startWeight, targetWeight, ratePct) {
+    if (goalType === "maintain" || !Number.isFinite(startWeight) || !Number.isFinite(targetWeight) || !Number.isFinite(ratePct) || ratePct <= 0) return null;
+    if (goalType === "loss" && targetWeight < startWeight) return Math.log(targetWeight / startWeight) / Math.log(1 - ratePct / 100);
+    if (goalType === "gain" && targetWeight > startWeight) return Math.log(targetWeight / startWeight) / Math.log(1 + ratePct / 100);
+    return null;
+  }
+
+  function projectWeight(profile, startWeight, startDate, targetWeight, ratePct, targetDate) {
+    if (!startDate || !targetDate || !Number.isFinite(startWeight)) return null;
+    const weeks = Math.max(0, daysBetween(startDate, targetDate) / 7);
+    let result = startWeight;
+    if (profile.goalType === "loss") result = startWeight * (1 - ratePct / 100) ** weeks;
+    if (profile.goalType === "gain") result = startWeight * (1 + ratePct / 100) ** weeks;
+    if (Number.isFinite(targetWeight)) {
+      if (profile.goalType === "loss") result = Math.max(targetWeight, result);
+      if (profile.goalType === "gain") result = Math.min(targetWeight, result);
+    }
+    return result;
+  }
+
+  function calculatePlan(profile = state.profile, weighIns = state.weighIns, overrideWeight = null) {
+    const latest = latestWeighIn(weighIns);
+    const weight = Number.isFinite(toNumber(overrideWeight, NaN)) ? toNumber(overrideWeight) : latest?.weight;
+    if (!Number.isFinite(weight)) return emptyPlan(profile);
+
+    const targetWeight = deriveTargetWeight(profile, weight);
+    const rate = chooseRate(profile, weight, targetWeight);
+    const rmr = formulaRmr(profile, weight);
+    const baseMaintenance = Number.isFinite(rmr.value) ? rmr.value * toNumber(profile.activityFactor, 1.35) : null;
+    const maintenance = Number.isFinite(baseMaintenance) ? baseMaintenance + toNumber(profile.calibrationOffset, 0) : null;
+    const weeklyKg = profile.goalType === "maintain" ? 0 : weight * rate.selected / 100;
+    const signedWeeklyKg = profile.goalType === "loss" ? -weeklyKg : profile.goalType === "gain" ? weeklyKg : 0;
+    const dailyAdjustment = signedWeeklyKg * KG_KCAL / 7;
+    const targetCalories = Number.isFinite(maintenance) ? Math.max(1000, maintenance + dailyAdjustment) : null;
+
+    let proteinG;
+    let fatG;
+    let carbsG;
+    let macroRule;
+    if (profile.macroMode === "custom") {
+      const pPct = toNumber(profile.proteinPct, NaN);
+      const fPct = toNumber(profile.fatPct, NaN);
+      const cPct = toNumber(profile.carbPct, NaN);
+      proteinG = Number.isFinite(targetCalories) && Number.isFinite(pPct) ? targetCalories * pPct / 100 / 4 : null;
+      fatG = Number.isFinite(targetCalories) && Number.isFinite(fPct) ? targetCalories * fPct / 100 / 9 : null;
+      carbsG = Number.isFinite(targetCalories) && Number.isFinite(cPct) ? targetCalories * cPct / 100 / 4 : null;
+      macroRule = { mode: "custom", proteinPerKg: Number.isFinite(proteinG) ? proteinG / weight : null, fatPercent: fPct };
+    } else if (profile.macroMode === "balanced") {
+      const distribution = { proteinPct: 20, fatPct: 30, carbPct: 50 };
+      proteinG = Number.isFinite(targetCalories) ? targetCalories * distribution.proteinPct / 100 / 4 : null;
+      fatG = Number.isFinite(targetCalories) ? targetCalories * distribution.fatPct / 100 / 9 : null;
+      carbsG = Number.isFinite(targetCalories) ? targetCalories * distribution.carbPct / 100 / 4 : null;
+      macroRule = { mode: "balanced", ...distribution };
+    } else {
+      const athletic = athleticMacroRule(profile.goalType);
+      proteinG = weight * athletic.proteinPerKg;
+      const requestedFatG = weight * athletic.fatPerKg;
+      const availableForFat = Number.isFinite(targetCalories) ? Math.max(0, targetCalories - proteinG * 4) : null;
+      fatG = Number.isFinite(availableForFat) ? Math.min(requestedFatG, availableForFat / 9) : null;
+      carbsG = Number.isFinite(targetCalories) && Number.isFinite(fatG) ? Math.max(0, (targetCalories - proteinG * 4 - fatG * 9) / 4) : null;
+      macroRule = { mode: "athletic", ...athletic, effectiveFatPerKg: Number.isFinite(fatG) ? fatG / weight : null };
+    }
+
+    const macroCalories = [proteinG * 4, fatG * 9, carbsG * 4].every(Number.isFinite)
+      ? proteinG * 4 + fatG * 9 + carbsG * 4
+      : null;
+    const proteinPct = Number.isFinite(targetCalories) && targetCalories > 0 && Number.isFinite(proteinG) ? proteinG * 4 / targetCalories * 100 : null;
+    const fatPct = Number.isFinite(targetCalories) && targetCalories > 0 && Number.isFinite(fatG) ? fatG * 9 / targetCalories * 100 : null;
+    const carbsPct = Number.isFinite(targetCalories) && targetCalories > 0 && Number.isFinite(carbsG) ? carbsG * 4 / targetCalories * 100 : null;
+
+    const heightM = toNumber(profile.heightCm, NaN) / 100;
+    const bodyFat = toNumber(profile.bodyFat, NaN);
+    const bmi = Number.isFinite(heightM) && heightM > 0 ? weight / heightM ** 2 : null;
+    const ffmi = Number.isFinite(bodyFat) && bodyFat > 0 && bodyFat < 70 && Number.isFinite(heightM)
+      ? weight * (1 - bodyFat / 100) / heightM ** 2
+      : null;
+    const estimatedWeeks = weeksToTarget(profile.goalType, weight, targetWeight, rate.selected);
+    const estimatedDate = Number.isFinite(estimatedWeeks) ? addDays(parseDate(todayISO()), estimatedWeeks * 7) : null;
+
+    return {
+      weight,
+      targetWeight,
+      rate,
+      rmr,
+      baseMaintenance,
+      maintenance,
+      weeklyKg,
+      signedWeeklyKg,
+      dailyAdjustment,
+      targetCalories,
+      proteinG,
+      fatG,
+      carbsG,
+      macroRule,
+      macroCalories,
+      proteinPct,
+      fatPct,
+      carbsPct,
+      bmi,
+      ffmi,
+      estimatedWeeks,
+      estimatedDate
+    };
+  }
+
+  function emptyPlan(profile) {
+    return {
+      weight: null, targetWeight: null, rate: chooseRate(profile, 1, 1), rmr: { value: null, used: profile.formula, fallback: false },
+      baseMaintenance: null, maintenance: null, weeklyKg: null, signedWeeklyKg: null, dailyAdjustment: null, targetCalories: null,
+      proteinG: null, fatG: null, carbsG: null, macroRule: { mode: profile.macroMode }, macroCalories: null,
+      proteinPct: null, fatPct: null, carbsPct: null, bmi: null, ffmi: null, estimatedDate: null
+    };
+  }
+
+  function trendAtDate(date, trends = rollingTrend()) {
+    const iso = toISODate(date);
+    return [...trends].reverse().find(item => item.date <= iso)?.trend ?? null;
+  }
+
+  function expectedAtDate(profile, plan, date) {
+    const startDate = parseDate(profile.planStartDate) || parseDate(sortedWeighIns()[0]?.date);
+    const startWeight = toNumber(profile.planStartWeight, sortedWeighIns()[0]?.weight);
+    if (!startDate || !Number.isFinite(startWeight)) return null;
+    return projectWeight(profile, startWeight, startDate, plan.targetWeight, plan.rate.selected, date);
+  }
+
+  function bmiCategory(bmi) {
+    if (!Number.isFinite(bmi)) return "sin cálculo";
+    if (bmi < 18.5) return "bajo según referencia general";
+    if (bmi < 25) return "dentro de referencia general";
+    if (bmi < 30) return "por encima de referencia general";
+    return "alto según referencia general";
+  }
+
+  function todayDiary() {
+    return state.diary[selectedDiaryDate] || [];
+  }
+
+  function diaryDateStatus(date = selectedDiaryDate) {
+    const operationalToday = operationalDayISO();
+    if (date === operationalToday) return "Hoy";
+    if (date === todayISO() && date !== operationalToday) return "Día siguiente";
+    const yesterday = toISODate(addDays(parseDate(operationalToday), -1));
+    if (date === yesterday) return "Ayer";
+    return formatDate(date);
+  }
+
+  function setSelectedDiaryDate(value, scroll = false) {
+    const iso = normalizeDate(value);
+    if (!iso) return;
+    selectedDiaryDate = iso > todayISO() ? todayISO() : iso;
+    weightEditorForced = false;
+    renderDiary(calculatePlan());
+    renderRecordWeight();
+    if (activeDiaryView === "chart") requestAnimationFrame(() => drawCalorieChart(calculatePlan()));
+    if (scroll) $("#daily-diary")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function changeDiaryDay(delta) {
+    const current = parseDate(selectedDiaryDate) || new Date();
+    setSelectedDiaryDate(toISODate(addDays(current, delta)));
+  }
+
+  function openDiaryCalendar() {
+    const picker = $("#diary-native-date");
+    picker.max = todayISO();
+    picker.value = selectedDiaryDate;
+    if (typeof picker.showPicker === "function") picker.showPicker();
+    else picker.click();
+  }
+
+  function diaryTotals(entries = todayDiary()) {
+    return entries.reduce((totals, item) => {
+      totals.calories += toNumber(item.calories, 0);
+      totals.protein += toNumber(item.protein, 0);
+      totals.fat += toNumber(item.fat, 0);
+      totals.carbs += toNumber(item.carbs, 0);
+      return totals;
+    }, { calories: 0, protein: 0, fat: 0, carbs: 0 });
+  }
+
+  function mealLabel(meal) {
+    return ({ breakfast: "Desayuno", lunch: "Almuerzo", snack: "Merienda", dinner: "Cena", extras: "Snacks" })[meal] || "Comida";
+  }
+
+  function renderDiary(plan) {
+    const entries = todayDiary();
+    const totals = diaryTotals(entries);
+    const target = Number.isFinite(plan.targetCalories) ? plan.targetCalories : 0;
+    const selected = parseDate(selectedDiaryDate) || new Date();
+    $("#diary-date-label").textContent = new Intl.DateTimeFormat("es-UY", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(selected);
+    $("#diary-date-status").textContent = diaryDateStatus();
+    $("#diary-native-date").value = selectedDiaryDate;
+    $("#diary-native-date").max = todayISO();
+    $("#diary-next-day").disabled = selectedDiaryDate >= todayISO();
+    $("#diary-today-button").hidden = selectedDiaryDate === operationalDayISO();
+
+    $("#diary-calories").textContent = formatNumber(Math.round(totals.calories));
+    const remaining = target - totals.calories;
+    $("#diary-remaining").textContent = target ? `${formatNumber(Math.abs(Math.round(remaining)))} kcal ${remaining >= 0 ? "disponibles" : "por encima"}` : "Sin objetivo calculado";
+
+    setDiaryProgress("calorie", totals.calories, target, "kcal");
+    setDiaryProgress("protein", totals.protein, plan.proteinG, "g");
+    setDiaryProgress("fat", totals.fat, plan.fatG, "g");
+    setDiaryProgress("carb", totals.carbs, plan.carbsG, "g");
+
+    ["breakfast","lunch","snack","dinner","extras"].forEach(meal => {
+      const container = document.querySelector(`[data-meal-items="${meal}"]`);
+      const mealEntries = entries.filter(item => item.meal === meal);
+      const total = mealEntries.reduce((sum, item) => sum + toNumber(item.calories, 0), 0);
+      document.querySelector(`[data-meal-total="${meal}"]`).textContent = `${formatNumber(Math.round(total))} kcal`;
+      container.innerHTML = "";
+      if (!mealEntries.length) {
+        container.innerHTML = '<p class="meal-empty">Todavía no cargaste nada.</p>';
+        return;
+      }
+      mealEntries.forEach(item => {
+        const row = document.createElement("div");
+        const editing = editingDiaryEntryId === item.id;
+        row.className = `meal-item${editing ? " editing" : ""}`;
+        if (editing) {
+          const calorieOnly = isCalorieOnlyEntry(item);
+          if (calorieOnly) {
+            row.innerHTML = `<form class="meal-inline-edit" data-diary-edit-form="${escapeHTML(item.id)}">
+              <div class="meal-inline-edit-title"><b>${escapeHTML(item.name)}</b><small data-diary-edit-preview>${formatNumber(Math.round(item.calories))} kcal</small></div>
+              <label><span>Calorías</span><div class="unit-input"><input name="calories" type="number" min="1" max="10000" step="1" inputmode="numeric" value="${escapeHTML(Math.round(item.calories))}" required><i>kcal</i></div></label>
               <div class="meal-inline-edit-actions"><button class="primary-action" type="submit">Guardar</button></div>
-            </form>`;else{const b=sn(p),v=b?se(b):[qe(p.serving)],h=v.find(M=>M.value===p.quantityUnit)||v[0];w.innerHTML=`<form class="meal-inline-edit" data-diary-edit-form="${C(p.id)}">
-              <div class="meal-inline-edit-title"><b>${C(p.name)}</b><small data-diary-edit-preview>${g(Math.round(p.calories))} kcal</small></div>
-              <label><span>Cantidad</span><input name="amount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${C(p.quantity||h.baseAmount)}" required></label>
-              <label><span>Unidad</span><select name="unit" ${v.length===1?"disabled":""}>${v.map(M=>`<option value="${C(M.value)}" ${M.value===h.value?"selected":""}>${C(M.plural)}</option>`).join("")}</select></label>
+            </form>`;
+          } else {
+            const source = diaryEntrySource(item);
+            const options = source ? foodQuantityOptions(source) : [parseServingDefinition(item.serving)];
+            const selectedOption = options.find(option => option.value === item.quantityUnit) || options[0];
+            row.innerHTML = `<form class="meal-inline-edit" data-diary-edit-form="${escapeHTML(item.id)}">
+              <div class="meal-inline-edit-title"><b>${escapeHTML(item.name)}</b><small data-diary-edit-preview>${formatNumber(Math.round(item.calories))} kcal</small></div>
+              <label><span>Cantidad</span><input name="amount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(item.quantity || selectedOption.baseAmount)}" required></label>
+              <label><span>Unidad</span><select name="unit" ${options.length === 1 ? "disabled" : ""}>${options.map(option => `<option value="${escapeHTML(option.value)}" ${option.value === selectedOption.value ? "selected" : ""}>${escapeHTML(option.plural)}</option>`).join("")}</select></label>
               <div class="meal-inline-edit-actions"><button class="primary-action" type="submit">Guardar</button></div>
-            </form>`}else(rt(p)||m(p.quantity,0)>0)&&(w.classList.add("meal-item-editable"),w.dataset.editDiary=p.id,w.setAttribute("aria-label",rt(p)?`Editar calor\xEDas de ${p.name}`:`Editar cantidad de ${p.name}`)),w.innerHTML=`<div><b>${C(p.name)}</b><small><span class="meal-serving">${C(p.serving||"1 porci\xF3n")}</span> \xB7 P ${g(p.protein,1)} \xB7 G ${g(p.fat,1)} \xB7 C ${g(p.carbs,1)}</small></div><span>${g(Math.round(p.calories))} kcal</span><button type="button" data-remove-diary="${C(p.id)}" aria-label="Eliminar ${C(p.name)}">\xD7</button>`;l.appendChild(w)})});const s=!!d.completedDays?.[L];o("#day-reading").hidden=!s,o("#finish-day").textContent=s?"D\xEDa terminado \u2713":L===ve()?"Terminar d\xEDa":"Terminar este d\xEDa",o("#finish-day").classList.toggle("completed",s),s&&Ta(e,a),Ie==="chart"&&Lt(e)}function ea(e,t,a,n){const i=Number.isFinite(a)?a:0;o(`#diary-${e}-progress`).textContent=`${g(Math.round(t))} / ${i?g(Math.round(i)):"\u2014"} ${n}`,o(`#diary-${e}-bar`).style.width=`${i?P(t/i*100,0,100):0}%`}function Ta(e,t=Et()){const a=m(o("#day-projection-weeks")?.value,6),n=Aa()?.weight;if(!Number.isFinite(n)||!Number.isFinite(e.maintenance)||t.calories<=0){o("#day-projection-title").textContent="Complet\xE1 el d\xEDa para ver una proyecci\xF3n.",o("#day-projection-text").textContent="La cuenta compara las calor\xEDas registradas con tu mantenimiento estimado. Es orientativa y no reemplaza la tendencia de pesajes.";return}const i=t.calories-e.maintenance,r=n+i*a*7/7700,s=r<n?"bajar\xEDa":r>n?"subir\xEDa":"se mantendr\xEDa";o("#day-projection-title").textContent=`En ${a} semanas, el peso ${s} hacia ${ae(r,1)}.`,o("#day-projection-text").textContent=`Con ${g(Math.round(t.calories))} kcal diarias frente a un mantenimiento estimado de ${g(Math.round(e.maintenance))} kcal, la diferencia te\xF3rica ser\xEDa ${i>0?"+":""}${g(Math.round(i))} kcal por d\xEDa. La adaptaci\xF3n del cuerpo y el registro incompleto pueden cambiar el resultado.`}function lr(){d.completedDays=d.completedDays||{},d.completedDays[L]=!0,F(d),o("#day-reading").hidden=!1,Ta(z(),Et()),o("#day-reading").scrollIntoView({behavior:"smooth",block:"center"}),D()}function dr(){d.completedDays=d.completedDays||{},delete d.completedDays[L],F(d),D()}function _n(e){Ie=e==="chart"?"chart":"record",S("[data-diary-view]").forEach(t=>t.classList.toggle("active",t.dataset.diaryView===Ie)),o("#diary-record-view").hidden=Ie!=="record",o("#diary-chart-view").hidden=Ie!=="chart",Ua(),Ie==="chart"&&requestAnimationFrame(()=>Lt(z()))}function ta(e){return Et(d.diary[e]||[])}function St(){return window.matchMedia?.("(max-width: 590px)").matches??window.innerWidth<=590}function Ia(){return St()?7:Sn}function Ua(){const e=Ia();S("[data-calorie-range]").forEach(t=>t.classList.toggle("active",m(t.dataset.calorieRange,0)===e))}function ur(){const e=k(L),t=[],a=Ia();for(let n=a-1;n>=0;n-=1){const i=X(e,-n),r=te(i),s=ta(r);t.push({date:i,iso:r,calories:s.calories,hasEntries:(d.diary[r]||[]).length>0,completed:!!d.completedDays?.[r]})}return t}function Lt(e=z()){const t=o("#calorie-chart");if(!t||o("#diary-chart-view").hidden)return;const a=jt(t);if(!a)return;const{ctx:n,width:i,height:r}=a;n.clearRect(0,0,i,r);const s=ur(),c=Number.isFinite(e.targetCalories)?e.targetCalories:0,l=Math.max(c,...s.map(N=>N.calories),500)*1.12,u={left:48,right:16,top:25,bottom:46},f=i-u.left-u.right,p=r-u.top-u.bottom,w=f/Math.max(1,s.length),y=Math.max(5,Math.min(34,w*.62)),x=N=>u.top+(l-N)/l*p;n.font="10px ui-monospace, monospace",n.textAlign="right",n.textBaseline="middle";for(let N=0;N<=4;N+=1){const $=l*N/4,A=x($);n.strokeStyle="rgba(23,26,33,.12)",n.lineWidth=1,n.beginPath(),n.moveTo(u.left,A),n.lineTo(i-u.right,A),n.stroke(),n.fillStyle="rgba(23,26,33,.55)",n.fillText(g($,0),u.left-7,A)}c&&(n.save(),n.strokeStyle="#171a21",n.lineWidth=2,n.setLineDash([7,5]),n.beginPath(),n.moveTo(u.left,x(c)),n.lineTo(i-u.right,x(c)),n.stroke(),n.restore()),s.forEach((N,$)=>{const A=u.left+w*$+w/2,U=x(N.calories),le=x(0);n.fillStyle=N.hasEntries?"#8d7cff":"rgba(23,26,33,.08)",n.fillRect(A-y/2,U,y,Math.max(1,le-U)),N.hasEntries&&(n.fillStyle="#171a21",n.font="9px ui-monospace, monospace",n.textAlign="center",n.textBaseline="bottom",n.fillText(g(N.calories,0),A,Math.max(12,U-5)));const J=Ia();(St()?$%2===0||$===s.length-1:J<=14||$%Math.ceil(J/10)===0||$===s.length-1)&&(n.fillStyle="rgba(23,26,33,.62)",n.textBaseline="top",n.fillText(new Intl.DateTimeFormat("es-UY",{day:"2-digit",month:"2-digit"}).format(N.date),A,r-u.bottom+11))});const b=s.filter(N=>N.hasEntries);o("#calorie-chart-empty").hidden=b.length>0;const v=xi(e,re(),s);if(!Number.isFinite(v.average)){o("#calorie-chart-summary").textContent="Todav\xEDa no hay d\xEDas suficientes para comparar.";return}const h=v.difference,M=Number.isFinite(v.observedWeekly)?` \xB7 el peso ${v.observedWeekly<-.05?"baja":v.observedWeekly>.05?"sube":"se mantiene"} ${Math.abs(v.observedWeekly)>=.05?`${g(Math.abs(v.observedWeekly),2)} kg/sem`:""}`:"";o("#calorie-chart-summary").textContent=`Promedio: ${g(Math.round(v.average))} kcal \xB7 ${g(Math.abs(Math.round(h)))} kcal ${h>0?"sobre":"bajo"} el objetivo${M}.`}function Ft(e,t=!0){ze=e==="progress"?"progress":"today",S("[data-app-view]").forEach(a=>a.classList.toggle("active",a.dataset.appView===ze)),o("#today-view").hidden=ze!=="today",o("#progress-view").hidden=ze!=="progress",ze==="progress"&&W&&requestAnimationFrame(vt),t&&window.scrollTo({top:0,behavior:"smooth"})}function Bn(){o("#meal-picker-modal").hidden=!1,document.body.classList.add("modal-open")}function aa(){o("#meal-picker-modal").hidden=!0,o("#food-modal").hidden&&o("#settings-modal").hidden&&document.body.classList.remove("modal-open")}function mr(e){aa(),Yn(e)}function fr(){Ue=!0;const e=d.weighIns.find(t=>t.date===L);o("#quick-weight").value=e?.weight||"",Dt(),setTimeout(()=>o("#quick-weight")?.focus(),50)}function Dt(){const e=d.weighIns.find(l=>l.date===L),t=!!e,a=o("#record-weight-card"),n=o("#meal-grid"),i=document.querySelector(".records-sidebar"),r=t&&!Ue,s=window.matchMedia("(max-width: 859px)").matches;if(a.classList.toggle("compact-recorded-weight",r),(s||r)&&i&&a.parentElement!==i){const l=i.querySelector(".diary-quick-tools");i.insertBefore(a,l||null)}!s&&!r&&n&&a.parentElement!==n&&n.prepend(a);const c=L===ve()?"hoy":`el ${j(L)}`;o("#record-weight-title").textContent=t?`Peso de ${c}`:`Registrar peso de ${c}`,o("#weight-context").textContent=t?"Este dato forma parte de la tendencia y puede editarse sin salir del registro diario.":"Es opcional. Un dato aislado puede variar mucho; la tendencia necesita varias mediciones.",o("#today-weight-recorded").hidden=!t||Ue,o("#quick-weight-form").hidden=t&&!Ue,t&&(o("#today-weight-value").textContent=ae(e.weight)),!Ue&&!t&&(o("#quick-weight").value="")}function gr(){Dt()}function C(e){return String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[t])}function V(e,t=""){const a=o("#barcode-status");a&&(a.textContent=e,a.className=`barcode-status${t?` ${t}`:""}`)}function Pa(){return o("#barcode-video")?.srcObject?.getVideoTracks?.()[0]||null}function At(){const e=o("#barcode-torch");if(!e)return;const t=Pa();let a=!1;try{a=!!t?.getCapabilities?.().torch}catch{}a||=typeof Ze?.switchTorch=="function",e.hidden=!a,e.setAttribute("aria-pressed",String(We)),e.classList.toggle("active",We)}async function pr(){const e=Pa(),t=!We;let a=null;try{let n=!1;if(e?.applyConstraints){let i={};try{i=e.getCapabilities?.()||{}}catch{}if(i.torch)try{await e.applyConstraints({advanced:[{torch:t}]}),n=!0}catch(r){a=r}}if(!n&&typeof Ze?.switchTorch=="function"&&(await Ze.switchTorch(),n=!0),!n)throw a||new Error("Torch unavailable");We=t,At(),V(t?"Linterna encendida. Apunt\xE1 al c\xF3digo de barras.":"Linterna apagada. Apunt\xE1 al c\xF3digo de barras.")}catch(n){console.warn("No se pudo cambiar la linterna:",n),We=!1,At(),V("El navegador no permiti\xF3 controlar la linterna de esta c\xE1mara.","error")}}function Ra(){const e=Pa();if(e&&We)try{e.applyConstraints?.({advanced:[{torch:!1}]}).catch?.(()=>{})}catch{}We=!1;try{Ze?.stop?.()}catch{}Ze=null;try{Yt?.reset?.()}catch{}Yt=null;const t=o("#barcode-video"),a=t?.srcObject;a?.getTracks&&a.getTracks().forEach(i=>i.stop()),t&&(t.srcObject=null);const n=o("#barcode-torch");n&&(n.hidden=!0,n.classList.remove("active"),n.setAttribute("aria-pressed","false"))}function hr(e){return ne(e?.ScanResult||e?.scanResult||e?.content||e?.value||e?.text||"")}async function br(){Ra();const e=o("#barcode-video");if(!e)return;if(window.MASA_NATIVE?.isNative?.()&&typeof window.MASA_NATIVE.scanBarcode=="function"){V("Abriendo el lector de c\xF3digos de barras\u2026","loading");try{const a=await window.MASA_NATIVE.scanBarcode(),n=hr(a);if(!n){V("Escaneo cancelado. Tambi\xE9n pod\xE9s ingresar el c\xF3digo manualmente.");return}if(!Qt(n)){V("El c\xF3digo le\xEDdo no tiene un formato EAN/UPC v\xE1lido.","error");return}_a(n)}catch(a){console.warn("No se pudo iniciar el lector nativo:",a);const n=/cancel/i.test(String(a?.message||a||""));V(n?"Escaneo cancelado. Tambi\xE9n pod\xE9s ingresar el c\xF3digo manualmente.":"No se pudo abrir la c\xE1mara. Revis\xE1 el permiso de c\xE1mara o ingres\xE1 el c\xF3digo manualmente.",n?"":"error")}return}if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia){V("La c\xE1mara requiere abrir M.A.S.A. desde una direcci\xF3n HTTPS. Pod\xE9s ingresar el c\xF3digo manualmente.","error");return}const t=document.permissionsPolicy||document.featurePolicy;if(t?.allowsFeature&&!t.allowsFeature("camera")){V("La configuraci\xF3n del sitio est\xE1 bloqueando la c\xE1mara. Volv\xE9 a publicar esta versi\xF3n y recarg\xE1 la p\xE1gina.","error");return}if(!window.ZXingBrowser?.BrowserMultiFormatReader){V("No se pudo cargar el lector. Pod\xE9s ingresar el c\xF3digo manualmente.","error");return}V("Apunt\xE1 al c\xF3digo de barras y manten\xE9 el envase quieto.");try{Yt=new window.ZXingBrowser.BrowserMultiFormatReader,Ze=await Yt.decodeFromConstraints({audio:!1,video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}}},e,a=>{if(!a||Kt)return;const n=ne(a.getText?.()||a.text||"");Qt(n)&&(Ra(),_a(n))}),At(),e.addEventListener("loadedmetadata",At,{once:!0}),setTimeout(At,350)}catch(a){console.warn("No se pudo iniciar la c\xE1mara:",a),V(`${{NotAllowedError:"No se concedi\xF3 acceso a la c\xE1mara. Revis\xE1 el permiso del sitio en el navegador.",SecurityError:"El navegador bloque\xF3 la c\xE1mara por la configuraci\xF3n de seguridad del sitio.",NotFoundError:"No se encontr\xF3 una c\xE1mara disponible en este dispositivo.",NotReadableError:"La c\xE1mara est\xE1 siendo usada por otra aplicaci\xF3n o no se pudo iniciar."}[a?.name]||"No se pudo abrir la c\xE1mara."} Pod\xE9s ingresar el c\xF3digo manualmente.`,"error")}}function dt(e){return String(e||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[|¦]/g," ").replace(/[^a-z0-9.,%]+/g," ").replace(/\s+/g," ").trim()}function vr(e){const t=(Array.isArray(e?.lines)?e.lines:[]).map(n=>{const i=Number(n?.top),r=Number(n?.bottom),s=Number(n?.left),c=Number(n?.right),l=String(n?.text||"").trim();if(!l||![i,r,s,c].every(Number.isFinite))return null;const u=Math.max(1,r-i);return{text:l,top:i,bottom:r,left:s,right:c,height:u,centerY:(i+r)/2}}).filter(Boolean).sort((n,i)=>n.centerY-i.centerY||n.left-i.left),a=[];return t.forEach(n=>{let i=null,r=1/0;for(let s=Math.max(0,a.length-4);s<a.length;s+=1){const c=a[s],u=Math.max(0,Math.min(c.bottom,n.bottom)-Math.max(c.top,n.top))/Math.max(1,Math.min(c.height,n.height)),f=Math.abs(c.centerY-n.centerY);(u>=.28||f<=Math.max(c.height,n.height)*.62)&&f<r&&(i=c,r=f)}if(!i){a.push({lines:[n],top:n.top,bottom:n.bottom,height:n.height,centerY:n.centerY});return}i.lines.push(n),i.top=Math.min(i.top,n.top),i.bottom=Math.max(i.bottom,n.bottom),i.height=Math.max(1,i.bottom-i.top),i.centerY=i.lines.reduce((s,c)=>s+c.centerY,0)/i.lines.length}),a.sort((n,i)=>n.centerY-i.centerY).map(n=>n.lines.sort((i,r)=>i.left-r.left).map(i=>i.text).join(" ").trim()).filter(Boolean)}function yr(e){const t=[],a=new Set,n=i=>{const r=String(i||"").trim(),s=dt(r);!r||!s||a.has(s)||(a.add(s),t.push(r))};return vr(e).forEach(n),(Array.isArray(e?.lines)?e.lines:[]).forEach(i=>n(i?.text)),String(e?.text||"").split(/\r?\n/).forEach(n),t}function wr(e){let t=String(e||"").trim().replace(/\s/g,"").replace(",",".");return/^[oO]\d/.test(t)&&(t=`0${t.slice(1)}`),t=t.replace(/(\d)[oO](?=\d|$)/g,"$10"),t}function Pe(e){const t=Number(wr(e));return Number.isFinite(t)?t:NaN}function xr(e){const t=dt(e),a=[...t.matchAll(/(\d+(?:[.,]\d+)?)\s*(kg|kilogramos?|g|gr|gramos?|ml|mililitros?|l|litros?)\b/gi)];if(!a.length)return null;const n=t.search(/porcion|racion|tamano de porcion|cantidad por porcion/);let i=n>=0?a.find(c=>(c.index||0)>=n):null;!i&&/(?:por|cada)\s*100\s*(?:g|ml)/.test(t)&&(i=a.find(c=>Math.abs(Pe(c[1])-100)<.001)||null),i||=a[0];let r=Pe(i[1]),s=_(i[2]);return!Number.isFinite(r)||r<=0?null:(/^kg|kilogram/.test(s)?(r*=1e3,s="g"):/^l$|litro/.test(s)?(r*=1e3,s="ml"):/^ml|mililitro/.test(s)?s="ml":s="g",{amount:r,unit:s})}function qa(e,t,a){return[e[t],`${e[t]} ${e[t+1]||""}`,`${e[t]} ${e[t+1]||""} ${e[t+2]||""}`,`${e[t-1]||""} ${e[t]}`].map(i=>{const r=dt(i),s=r.match(a);return s?r.slice((s.index||0)+s[0].length).trim():r})}function Wn(e){const t=[...String(e||"").matchAll(/(\d+(?:[.,]\d+)?)(?:\s*(%|kcal|cal|kj|g|gr|gramos?|mg))?/gi)];for(const a of t){if(String(a[2]||"").toLowerCase()==="%")continue;const n=Pe(a[1]);if(Number.isFinite(n))return n}return NaN}function Oa(e,t){for(let a=0;a<e.length;a+=1){const n=dt(e[a]);if(t.lastIndex=0,!!t.test(n)){t.lastIndex=0;for(const i of qa(e,a,t)){const r=i.match(/(\d+(?:[.,]\d+)?)\s*(?:g|gr|gramos?)\b/i);if(r)return Pe(r[1]);const s=Wn(i);if(Number.isFinite(s))return s}}}return NaN}function Mr(e){const t=/calorias?|valor\s+energetico|energia|kcal/i;for(let a=0;a<e.length;a+=1){const n=dt(e[a]);if(t.test(n)){for(const i of qa(e,a,t)){const r=i.match(/(\d+(?:[.,]\d+)?)\s*(?:kcal|cal)\b/i);if(r)return Pe(r[1])}for(const i of qa(e,a,t)){const r=i.match(/(\d+(?:[.,]\d+)?)\s*kj\b/i),s=[...i.matchAll(/(\d+(?:[.,]\d+)?)(?!\s*%)/g)].map(l=>Pe(l[1])).filter(Number.isFinite);if(r&&s.length>=2){const l=Pe(r[1]),u=s.find(f=>f!==l&&f>0&&f<1e3);if(Number.isFinite(u))return u}if(r)return Pe(r[1])/4.184;const c=Wn(i);if(Number.isFinite(c))return c}}}return NaN}function Cr(e){const t=yr(e),a=/porcion|racion|tamano\s+de\s+porcion|cantidad\s+por\s+porcion|(?:por|cada)\s*100\s*(?:g|ml)/;let n=null;for(let r=0;r<t.length&&!n;r+=1)a.test(dt(t[r]))&&(n=xr(`${t[r]} ${t[r+1]||""}`));const i={servingAmount:n?.amount||100,servingUnit:n?.unit||"g",calories:Mr(t),protein:Oa(t,/prote[i1l]nas?|proteinas?|protein/i),fat:Oa(t,/grasas?\s*(?:total(?:es)?)?|lipidos?\s*(?:total(?:es)?)?/i),carbs:Oa(t,/carbohidratos?(?:\s+totales)?|hidratos?\s+de\s+carbono|carbohidrat/i),servingDetected:!!n,rawText:String(e?.text||t.join(`
-`)).trim(),lineCount:t.length,ocrMeta:{rotation:Number(e?.rotation||0),pass:String(e?.pass||"original"),score:Number(e?.score||0),width:Number(e?.imageWidth||0),height:Number(e?.imageHeight||0)}};return i.found=[i.calories,i.protein,i.fat,i.carbs].filter(Number.isFinite).length,i}function zn(e){const t=[];e.servingDetected&&t.push("porci\xF3n"),Number.isFinite(e.calories)&&t.push("calor\xEDas"),Number.isFinite(e.protein)&&t.push("prote\xEDnas"),Number.isFinite(e.fat)&&t.push("grasas"),Number.isFinite(e.carbs)&&t.push("carbohidratos");const a=t.length?`Se reconocieron ${t.join(", ")}.`:"No se reconocieron valores con suficiente claridad.",n=e.servingDetected?"":" No se detect\xF3 la porci\xF3n y se dej\xF3 100 g como base.";return`${a}${n} Revis\xE1 todos los campos contra el envase antes de guardar.`}function kr(e){const t=o("#food-editor-form");Number.isFinite(e.calories)&&(t.elements.calories.value=Q(e.calories,0)),Number.isFinite(e.protein)&&(t.elements.protein.value=Q(e.protein,1)),Number.isFinite(e.fat)&&(t.elements.fat.value=Q(e.fat,1)),Number.isFinite(e.carbs)&&(t.elements.carbs.value=Q(e.carbs,1)),t.elements.servingAmount.value=Q(e.servingAmount,2),ht(t.elements.servingUnit,t.elements.servingUnitCustom,e.servingUnit),Ee("food");const a=o("#food-editor-source-note");a.hidden=!1,a.textContent=zn(e),a.classList.remove("success"),a.classList.add("warning"),Ht="label",o("#rescan-food-editor").hidden=!1,o("#close-food-editor").hidden=!0}function Nr(){return new Promise((e,t)=>{const a=document.createElement("input");a.type="file",a.accept="image/*",a.setAttribute("capture","environment"),a.hidden=!0;let n=!1;const i=()=>{window.setTimeout(()=>{!n&&!a.files?.length&&r(t,new Error("Escaneo cancelado."))},800)},r=(s,c)=>{n||(n=!0,window.removeEventListener("focus",i),a.remove(),s(c))};a.addEventListener("change",()=>{const s=a.files?.[0];if(!s){r(t,new Error("Escaneo cancelado."));return}r(e,s)},{once:!0}),a.addEventListener("cancel",()=>{r(t,new Error("Escaneo cancelado."))},{once:!0}),window.addEventListener("focus",i),document.body.appendChild(a),a.click()})}async function $r(e){let a,n="";if(typeof createImageBitmap=="function")try{a=await createImageBitmap(e,{imageOrientation:"from-image"})}catch{a=await createImageBitmap(e)}else n=URL.createObjectURL(e),a=await new Promise((i,r)=>{const s=new Image;s.onload=()=>i(s),s.onerror=()=>r(new Error("No se pudo abrir la imagen tomada.")),s.src=n});try{const i=Number(a.width||a.naturalWidth||0),r=Number(a.height||a.naturalHeight||0);if(!i||!r)throw new Error("La foto no tiene un tama\xF1o v\xE1lido.");const s=Math.min(1,2600/Math.max(i,r)),c=document.createElement("canvas");c.width=Math.max(1,Math.round(i*s)),c.height=Math.max(1,Math.round(r*s));const l=c.getContext("2d",{alpha:!1});if(!l)throw new Error("No se pudo preparar la foto para leerla.");return l.drawImage(a,0,0,c.width,c.height),c.toDataURL("image/jpeg",.96)}finally{typeof a?.close=="function"&&a.close(),n&&URL.revokeObjectURL(n)}}async function na(e="food"){if(!wa){if(!window.MASA_NATIVE?.isNative?.()||typeof window.MASA_NATIVE.scanNutritionLabel!="function"){window.alert("La lectura autom\xE1tica de r\xF3tulos est\xE1 disponible en la aplicaci\xF3n Android. En la web pod\xE9s cargar los valores manualmente.");return}wa=!0,document.querySelectorAll("#scan-label-food, #scan-label-recipe, #scan-label-editor").forEach(t=>{t.disabled=!0});try{const t=await Nr(),a=await $r(t),n=await window.MASA_NATIVE.scanNutritionLabel(a),i=Cr(n),r={createdAt:new Date().toISOString(),parsed:i,native:{rotation:n?.rotation,pass:n?.pass,score:n?.score,keywordCount:n?.keywordCount,imageWidth:n?.imageWidth,imageHeight:n?.imageHeight,text:n?.text,lines:n?.lines}};window.__MASA_LAST_LABEL_DIAGNOSTIC=r;try{sessionStorage.setItem("masa-last-label-diagnostic",JSON.stringify(r))}catch{}if(!i.found){const c=String(n?.text||"").trim();if(console.warn("OCR de r\xF3tulo sin valores interpretables:",r),c){if(window.confirm("La c\xE1mara s\xED reconoci\xF3 texto, pero no pudo ubicar los valores nutricionales. \xBFCopiar el diagn\xF3stico para poder revisarlo?")){const u=JSON.stringify(r,null,2);try{await navigator.clipboard.writeText(u),window.alert("Diagn\xF3stico copiado. Pegalo en el chat para revisar exactamente qu\xE9 ley\xF3 el tel\xE9fono.")}catch{window.prompt("Copi\xE1 este diagn\xF3stico:",u)}}}else window.alert(`El OCR no detect\xF3 texto en la foto. Rotaci\xF3n probada: ${Number(n?.rotation||0)}\xB0. Acerc\xE1 la tabla hasta que ocupe casi toda la imagen y evit\xE1 reflejos.`);return}if(e==="food-editor"){kr(i);return}const s={name:"",source:"nutrition-label-ocr",servingAmount:i.servingAmount,servingUnit:i.servingUnit,servingUnitCustom:"",calories:Number.isFinite(i.calories)?i.calories:"",protein:Number.isFinite(i.protein)?i.protein:"",fat:Number.isFinite(i.fat)?i.fat:"",carbs:Number.isFinite(i.carbs)?i.carbs:"",equivalences:[]};e==="recipe"?o("#recipe-modal").hidden=!0:o("#food-modal").hidden=!0,ue({returnTarget:e,prefillFood:s,sourceNote:zn(i),sourceNoteType:"warning",allowRescan:!0,rescanMode:"label",title:"Revisar r\xF3tulo nutricional",description:"La c\xE1mara complet\xF3 los valores que pudo reconocer. Confirmalos antes de guardar."})}catch(t){if(!/cancel/i.test(String(t?.message||t||""))){const n=String(t?.message||t||"").trim();console.warn("No se pudo leer el r\xF3tulo nutricional:",t),window.alert(n&&n.length<180?`No se pudo leer el r\xF3tulo: ${n}`:"No se pudo abrir o procesar la foto del r\xF3tulo. Prob\xE1 nuevamente con la tabla completa y enfocada.")}}finally{wa=!1,document.querySelectorAll("#scan-label-food, #scan-label-recipe, #scan-label-editor").forEach(t=>{t.disabled=!1})}}}function ia(e="food"){Be=e==="recipe"?"recipe":e==="food-editor"?"food-editor":"food",Be==="recipe"?o("#recipe-modal").hidden=!0:Be==="food-editor"?o("#food-editor-modal").hidden=!0:o("#food-modal").hidden=!0,o("#barcode-modal").hidden=!1,o("#barcode-manual-form").reset(),o("#barcode-torch").hidden=!0,document.body.classList.add("modal-open"),br()}function Tt(e=!0){Ra(),o("#barcode-modal").hidden=!0,e&&(Be==="recipe"?o("#recipe-modal").hidden=!1:Be==="food-editor"?o("#food-editor-modal").hidden=!1:o("#food-modal").hidden=!1),oe()}function Er(e){const t=Be;if(Tt(!1),t==="food-editor"){const a=Z||"main",n=e.kind==="food"?d.foods.find(i=>i.id===e.id):null;ue({returnTarget:a,editId:n?.id||null,prefillFood:n?null:e,sourceNote:n?`Este c\xF3digo ya pertenece a \u201C${n.name}\u201D. Pod\xE9s revisar o actualizar sus datos.`:`Encontramos \u201C${e.name}\u201D en tu cat\xE1logo. Revis\xE1 los datos antes de guardarlo en tu biblioteca.`,sourceNoteType:"success"})}else t==="recipe"?(o("#recipe-modal").hidden=!1,o("#recipe-ingredient-search").value=e.name,he={id:e.id,kind:e.kind},me()):(o("#food-modal").hidden=!1,o("#food-search-input").value=e.name,ut(),Y={id:e.id,kind:e.kind},oa(),la());oe()}function ja(e,t,a={}){const n=Be,i=n==="food-editor"?Z||"main":n;Tt(!1),ue({returnTarget:i,prefillFood:e,sourceNote:t,sourceNoteType:a.sourceNoteType||"",allowRescan:!!a.allowRescan,rescanMode:"barcode",title:a.title||"",description:a.description||""})}function Hn(e){const t=String(e||"").trim().toLowerCase().replace(",",".");if(!t)return null;const a=t.match(/(\d+(?:\.\d+)?)\s*(ml|millilit(?:er|re|ro)s?|cl|l|lit(?:er|re|ro)s?|g|gr|gram(?:o|me|s)?s?|kg|kilogram(?:o|me|s)?s?)(?:\b|$)/i);if(!a)return null;let n=Number(a[1]),i=a[2].toLowerCase();return!Number.isFinite(n)||n<=0?null:(i==="cl"?(n*=10,i="ml"):/^l|^lit/.test(i)?i="l":/^ml|^millilit/.test(i)?i="ml":/^kg|^kilogram/.test(i)?i="kg":i="g",{amount:n,unit:i})}function Sr(e){const a=[e?.quantity,e?.product_quantity&&e?.product_quantity_unit?`${e.product_quantity} ${e.product_quantity_unit}`:""].map(Hn).find(Boolean)||null,n=Hn(e?.serving_size),i=a||n||{amount:1,unit:"unit"},r=!!(n&&n.unit===i.unit&&Math.abs(n.amount-i.amount)<.001);return{...i,useDirectServing:!a||r}}function Lr(e,t){const a=e?.nutriments||{};let n=m(a["energy-kcal_100g"],NaN);if(!Number.isFinite(n)){const $=m(a["energy-kj_100g"]??a.energy_100g,NaN);Number.isFinite($)&&(n=$/4.184)}const i=m(a.proteins_100g,NaN),r=m(a.fat_100g,NaN),s=m(a.carbohydrates_100g,NaN),c=Sr(e),l=["g","ml"].includes(c.unit)?c.amount/100:c.unit==="kg"||c.unit==="l"?c.amount*10:1,u=m(a["energy-kcal_serving"],NaN),f=m(a.proteins_serving,NaN),p=m(a.fat_serving,NaN),w=m(a.carbohydrates_serving,NaN),y=($,A)=>c.useDirectServing&&Number.isFinite(A)?A:Number.isFinite($)?$*l:"",x=String(e.product_name_es||e.product_name||e.generic_name_es||e.generic_name||"").trim(),b=y(n,u),v=y(i,f),h=y(r,p),M=y(s,w),N=!!x&&[b,v,h,M].every(Number.isFinite);ja({name:x,barcode:t,brand:String(e.brands||"").trim(),calories:Number.isFinite(b)?b:"",protein:Number.isFinite(v)?v:"",fat:Number.isFinite(h)?h:"",carbs:Number.isFinite(M)?M:"",serving:pt(c.amount,c.unit),servingAmount:c.amount,servingUnit:c.unit,source:"openfoodfacts",sourceUrl:`https://world.openfoodfacts.org/product/${t}`,sourceImportedAt:new Date().toISOString(),imageUrl:String(e.image_front_small_url||e.image_front_url||"")},N?"Producto encontrado en Open Food Facts. Revis\xE1 la cantidad original del envase y los datos antes de guardarlo.":"El producto existe, pero faltan datos. Complet\xE1 lo que figure en la etiqueta antes de guardarlo.",{allowRescan:!0})}async function Fr(e,t){const a=new URLSearchParams({fields:t,lc:"es"}).toString(),n=[`${Ri}${encodeURIComponent(e)}?${a}`,`${Pi}/${encodeURIComponent(e)}.json?${a}`];let i=null;for(const r of n){const s=new AbortController,c=setTimeout(()=>s.abort(),12e3);try{const l=await fetch(r,{headers:{Accept:"application/json"},cache:"no-store",signal:s.signal});if(!l.ok)throw new Error(`HTTP ${l.status}`);if(!(l.headers.get("content-type")||"").includes("json"))throw new Error("La respuesta no es JSON");return await l.json()}catch(l){i=l}finally{clearTimeout(c)}}throw i||new Error("No se pudo consultar Open Food Facts")}async function _a(e){if(Kt)return;const t=ne(e);if(!Qt(t)){V("El c\xF3digo debe ser un EAN/UPC v\xE1lido de 8, 12, 13 o 14 d\xEDgitos.","error");return}let a=Gn(t);if(!a&&pe==="loading"&&ya){try{await ya}catch{}a=Gn(t)}if(a){V("Producto encontrado en tu biblioteca.","success"),Er(a);return}Kt=!0,V(`Buscando ${t} en Open Food Facts\u2026`,"loading");try{const n=["code","product_name","product_name_es","generic_name","generic_name_es","brands","quantity","serving_size","product_quantity","product_quantity_unit","nutriments","image_front_small_url","image_front_url"].join(","),i=await Fr(t,n);!!i?.product&&(i.status===1||i.status==="success"||i.status===void 0)?Lr(i.product,t):ja({barcode:t,servingAmount:1,servingUnit:"unit",serving:"1 unidad"},`No encontramos un alimento asociado al c\xF3digo ${t}. Complet\xE1 los datos de la etiqueta y guardalo; la pr\xF3xima vez M.A.S.A. lo reconocer\xE1.`,{allowRescan:!0,sourceNoteType:"warning",title:"Alimento no encontrado",description:"Solo pudimos leer el c\xF3digo de barras. Pod\xE9s completar el alimento manualmente o volver a escanear."})}catch(n){console.warn("No se pudo consultar Open Food Facts:",n),ja({barcode:t,servingAmount:1,servingUnit:"unit",serving:"1 unidad"},`No pudimos consultar Open Food Facts para el c\xF3digo ${t}. Complet\xE1 los datos de la etiqueta o volv\xE9 a escanear.`,{allowRescan:!0,sourceNoteType:"warning",title:"No se pudo comprobar el alimento",description:"El c\xF3digo qued\xF3 cargado. Pod\xE9s completar los datos manualmente o intentar el escaneo otra vez."})}finally{Kt=!1}}function Dr(e){e.preventDefault(),_a(e.currentTarget.elements.barcode.value)}function Yn(e){ee=e,Te="recent",Y=null,o("#food-meal-label").textContent=`Agregar en ${jn(e)} \xB7 ${j(L)}`,o("#food-modal").hidden=!1;const t=o("#food-add-feedback");t.hidden=!0,t.textContent="",o("#food-search-input").value="",document.body.classList.add("modal-open"),Wa("recent",!1),ut(),it(o("#food-search-input"))}function O(e){const t=o(`#${e}`);return!!(t&&!t.hidden)}function oe(){const e=["food-modal","food-editor-modal","recipe-modal","library-modal","settings-modal","meal-picker-modal","daily-checkin-modal","confirm-modal","tips-modal","about-modal","barcode-modal"];document.body.classList.toggle("modal-open",e.some(O))}function ra(){Y=null,o("#food-modal").hidden=!0,oe()}function Ba(){return!!String(o("#food-search-input")?.value||"").trim()}function ut(){const e=Ba();o("#food-search-panel").hidden=!e,o("#food-browse-area").hidden=e,Y=null,e?oa():It()}function Wa(e,t=!0){const a=["recent","frequent","recipe","quick"];Te=a.includes(e)?e:"recent",Y=null,t&&o("#food-search-input")&&(o("#food-search-input").value=""),S("[data-food-mode]").forEach(n=>n.classList.toggle("active",n.dataset.foodMode===Te)),a.forEach(n=>{o(`#food-mode-${n}`).hidden=n!==Te}),o("#food-search-panel").hidden=!0,o("#food-browse-area").hidden=!1,It()}function It(){Te==="recent"&&qr(),Te==="frequent"&&Or(),Te==="recipe"&&Zn()}function mt(e){return String(e?.catalogId||e?.id||"")}function za(e){return d.foodUsage?.[mt(e)]||null}function Ar(e,t=ee){const a=za(e);return a?.byMeal?.[t]||a||null}function Re(e){const t=za(e),a=String(t?.lastUsed||e?.lastUsed||""),n=String(t?.lastUsedAt||e?.lastUsedAt||(a?`${a}T12:00:00.000Z`:""));return{uses:Math.max(m(e?.uses,0),m(t?.uses,0)),lastUsed:a,lastUsedAt:n}}function ft(e,t=ee){const a=za(e)?.byMeal?.[t],n=String(a?.lastUsed||"");return{uses:Math.max(0,m(a?.uses,0)),lastUsed:n,lastUsedAt:String(a?.lastUsedAt||(n?`${n}T12:00:00.000Z`:""))}}function Kn(e,t){const a=Re(e),n=Re(t),i=n.uses-a.uses;if(i)return i;const r=n.lastUsedAt.localeCompare(a.lastUsedAt);if(r)return r;const s=e.kind==="external"?0:1,c=t.kind==="external"?0:1;return s!==c?c-s:String(e.name||"").localeCompare(String(t.name||""),"es")}function Ha(e,t,a=ee){const n=ft(e,a),i=ft(t,a);return i.uses-n.uses||i.lastUsedAt.localeCompare(n.lastUsedAt)||Kn(e,t)}function Ya(e,t){const a=ft(e),n=ft(t),i=Re(e),r=Re(t);return n.lastUsedAt.localeCompare(a.lastUsedAt)||n.uses-a.uses||r.lastUsedAt.localeCompare(i.lastUsedAt)||r.uses-i.uses||String(e.name||"").localeCompare(String(t.name||""),"es")}function Tr(e,t){const a=ft(e),n=ft(t),i=Re(e),r=Re(t);return n.uses-a.uses||n.lastUsedAt.localeCompare(a.lastUsedAt)||r.uses-i.uses||r.lastUsedAt.localeCompare(i.lastUsedAt)||String(e.name||"").localeCompare(String(t.name||""),"es")}function Ir(){return[...d.foods,...d.recipes].sort(Kn)}function $e(e,t=""){return t==="external"||String(e).startsWith("external:")?je.get(e)||null:t==="recipe"?d.recipes.find(a=>a.id===e)||null:t==="food"?d.foods.find(a=>a.id===e)||null:d.foods.find(a=>a.id===e)||d.recipes.find(a=>a.id===e)||je.get(e)||null}function Gn(e){const t=ne(e);return t&&(d.foods.find(a=>ne(a.barcode)===t)||De.find(a=>ne(a.barcode)===t))||null}function Ye(e){return String(e||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g," ")}function Vn(e){const t=Ye(e);return t?t.split(" ").flatMap(a=>a.match(/[a-z]+|\d+/g)||[]):[]}function Xn(e){return Ye([e.name,e.brand,e.barcode,...Array.isArray(e.aliases)?e.aliases:[],e.sourceName].filter(Boolean).join(" "))}function Ka(e,t=""){const a=Ye(e?.name),n=Ye(`${Xn(e)} ${t}`);return{item:e,nameText:a,nameCompact:a.replace(/\s+/g,""),searchText:n,searchCompact:n.replace(/\s+/g,""),tokens:Vn(n)}}function Ga(e){const t=Ye(e);return{text:t,compact:t.replace(/\s+/g,""),tokens:Vn(t)}}function Ur(e,t){if(!e||!t)return!1;let a=0;for(const n of t)if(n===e[a]&&(a+=1),a===e.length)return!0;return!1}function Pr(e,t){if(!e||e.length<4||!/^[a-z]+$/.test(e))return!1;const a=t.filter(r=>/^[a-z]+$/.test(r)),n=new Map;function i(r,s){if(r===e.length)return!0;const c=`${r}:${s}`;if(n.has(c))return n.get(c);for(let l=s;l<a.length;l+=1){const u=e.length-r,f=Math.min(a[l].length,u);for(let p=f;p>=2;p-=1){const w=e.slice(r,r+p);if(a[l].startsWith(w)&&i(r+p,l+1))return n.set(c,!0),!0}}return n.set(c,!1),!1}return i(0,0)}function Va(e,t){if(!t.text)return 0;const{text:a,compact:n,tokens:i}=t;if(e.nameText===a)return 1e4;if(e.nameCompact===n)return 9800;if(e.nameText.startsWith(a))return 9300-Math.min(300,e.nameText.length-a.length);if(e.nameCompact.startsWith(n))return 9e3-Math.min(300,e.nameCompact.length-n.length);let r=0,s=i.length>0;for(const l of i){let u=0;for(const f of e.tokens)f===l?u=Math.max(u,180):f.startsWith(l)?u=Math.max(u,140):l.length>=3&&f.includes(l)&&(u=Math.max(u,95));if(!u&&Pr(l,e.tokens)&&(u=120),!u){s=!1;break}r+=u}if(s)return 7600+r;if(e.searchCompact.includes(n))return 6500-Math.min(500,e.searchCompact.indexOf(n));const c=n.length/Math.max(1,e.searchCompact.length);return n.length>=4&&c>=.42&&Ur(n,e.searchCompact)?4800+Math.round(c*1e3):0}function gt(e,t,a=""){return Va(Ka(e,a),Ga(t))}function Qn(e,t=50){const a=Ga(e);return a.text?ba.map(n=>({item:n.item,score:Va(n,a)})).filter(n=>n.score>0).sort((n,i)=>i.score-n.score||String(n.item.name||"").localeCompare(String(i.item.name||""),"es")).slice(0,t).map(n=>n.item):De.slice(0,t)}function Rr(){return Object.entries(d.foodUsage||{}).map(([e,t])=>{const a=e.startsWith("external:")?e:`external:${e}`;return{item:je.get(a),usage:t}}).filter(e=>e.item&&m(e.usage?.uses,0)>0).map(e=>e.item)}function Xa(){const e=[...d.foods,...d.recipes].filter(t=>Re(t).uses>0);return[...new Map([...e,...Rr()].map(t=>[t.id,t])).values()]}function Jn(e){pe==="loading"&&e.insertAdjacentHTML("beforeend",'<p class="empty-message">Cargando cat\xE1logo de alimentos\u2026</p>'),pe==="error"&&e.insertAdjacentHTML("beforeend",`<p class="empty-message">No se pudo cargar el cat\xE1logo: ${C(va)}</p>`)}function oa(){const e=o("#food-search-input")?.value||"",t=Ye(e),a=o("#food-results");if(a.innerHTML="",Jn(a),!t)return;const i=[...Ir().filter(s=>gt(s,e)>0),...Qn(e,45)],r=[...new Map(i.map(s=>[s.id,s])).values()].sort((s,c)=>gt(c,e)-gt(s,e)||Ha(s,c,ee)).slice(0,35);if(!r.length){pe!=="loading"&&a.insertAdjacentHTML("beforeend",'<p class="empty-message">No hay coincidencias. Pod\xE9s crear un alimento propio con ese nombre.</p>');return}r.forEach(s=>a.appendChild(ca(s)))}function qr(){const e=o("#recent-food-results");e.innerHTML="";const t=Xa().sort(Ya).slice(0,40);if(!t.length){e.innerHTML='<p class="empty-message">Todav\xEDa no hay alimentos recientes. Aparecer\xE1n despu\xE9s de agregarlos al registro.</p>';return}t.forEach(a=>e.appendChild(ca(a,"recent")))}function Or(){const e=o("#frequent-food-results");e.innerHTML="";const t=Xa().sort(Tr).slice(0,40);if(!t.length){e.innerHTML='<p class="empty-message">Todav\xEDa no hay consumos suficientes para ordenar tus frecuentes.</p>';return}t.forEach(a=>e.appendChild(ca(a,"frequent")))}function Zn(){const e=o("#recipe-results");if(e.innerHTML="",!d.recipes.length){e.innerHTML='<p class="empty-message">Todav\xEDa no guardaste recetas.</p>';return}[...d.recipes].sort((t,a)=>Ha(t,a,ee)).forEach(t=>e.appendChild(ca(t)))}const jr={unidad:["unidad","unidades"],unidades:["unidad","unidades"],porcion:["porci\xF3n","porciones"],porciones:["porci\xF3n","porciones"],taza:["taza","tazas"],tazas:["taza","tazas"],cucharada:["cucharada","cucharadas"],cucharadas:["cucharada","cucharadas"],cucharadita:["cucharadita","cucharaditas"],cucharaditas:["cucharadita","cucharaditas"],plato:["plato","platos"],platos:["plato","platos"],paquete:["paquete","paquetes"],paquetes:["paquete","paquetes"],cookie:["unidad","unidades"],piece:["unidad","unidades"],item:["unidad","unidades"],unit:["unidad","unidades"],each:["unidad","unidades"],serving:["porci\xF3n","porciones"],portion:["porci\xF3n","porciones"],cup:["taza","tazas"],plate:["plato","platos"],slice:["feta","fetas"],sandwich:["s\xE1ndwich","s\xE1ndwiches"],roll:["rollo","rollos"],bar:["barra","barras"],tortilla:["tortilla","tortillas"],cracker:["galleta","galletas"],wrap:["wrap","wraps"],donut:["dona","donas"],burrito:["burrito","burritos"],muffin:["muffin","muffins"],bagel:["bagel","bagels"],fruit:["unidad","unidades"],packet:["paquete","paquetes"],wing:["ala","alas"],bun:["pan","panes"],pancake:["panqueque","panqueques"],taco:["taco","tacos"],skewer:["brocheta","brochetas"],waffle:["waffle","waffles"],scoop:["bocha","bochas"],container:["recipiente","recipientes"],empanada:["empanada","empanadas"],pieces:["unidad","unidades"],g:["g","g"],kg:["kg","kg"],ml:["ml","ml"],l:["l","l"],fl_oz:["oz l\xEDquida","oz l\xEDquidas"],tablespoon:["cucharada","cucharadas"],tbsp:["cucharada","cucharadas"],teaspoon:["cucharadita","cucharaditas"],tsp:["cucharadita","cucharaditas"],bowl:["taz\xF3n","tazones"],glass:["vaso","vasos"],can:["lata","latas"],bottle:["botella","botellas"],package:["paquete","paquetes"],oz:["oz","oz"]};function Qa(e){const t=_(e).replace(/\s+/g,"_");return/^(g|gr|gramo|gramos|gram)$/.test(t)?"g":/^(kg|kilo|kilos|kilogramo|kilogramos)$/.test(t)?"kg":/^(ml|mililitro|mililitros)$/.test(t)?"ml":/^(l|litro|litros)$/.test(t)?"l":/^(unidad|unidades|u|unit|units|piece|pieces)$/.test(t)?"unit":/^(porcion|porciones|serving|servings|portion|portions)$/.test(t)?"serving":/^(taza|tazas|cup|cups)$/.test(t)?"cup":/^(cucharada|cucharadas|tablespoon|tablespoons|tbsp)$/.test(t)?"tablespoon":/^(cucharadita|cucharaditas|teaspoon|teaspoons|tsp)$/.test(t)?"teaspoon":/^(plato|platos|plate|plates)$/.test(t)?"plate":/^(feta|fetas|rebanada|rebanadas|slice|slices)$/.test(t)?"slice":/^(paquete|paquetes|package|packages|packet|packets)$/.test(t)?"package":"custom"}function Ut(e,t=""){if(e==="custom"){const a=String(t||"unidad").trim()||"unidad";return[a,a]}return ii(e)}function pt(e,t,a=""){const[n,i]=Ut(t,a),r=Math.abs(m(e,0)-1)<1e-4?n:i;return`${Ke(e)} ${r}`}const _r=[["g","gramos (g)"],["kg","kilogramos (kg)"],["ml","mililitros (ml)"],["l","litros (l)"],["unit","unidad"],["serving","porci\xF3n"],["cup","taza"],["tablespoon","cucharada"],["teaspoon","cucharadita"],["plate","plato"],["slice","feta"],["package","paquete"],["custom","otra unidad\u2026"]];function Br(e){const t=o(e==="recipe"?"#recipe-form":"#food-editor-form"),a=e==="recipe"?t?.elements.yieldUnit:t?.elements.servingUnit,n=e==="recipe"?t?.elements.yieldUnitCustom:t?.elements.servingUnitCustom;return a?Ut(a.value,a.value==="custom"?n?.value:"")[1]:"unidad base"}function Pt(e){return e==="recipe"?zt:xt}function Ee(e){const t=o(e==="recipe"?"#recipe-equivalence-list":"#food-equivalence-list");if(!t)return;const a=Pt(e),n=Br(e);if(t.innerHTML="",!a.length){t.innerHTML='<p class="equivalence-empty">No agregaste equivalencias.</p>';return}a.forEach((i,r)=>{const s=document.createElement("article");s.className="equivalence-row",s.dataset.equivalenceIndex=r,s.dataset.equivalenceType=e,s.innerHTML=`
-        <label><span>Cantidad</span><input name="equivalenceAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${C(i.amount)}"></label>
-        <label><span>Unidad alternativa</span><select name="equivalenceUnit">${_r.map(([c,l])=>`<option value="${c}" ${c===i.unit?"selected":""}>${C(l)}</option>`).join("")}</select></label>
-        <label class="equivalence-custom-unit" ${i.unit==="custom"?"":"hidden"}><span>Nombre</span><input name="equivalenceCustomUnit" maxlength="40" placeholder="Ej.: vaso" value="${C(i.customUnit||"")}"></label>
+            </form>`;
+          }
+        } else {
+          const canEditEntry = isCalorieOnlyEntry(item) || toNumber(item.quantity, 0) > 0;
+          if (canEditEntry) {
+            row.classList.add("meal-item-editable");
+            row.dataset.editDiary = item.id;
+            row.setAttribute("aria-label", isCalorieOnlyEntry(item) ? `Editar calorías de ${item.name}` : `Editar cantidad de ${item.name}`);
+          }
+          row.innerHTML = `<div><b>${escapeHTML(item.name)}</b><small><span class="meal-serving">${escapeHTML(item.serving || "1 porción")}</span> · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span><button type="button" data-remove-diary="${escapeHTML(item.id)}" aria-label="Eliminar ${escapeHTML(item.name)}">×</button>`;
+        }
+        container.appendChild(row);
+      });
+    });
+
+    const completed = Boolean(state.completedDays?.[selectedDiaryDate]);
+    $("#day-reading").hidden = !completed;
+    $("#finish-day").textContent = completed ? "Día terminado ✓" : selectedDiaryDate === operationalDayISO() ? "Terminar día" : "Terminar este día";
+    $("#finish-day").classList.toggle("completed", completed);
+    if (completed) renderDayProjection(plan, totals);
+    if (activeDiaryView === "chart") drawCalorieChart(plan);
+  }
+
+  function setDiaryProgress(key, value, target, unit) {
+    const safeTarget = Number.isFinite(target) ? target : 0;
+    $(`#diary-${key}-progress`).textContent = `${formatNumber(Math.round(value))} / ${safeTarget ? formatNumber(Math.round(safeTarget)) : "—"} ${unit}`;
+    $(`#diary-${key}-bar`).style.width = `${safeTarget ? clamp(value / safeTarget * 100, 0, 100) : 0}%`;
+  }
+
+  function renderDayProjection(plan, totals = diaryTotals()) {
+    const weeks = toNumber($("#day-projection-weeks")?.value, 6);
+    const current = latestWeighIn()?.weight;
+    if (!Number.isFinite(current) || !Number.isFinite(plan.maintenance) || totals.calories <= 0) {
+      $("#day-projection-title").textContent = "Completá el día para ver una proyección.";
+      $("#day-projection-text").textContent = "La cuenta compara las calorías registradas con tu mantenimiento estimado. Es orientativa y no reemplaza la tendencia de pesajes.";
+      return;
+    }
+    const dailyDelta = totals.calories - plan.maintenance;
+    const projected = current + dailyDelta * weeks * 7 / KG_KCAL;
+    const direction = projected < current ? "bajaría" : projected > current ? "subiría" : "se mantendría";
+    $("#day-projection-title").textContent = `En ${weeks} semanas, el peso ${direction} hacia ${formatKg(projected,1)}.`;
+    $("#day-projection-text").textContent = `Con ${formatNumber(Math.round(totals.calories))} kcal diarias frente a un mantenimiento estimado de ${formatNumber(Math.round(plan.maintenance))} kcal, la diferencia teórica sería ${dailyDelta > 0 ? "+" : ""}${formatNumber(Math.round(dailyDelta))} kcal por día. La adaptación del cuerpo y el registro incompleto pueden cambiar el resultado.`;
+  }
+
+  function finishDay() {
+    state.completedDays = state.completedDays || {};
+    state.completedDays[selectedDiaryDate] = true;
+    saveState(state);
+    $("#day-reading").hidden = false;
+    renderDayProjection(calculatePlan(), diaryTotals());
+    $("#day-reading").scrollIntoView({ behavior: "smooth", block: "center" });
+    render();
+  }
+
+  function hideDaySummary() {
+    state.completedDays = state.completedDays || {};
+    delete state.completedDays[selectedDiaryDate];
+    saveState(state);
+    render();
+  }
+
+  function switchDiaryView(view) {
+    activeDiaryView = view === "chart" ? "chart" : "record";
+    $$('[data-diary-view]').forEach(button => button.classList.toggle("active", button.dataset.diaryView === activeDiaryView));
+    $("#diary-record-view").hidden = activeDiaryView !== "record";
+    $("#diary-chart-view").hidden = activeDiaryView !== "chart";
+    syncCalorieRangeButtons();
+    if (activeDiaryView === "chart") requestAnimationFrame(() => drawCalorieChart(calculatePlan()));
+  }
+
+  function diaryTotalsForDate(date) {
+    return diaryTotals(state.diary[date] || []);
+  }
+
+  function isMobileLayout() {
+    return window.matchMedia?.("(max-width: 590px)").matches ?? window.innerWidth <= 590;
+  }
+
+  function effectiveCalorieRange() {
+    return isMobileLayout() ? 7 : calorieRange;
+  }
+
+  function syncCalorieRangeButtons() {
+    const visibleRange = effectiveCalorieRange();
+    $$('[data-calorie-range]').forEach(button => button.classList.toggle("active", toNumber(button.dataset.calorieRange, 0) === visibleRange));
+  }
+
+  function calorieChartDays() {
+    const end = parseDate(selectedDiaryDate);
+    const days = [];
+    const visibleRange = effectiveCalorieRange();
+    for (let offset = visibleRange - 1; offset >= 0; offset -= 1) {
+      const date = addDays(end, -offset);
+      const iso = toISODate(date);
+      const totals = diaryTotalsForDate(iso);
+      days.push({ date, iso, calories: totals.calories, hasEntries: (state.diary[iso] || []).length > 0, completed: Boolean(state.completedDays?.[iso]) });
+    }
+    return days;
+  }
+
+  function drawCalorieChart(plan = calculatePlan()) {
+    const canvas = $("#calorie-chart");
+    if (!canvas || $("#diary-chart-view").hidden) return;
+    const prepared = prepareCanvas(canvas);
+    if (!prepared) return;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    const days = calorieChartDays();
+    const target = Number.isFinite(plan.targetCalories) ? plan.targetCalories : 0;
+    const maxValue = Math.max(target, ...days.map(day => day.calories), 500) * 1.12;
+    const margin = { left: 48, right: 16, top: 25, bottom: 46 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const slot = plotWidth / Math.max(1, days.length);
+    const barWidth = Math.max(5, Math.min(34, slot * .62));
+    const y = value => margin.top + (maxValue - value) / maxValue * plotHeight;
+
+    ctx.font = "10px ui-monospace, monospace";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i <= 4; i += 1) {
+      const value = maxValue * i / 4;
+      const py = y(value);
+      ctx.strokeStyle = "rgba(23,26,33,.12)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(margin.left, py); ctx.lineTo(width - margin.right, py); ctx.stroke();
+      ctx.fillStyle = "rgba(23,26,33,.55)";
+      ctx.fillText(formatNumber(value, 0), margin.left - 7, py);
+    }
+
+    if (target) {
+      ctx.save();
+      ctx.strokeStyle = "#171a21";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([7,5]);
+      ctx.beginPath(); ctx.moveTo(margin.left, y(target)); ctx.lineTo(width - margin.right, y(target)); ctx.stroke();
+      ctx.restore();
+    }
+
+    days.forEach((day, index) => {
+      const x = margin.left + slot * index + slot / 2;
+      const top = y(day.calories);
+      const bottom = y(0);
+      ctx.fillStyle = day.hasEntries ? "#8d7cff" : "rgba(23,26,33,.08)";
+      ctx.fillRect(x - barWidth / 2, top, barWidth, Math.max(1, bottom - top));
+      if (day.hasEntries) {
+        ctx.fillStyle = "#171a21";
+        ctx.font = "9px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(formatNumber(day.calories, 0), x, Math.max(12, top - 5));
+      }
+      const visibleRange = effectiveCalorieRange();
+      const showLabel = isMobileLayout()
+        ? index % 2 === 0 || index === days.length - 1
+        : visibleRange <= 14 || index % Math.ceil(visibleRange / 10) === 0 || index === days.length - 1;
+      if (showLabel) {
+        ctx.fillStyle = "rgba(23,26,33,.62)";
+        ctx.textBaseline = "top";
+        ctx.fillText(new Intl.DateTimeFormat("es-UY", { day: "2-digit", month: "2-digit" }).format(day.date), x, height - margin.bottom + 11);
+      }
+    });
+
+    const logged = days.filter(day => day.hasEntries);
+    $("#calorie-chart-empty").hidden = logged.length > 0;
+    const analysis = buildCalorieAnalysis(plan, sortedWeighIns(), days);
+    if (!Number.isFinite(analysis.average)) {
+      $("#calorie-chart-summary").textContent = "Todavía no hay días suficientes para comparar.";
+      return;
+    }
+    const diff = analysis.difference;
+    const weightText = Number.isFinite(analysis.observedWeekly)
+      ? ` · el peso ${analysis.observedWeekly < -0.05 ? "baja" : analysis.observedWeekly > 0.05 ? "sube" : "se mantiene"} ${Math.abs(analysis.observedWeekly) >= 0.05 ? `${formatNumber(Math.abs(analysis.observedWeekly), 2)} kg/sem` : ""}`
+      : "";
+    $("#calorie-chart-summary").textContent = `Promedio: ${formatNumber(Math.round(analysis.average))} kcal · ${formatNumber(Math.abs(Math.round(diff)))} kcal ${diff > 0 ? "sobre" : "bajo"} el objetivo${weightText}.`;
+  }
+
+  function switchAppView(view, scroll = true) {
+    activeAppView = view === "progress" ? "progress" : "today";
+    $$('[data-app-view]').forEach(button => button.classList.toggle("active", button.dataset.appView === activeAppView));
+    $("#today-view").hidden = activeAppView !== "today";
+    $("#progress-view").hidden = activeAppView !== "progress";
+    if (activeAppView === "progress" && chartPayload) requestAnimationFrame(renderActiveProgressChart);
+    if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openMealPicker() {
+    $("#meal-picker-modal").hidden = false;
+    document.body.classList.add("modal-open");
+  }
+
+  function closeMealPicker() {
+    $("#meal-picker-modal").hidden = true;
+    if ($("#food-modal").hidden && $("#settings-modal").hidden) document.body.classList.remove("modal-open");
+  }
+
+  function pickMeal(meal) {
+    closeMealPicker();
+    openFoodModal(meal);
+  }
+
+  function showWeightEditor() {
+    weightEditorForced = true;
+    const entry = state.weighIns.find(item => item.date === selectedDiaryDate);
+    $("#quick-weight").value = entry?.weight || "";
+    renderRecordWeight();
+    setTimeout(() => $("#quick-weight")?.focus(), 50);
+  }
+
+  function renderRecordWeight() {
+    const entry = state.weighIns.find(item => item.date === selectedDiaryDate);
+    const recorded = Boolean(entry);
+    const card = $("#record-weight-card");
+    const ledger = $("#meal-grid");
+    const sidebar = document.querySelector(".records-sidebar");
+    const compact = recorded && !weightEditorForced;
+    const mobileRecordLayout = window.matchMedia("(max-width: 859px)").matches;
+    card.classList.toggle("compact-recorded-weight", compact);
+    if ((mobileRecordLayout || compact) && sidebar && card.parentElement !== sidebar) {
+      const quickTools = sidebar.querySelector(".diary-quick-tools");
+      sidebar.insertBefore(card, quickTools || null);
+    }
+    if (!mobileRecordLayout && !compact && ledger && card.parentElement !== ledger) ledger.prepend(card);
+    const selectedLabel = selectedDiaryDate === operationalDayISO() ? "hoy" : `el ${formatDate(selectedDiaryDate)}`;
+    $("#record-weight-title").textContent = recorded ? `Peso de ${selectedLabel}` : `Registrar peso de ${selectedLabel}`;
+    $("#weight-context").textContent = recorded
+      ? `Este dato forma parte de la tendencia y puede editarse sin salir del registro diario.`
+      : "Es opcional. Un dato aislado puede variar mucho; la tendencia necesita varias mediciones.";
+    $("#today-weight-recorded").hidden = !recorded || weightEditorForced;
+    $("#quick-weight-form").hidden = recorded && !weightEditorForced;
+    if (recorded) $("#today-weight-value").textContent = formatKg(entry.weight);
+    if (!weightEditorForced && !recorded) $("#quick-weight").value = "";
+  }
+
+  function updateWeightEntryState() {
+    renderRecordWeight();
+  }
+
+  function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
+  }
+
+  function setBarcodeStatus(message, type = "") {
+    const status = $("#barcode-status");
+    if (!status) return;
+    status.textContent = message;
+    status.className = `barcode-status${type ? ` ${type}` : ""}`;
+  }
+
+  function getBarcodeVideoTrack() {
+    const stream = $("#barcode-video")?.srcObject;
+    return stream?.getVideoTracks?.()[0] || null;
+  }
+
+  function updateBarcodeTorchButton() {
+    const button = $("#barcode-torch");
+    if (!button) return;
+    const track = getBarcodeVideoTrack();
+    let supported = false;
+    try { supported = Boolean(track?.getCapabilities?.().torch); } catch (_) {}
+    supported ||= typeof barcodeScannerControls?.switchTorch === "function";
+    button.hidden = !supported;
+    button.setAttribute("aria-pressed", String(barcodeTorchOn));
+    button.classList.toggle("active", barcodeTorchOn);
+  }
+
+  async function toggleBarcodeTorch() {
+    const track = getBarcodeVideoTrack();
+    const desiredState = !barcodeTorchOn;
+    let directError = null;
+    try {
+      let handled = false;
+      if (track?.applyConstraints) {
+        let capabilities = {};
+        try { capabilities = track.getCapabilities?.() || {}; } catch (_) {}
+        if (capabilities.torch) {
+          try {
+            await track.applyConstraints({ advanced: [{ torch: desiredState }] });
+            handled = true;
+          } catch (error) {
+            directError = error;
+          }
+        }
+      }
+      if (!handled && typeof barcodeScannerControls?.switchTorch === "function") {
+        await barcodeScannerControls.switchTorch();
+        handled = true;
+      }
+      if (!handled) throw directError || new Error("Torch unavailable");
+      barcodeTorchOn = desiredState;
+      updateBarcodeTorchButton();
+      setBarcodeStatus(desiredState ? "Linterna encendida. Apuntá al código de barras." : "Linterna apagada. Apuntá al código de barras.");
+    } catch (error) {
+      console.warn("No se pudo cambiar la linterna:", error);
+      barcodeTorchOn = false;
+      updateBarcodeTorchButton();
+      setBarcodeStatus("El navegador no permitió controlar la linterna de esta cámara.", "error");
+    }
+  }
+
+  function stopBarcodeScanner() {
+    const track = getBarcodeVideoTrack();
+    if (track && barcodeTorchOn) {
+      try { track.applyConstraints?.({ advanced: [{ torch: false }] }).catch?.(() => {}); } catch (_) {}
+    }
+    barcodeTorchOn = false;
+    try { barcodeScannerControls?.stop?.(); } catch (_) {}
+    barcodeScannerControls = null;
+    try { barcodeReader?.reset?.(); } catch (_) {}
+    barcodeReader = null;
+    const video = $("#barcode-video");
+    const stream = video?.srcObject;
+    if (stream?.getTracks) stream.getTracks().forEach(mediaTrack => mediaTrack.stop());
+    if (video) video.srcObject = null;
+    const torchButton = $("#barcode-torch");
+    if (torchButton) {
+      torchButton.hidden = true;
+      torchButton.classList.remove("active");
+      torchButton.setAttribute("aria-pressed", "false");
+    }
+  }
+
+  function nativeBarcodeValue(result) {
+    return normalizeBarcode(
+      result?.ScanResult
+      || result?.scanResult
+      || result?.content
+      || result?.value
+      || result?.text
+      || ""
+    );
+  }
+
+  async function startBarcodeScanner() {
+    stopBarcodeScanner();
+    const video = $("#barcode-video");
+    if (!video) return;
+
+    if (window.MASA_NATIVE?.isNative?.() && typeof window.MASA_NATIVE.scanBarcode === "function") {
+      setBarcodeStatus("Abriendo el lector de códigos de barras…", "loading");
+      try {
+        const result = await window.MASA_NATIVE.scanBarcode();
+        const code = nativeBarcodeValue(result);
+        if (!code) {
+          setBarcodeStatus("Escaneo cancelado. También podés ingresar el código manualmente.");
+          return;
+        }
+        if (!validBarcode(code)) {
+          setBarcodeStatus("El código leído no tiene un formato EAN/UPC válido.", "error");
+          return;
+        }
+        lookupBarcode(code);
+      } catch (error) {
+        console.warn("No se pudo iniciar el lector nativo:", error);
+        const cancelled = /cancel/i.test(String(error?.message || error || ""));
+        setBarcodeStatus(cancelled
+          ? "Escaneo cancelado. También podés ingresar el código manualmente."
+          : "No se pudo abrir la cámara. Revisá el permiso de cámara o ingresá el código manualmente.", cancelled ? "" : "error");
+      }
+      return;
+    }
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      setBarcodeStatus("La cámara requiere abrir M.A.S.A. desde una dirección HTTPS. Podés ingresar el código manualmente.", "error");
+      return;
+    }
+    const permissionsPolicy = document.permissionsPolicy || document.featurePolicy;
+    if (permissionsPolicy?.allowsFeature && !permissionsPolicy.allowsFeature("camera")) {
+      setBarcodeStatus("La configuración del sitio está bloqueando la cámara. Volvé a publicar esta versión y recargá la página.", "error");
+      return;
+    }
+    if (!window.ZXingBrowser?.BrowserMultiFormatReader) {
+      setBarcodeStatus("No se pudo cargar el lector. Podés ingresar el código manualmente.", "error");
+      return;
+    }
+    setBarcodeStatus("Apuntá al código de barras y mantené el envase quieto.");
+    try {
+      barcodeReader = new window.ZXingBrowser.BrowserMultiFormatReader();
+      barcodeScannerControls = await barcodeReader.decodeFromConstraints(
+        { audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+        video,
+        result => {
+          if (!result || barcodeLookupBusy) return;
+          const code = normalizeBarcode(result.getText?.() || result.text || "");
+          if (!validBarcode(code)) return;
+          stopBarcodeScanner();
+          lookupBarcode(code);
+        }
+      );
+      updateBarcodeTorchButton();
+      video.addEventListener("loadedmetadata", updateBarcodeTorchButton, { once: true });
+      setTimeout(updateBarcodeTorchButton, 350);
+    } catch (error) {
+      console.warn("No se pudo iniciar la cámara:", error);
+      const messages = {
+        NotAllowedError: "No se concedió acceso a la cámara. Revisá el permiso del sitio en el navegador.",
+        SecurityError: "El navegador bloqueó la cámara por la configuración de seguridad del sitio.",
+        NotFoundError: "No se encontró una cámara disponible en este dispositivo.",
+        NotReadableError: "La cámara está siendo usada por otra aplicación o no se pudo iniciar."
+      };
+      setBarcodeStatus(`${messages[error?.name] || "No se pudo abrir la cámara."} Podés ingresar el código manualmente.`, "error");
+    }
+  }
+
+  function normalizeNutritionLabelText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[|¦]/g, " ")
+      .replace(/[^a-z0-9.,%]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function nutritionLabelRows(result) {
+    const positioned = (Array.isArray(result?.lines) ? result.lines : [])
+      .map(line => {
+        const top = Number(line?.top);
+        const bottom = Number(line?.bottom);
+        const left = Number(line?.left);
+        const right = Number(line?.right);
+        const value = String(line?.text || "").trim();
+        if (!value || ![top, bottom, left, right].every(Number.isFinite)) return null;
+        const height = Math.max(1, bottom - top);
+        return { text: value, top, bottom, left, right, height, centerY: (top + bottom) / 2 };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.centerY - b.centerY || a.left - b.left);
+
+    const rows = [];
+    positioned.forEach(line => {
+      let bestRow = null;
+      let bestDistance = Infinity;
+      for (let index = Math.max(0, rows.length - 4); index < rows.length; index += 1) {
+        const row = rows[index];
+        const overlap = Math.max(0, Math.min(row.bottom, line.bottom) - Math.max(row.top, line.top));
+        const overlapRatio = overlap / Math.max(1, Math.min(row.height, line.height));
+        const distance = Math.abs(row.centerY - line.centerY);
+        const sameVisualRow = overlapRatio >= 0.28 || distance <= Math.max(row.height, line.height) * 0.62;
+        if (sameVisualRow && distance < bestDistance) {
+          bestRow = row;
+          bestDistance = distance;
+        }
+      }
+      if (!bestRow) {
+        rows.push({
+          lines: [line],
+          top: line.top,
+          bottom: line.bottom,
+          height: line.height,
+          centerY: line.centerY
+        });
+        return;
+      }
+      bestRow.lines.push(line);
+      bestRow.top = Math.min(bestRow.top, line.top);
+      bestRow.bottom = Math.max(bestRow.bottom, line.bottom);
+      bestRow.height = Math.max(1, bestRow.bottom - bestRow.top);
+      bestRow.centerY = bestRow.lines.reduce((sum, item) => sum + item.centerY, 0) / bestRow.lines.length;
+    });
+
+    return rows
+      .sort((a, b) => a.centerY - b.centerY)
+      .map(row => row.lines.sort((a, b) => a.left - b.left).map(line => line.text).join(" ").trim())
+      .filter(Boolean);
+  }
+
+  function nutritionLabelLines(result) {
+    const values = [];
+    const seen = new Set();
+    const append = value => {
+      const text = String(value || "").trim();
+      const key = normalizeNutritionLabelText(text);
+      if (!text || !key || seen.has(key)) return;
+      seen.add(key);
+      values.push(text);
+    };
+
+    nutritionLabelRows(result).forEach(append);
+    (Array.isArray(result?.lines) ? result.lines : []).forEach(line => append(line?.text));
+    String(result?.text || "").split(/\r?\n/).forEach(append);
+    return values;
+  }
+
+  function normalizeLabelNumber(value) {
+    let normalized = String(value || "").trim().replace(/\s/g, "").replace(",", ".");
+    if (/^[oO]\d/.test(normalized)) normalized = `0${normalized.slice(1)}`;
+    normalized = normalized.replace(/(\d)[oO](?=\d|$)/g, "$10");
+    return normalized;
+  }
+
+  function decimalFromLabel(value) {
+    const parsed = Number(normalizeLabelNumber(value));
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+
+  function measureFromLabelText(value) {
+    const normalized = normalizeNutritionLabelText(value);
+    const matches = [...normalized.matchAll(/(\d+(?:[.,]\d+)?)\s*(kg|kilogramos?|g|gr|gramos?|ml|mililitros?|l|litros?)\b/gi)];
+    if (!matches.length) return null;
+
+    const portionIndex = normalized.search(/porcion|racion|tamano de porcion|cantidad por porcion/);
+    let match = portionIndex >= 0 ? matches.find(candidate => (candidate.index || 0) >= portionIndex) : null;
+    if (!match && /(?:por|cada)\s*100\s*(?:g|ml)/.test(normalized)) {
+      match = matches.find(candidate => Math.abs(decimalFromLabel(candidate[1]) - 100) < 0.001) || null;
+    }
+    match ||= matches[0];
+
+    let amount = decimalFromLabel(match[1]);
+    let unit = normalizeHeader(match[2]);
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+    if (/^kg|kilogram/.test(unit)) { amount *= 1000; unit = "g"; }
+    else if (/^l$|litro/.test(unit)) { amount *= 1000; unit = "ml"; }
+    else if (/^ml|mililitro/.test(unit)) unit = "ml";
+    else unit = "g";
+    return { amount, unit };
+  }
+
+  function labelWindow(lines, index, labelPattern) {
+    const candidates = [
+      lines[index],
+      `${lines[index]} ${lines[index + 1] || ""}`,
+      `${lines[index]} ${lines[index + 1] || ""} ${lines[index + 2] || ""}`,
+      `${lines[index - 1] || ""} ${lines[index]}`
+    ];
+    return candidates.map(value => {
+      const normalized = normalizeNutritionLabelText(value);
+      const match = normalized.match(labelPattern);
+      return match ? normalized.slice((match.index || 0) + match[0].length).trim() : normalized;
+    });
+  }
+
+  function firstNonPercentNumber(value) {
+    const matches = [...String(value || "").matchAll(/(\d+(?:[.,]\d+)?)(?:\s*(%|kcal|cal|kj|g|gr|gramos?|mg))?/gi)];
+    for (const match of matches) {
+      if (String(match[2] || "").toLowerCase() === "%") continue;
+      const parsed = decimalFromLabel(match[1]);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return NaN;
+  }
+
+  function nutrientFromLabelLines(lines, labelPattern) {
+    for (let index = 0; index < lines.length; index += 1) {
+      const normalizedLine = normalizeNutritionLabelText(lines[index]);
+      labelPattern.lastIndex = 0;
+      if (!labelPattern.test(normalizedLine)) continue;
+      labelPattern.lastIndex = 0;
+      for (const tail of labelWindow(lines, index, labelPattern)) {
+        const gramMatch = tail.match(/(\d+(?:[.,]\d+)?)\s*(?:g|gr|gramos?)\b/i);
+        if (gramMatch) return decimalFromLabel(gramMatch[1]);
+        const number = firstNonPercentNumber(tail);
+        if (Number.isFinite(number)) return number;
+      }
+    }
+    return NaN;
+  }
+
+  function caloriesFromLabelLines(lines) {
+    const labelPattern = /calorias?|valor\s+energetico|energia|kcal/i;
+    for (let index = 0; index < lines.length; index += 1) {
+      const normalized = normalizeNutritionLabelText(lines[index]);
+      if (!labelPattern.test(normalized)) continue;
+      for (const tail of labelWindow(lines, index, labelPattern)) {
+        const kcalMatch = tail.match(/(\d+(?:[.,]\d+)?)\s*(?:kcal|cal)\b/i);
+        if (kcalMatch) return decimalFromLabel(kcalMatch[1]);
+      }
+      for (const tail of labelWindow(lines, index, labelPattern)) {
+        const kjMatch = tail.match(/(\d+(?:[.,]\d+)?)\s*kj\b/i);
+        const values = [...tail.matchAll(/(\d+(?:[.,]\d+)?)(?!\s*%)/g)].map(match => decimalFromLabel(match[1])).filter(Number.isFinite);
+        if (kjMatch && values.length >= 2) {
+          const kj = decimalFromLabel(kjMatch[1]);
+          const kcalCandidate = values.find(value => value !== kj && value > 0 && value < 1000);
+          if (Number.isFinite(kcalCandidate)) return kcalCandidate;
+        }
+        if (kjMatch) return decimalFromLabel(kjMatch[1]) / 4.184;
+        const number = firstNonPercentNumber(tail);
+        if (Number.isFinite(number)) return number;
+      }
+    }
+    return NaN;
+  }
+
+  function parseNutritionLabel(result) {
+    const lines = nutritionLabelLines(result);
+    const servingPattern = /porcion|racion|tamano\s+de\s+porcion|cantidad\s+por\s+porcion|(?:por|cada)\s*100\s*(?:g|ml)/;
+    let serving = null;
+    for (let index = 0; index < lines.length && !serving; index += 1) {
+      if (!servingPattern.test(normalizeNutritionLabelText(lines[index]))) continue;
+      serving = measureFromLabelText(`${lines[index]} ${lines[index + 1] || ""}`);
+    }
+
+    const values = {
+      servingAmount: serving?.amount || 100,
+      servingUnit: serving?.unit || "g",
+      calories: caloriesFromLabelLines(lines),
+      protein: nutrientFromLabelLines(lines, /prote[i1l]nas?|proteinas?|protein/i),
+      fat: nutrientFromLabelLines(lines, /grasas?\s*(?:total(?:es)?)?|lipidos?\s*(?:total(?:es)?)?/i),
+      carbs: nutrientFromLabelLines(lines, /carbohidratos?(?:\s+totales)?|hidratos?\s+de\s+carbono|carbohidrat/i),
+      servingDetected: Boolean(serving),
+      rawText: String(result?.text || lines.join("\n")).trim(),
+      lineCount: lines.length,
+      ocrMeta: {
+        rotation: Number(result?.rotation || 0),
+        pass: String(result?.pass || "original"),
+        score: Number(result?.score || 0),
+        width: Number(result?.imageWidth || 0),
+        height: Number(result?.imageHeight || 0)
+      }
+    };
+    values.found = [values.calories, values.protein, values.fat, values.carbs].filter(Number.isFinite).length;
+    return values;
+  }
+
+  function nutritionLabelNote(parsed) {
+    const found = [];
+    if (parsed.servingDetected) found.push("porción");
+    if (Number.isFinite(parsed.calories)) found.push("calorías");
+    if (Number.isFinite(parsed.protein)) found.push("proteínas");
+    if (Number.isFinite(parsed.fat)) found.push("grasas");
+    if (Number.isFinite(parsed.carbs)) found.push("carbohidratos");
+    const prefix = found.length ? `Se reconocieron ${found.join(", ")}.` : "No se reconocieron valores con suficiente claridad.";
+    const servingWarning = parsed.servingDetected ? "" : " No se detectó la porción y se dejó 100 g como base.";
+    return `${prefix}${servingWarning} Revisá todos los campos contra el envase antes de guardar.`;
+  }
+
+
+  function applyNutritionLabelToOpenEditor(parsed) {
+    const form = $("#food-editor-form");
+    if (Number.isFinite(parsed.calories)) form.elements.calories.value = roundEditorNumber(parsed.calories, 0);
+    if (Number.isFinite(parsed.protein)) form.elements.protein.value = roundEditorNumber(parsed.protein, 1);
+    if (Number.isFinite(parsed.fat)) form.elements.fat.value = roundEditorNumber(parsed.fat, 1);
+    if (Number.isFinite(parsed.carbs)) form.elements.carbs.value = roundEditorNumber(parsed.carbs, 1);
+    form.elements.servingAmount.value = roundEditorNumber(parsed.servingAmount, 2);
+    setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, parsed.servingUnit);
+    renderEquivalenceEditor("food");
+    const sourceNote = $("#food-editor-source-note");
+    sourceNote.hidden = false;
+    sourceNote.textContent = nutritionLabelNote(parsed);
+    sourceNote.classList.remove("success");
+    sourceNote.classList.add("warning");
+    foodEditorRescanMode = "label";
+    $("#rescan-food-editor").hidden = false;
+    $("#close-food-editor").hidden = true;
+  }
+
+  function selectNutritionLabelPhoto() {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.setAttribute("capture", "environment");
+      input.hidden = true;
+
+      let settled = false;
+      const onWindowFocus = () => {
+        window.setTimeout(() => {
+          if (!settled && !input.files?.length) finish(reject, new Error("Escaneo cancelado."));
+        }, 800);
+      };
+      const finish = (callback, value) => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener("focus", onWindowFocus);
+        input.remove();
+        callback(value);
+      };
+
+      input.addEventListener("change", () => {
+        const file = input.files?.[0];
+        if (!file) {
+          finish(reject, new Error("Escaneo cancelado."));
+          return;
+        }
+        finish(resolve, file);
+      }, { once: true });
+
+      input.addEventListener("cancel", () => {
+        finish(reject, new Error("Escaneo cancelado."));
+      }, { once: true });
+
+      window.addEventListener("focus", onWindowFocus);
+      document.body.appendChild(input);
+      input.click();
+    });
+  }
+
+  async function nutritionLabelPhotoToDataUrl(file) {
+    const maxSide = 2600;
+    let source;
+    let revokeUrl = "";
+
+    if (typeof createImageBitmap === "function") {
+      try {
+        source = await createImageBitmap(file, { imageOrientation: "from-image" });
+      } catch {
+        source = await createImageBitmap(file);
+      }
+    } else {
+      revokeUrl = URL.createObjectURL(file);
+      source = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("No se pudo abrir la imagen tomada."));
+        image.src = revokeUrl;
+      });
+    }
+
+    try {
+      const width = Number(source.width || source.naturalWidth || 0);
+      const height = Number(source.height || source.naturalHeight || 0);
+      if (!width || !height) throw new Error("La foto no tiene un tamaño válido.");
+
+      const scale = Math.min(1, maxSide / Math.max(width, height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(width * scale));
+      canvas.height = Math.max(1, Math.round(height * scale));
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("No se pudo preparar la foto para leerla.");
+      context.drawImage(source, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", 0.96);
+    } finally {
+      if (typeof source?.close === "function") source.close();
+      if (revokeUrl) URL.revokeObjectURL(revokeUrl);
+    }
+  }
+
+  async function scanNutritionLabel(target = "food") {
+    if (nutritionLabelScanBusy) return;
+    if (!window.MASA_NATIVE?.isNative?.() || typeof window.MASA_NATIVE.scanNutritionLabel !== "function") {
+      window.alert("La lectura automática de rótulos está disponible en la aplicación Android. En la web podés cargar los valores manualmente.");
+      return;
+    }
+    nutritionLabelScanBusy = true;
+    document.querySelectorAll("#scan-label-food, #scan-label-recipe, #scan-label-editor").forEach(button => { button.disabled = true; });
+    try {
+      const photo = await selectNutritionLabelPhoto();
+      const imageDataUrl = await nutritionLabelPhotoToDataUrl(photo);
+      const result = await window.MASA_NATIVE.scanNutritionLabel(imageDataUrl);
+      const parsed = parseNutritionLabel(result);
+      const diagnostic = {
+        createdAt: new Date().toISOString(),
+        parsed,
+        native: {
+          rotation: result?.rotation,
+          pass: result?.pass,
+          score: result?.score,
+          keywordCount: result?.keywordCount,
+          imageWidth: result?.imageWidth,
+          imageHeight: result?.imageHeight,
+          text: result?.text,
+          lines: result?.lines
+        }
+      };
+      window.__MASA_LAST_LABEL_DIAGNOSTIC = diagnostic;
+      try { sessionStorage.setItem("masa-last-label-diagnostic", JSON.stringify(diagnostic)); } catch {}
+      if (!parsed.found) {
+        const rawText = String(result?.text || "").trim();
+        console.warn("OCR de rótulo sin valores interpretables:", diagnostic);
+        if (rawText) {
+          const shouldCopy = window.confirm("La cámara sí reconoció texto, pero no pudo ubicar los valores nutricionales. ¿Copiar el diagnóstico para poder revisarlo?");
+          if (shouldCopy) {
+            const report = JSON.stringify(diagnostic, null, 2);
+            try {
+              await navigator.clipboard.writeText(report);
+              window.alert("Diagnóstico copiado. Pegalo en el chat para revisar exactamente qué leyó el teléfono.");
+            } catch {
+              window.prompt("Copiá este diagnóstico:", report);
+            }
+          }
+        } else {
+          window.alert(`El OCR no detectó texto en la foto. Rotación probada: ${Number(result?.rotation || 0)}°. Acercá la tabla hasta que ocupe casi toda la imagen y evitá reflejos.`);
+        }
+        return;
+      }
+      if (target === "food-editor") {
+        applyNutritionLabelToOpenEditor(parsed);
+        return;
+      }
+      const prefill = {
+        name: "",
+        source: "nutrition-label-ocr",
+        servingAmount: parsed.servingAmount,
+        servingUnit: parsed.servingUnit,
+        servingUnitCustom: "",
+        calories: Number.isFinite(parsed.calories) ? parsed.calories : "",
+        protein: Number.isFinite(parsed.protein) ? parsed.protein : "",
+        fat: Number.isFinite(parsed.fat) ? parsed.fat : "",
+        carbs: Number.isFinite(parsed.carbs) ? parsed.carbs : "",
+        equivalences: []
+      };
+      if (target === "recipe") $("#recipe-modal").hidden = true;
+      else $("#food-modal").hidden = true;
+      openFoodEditor({
+        returnTarget: target,
+        prefillFood: prefill,
+        sourceNote: nutritionLabelNote(parsed),
+        sourceNoteType: "warning",
+        allowRescan: true,
+        rescanMode: "label",
+        title: "Revisar rótulo nutricional",
+        description: "La cámara completó los valores que pudo reconocer. Confirmalos antes de guardar."
+      });
+    } catch (error) {
+      const cancelled = /cancel/i.test(String(error?.message || error || ""));
+      if (!cancelled) {
+        const detail = String(error?.message || error || "").trim();
+        console.warn("No se pudo leer el rótulo nutricional:", error);
+        window.alert(detail && detail.length < 180
+          ? `No se pudo leer el rótulo: ${detail}`
+          : "No se pudo abrir o procesar la foto del rótulo. Probá nuevamente con la tabla completa y enfocada.");
+      }
+    } finally {
+      nutritionLabelScanBusy = false;
+      document.querySelectorAll("#scan-label-food, #scan-label-recipe, #scan-label-editor").forEach(button => { button.disabled = false; });
+    }
+  }
+
+  function openBarcodeScanner(target = "food") {
+    barcodeReturnTarget = target === "recipe" ? "recipe" : target === "food-editor" ? "food-editor" : "food";
+    if (barcodeReturnTarget === "recipe") $("#recipe-modal").hidden = true;
+    else if (barcodeReturnTarget === "food-editor") $("#food-editor-modal").hidden = true;
+    else $("#food-modal").hidden = true;
+    $("#barcode-modal").hidden = false;
+    $("#barcode-manual-form").reset();
+    $("#barcode-torch").hidden = true;
+    document.body.classList.add("modal-open");
+    startBarcodeScanner();
+  }
+
+  function closeBarcodeScanner(restore = true) {
+    stopBarcodeScanner();
+    $("#barcode-modal").hidden = true;
+    if (restore) {
+      if (barcodeReturnTarget === "recipe") $("#recipe-modal").hidden = false;
+      else if (barcodeReturnTarget === "food-editor") $("#food-editor-modal").hidden = false;
+      else $("#food-modal").hidden = false;
+    }
+    updateModalBodyState();
+  }
+
+  function showBarcodeMatch(item) {
+    const target = barcodeReturnTarget;
+    closeBarcodeScanner(false);
+    if (target === "food-editor") {
+      const returnTarget = foodEditorReturnTarget || "main";
+      const ownFood = item.kind === "food" ? state.foods.find(food => food.id === item.id) : null;
+      openFoodEditor({
+        returnTarget,
+        editId: ownFood?.id || null,
+        prefillFood: ownFood ? null : item,
+        sourceNote: ownFood
+          ? `Este código ya pertenece a “${ownFood.name}”. Podés revisar o actualizar sus datos.`
+          : `Encontramos “${item.name}” en tu catálogo. Revisá los datos antes de guardarlo en tu biblioteca.`,
+        sourceNoteType: "success"
+      });
+    } else if (target === "recipe") {
+      $("#recipe-modal").hidden = false;
+      $("#recipe-ingredient-search").value = item.name;
+      activeRecipeIngredientSelection = { id: item.id, kind: item.kind };
+      renderRecipeIngredientResults();
+    } else {
+      $("#food-modal").hidden = false;
+      $("#food-search-input").value = item.name;
+      updateFoodSearchDisplay();
+      activeFoodSelection = { id: item.id, kind: item.kind };
+      renderFoodResults();
+      focusSelectedFoodAmount();
+    }
+    updateModalBodyState();
+  }
+
+  function openScannedFoodEditor(prefill, note, options = {}) {
+    const target = barcodeReturnTarget;
+    const returnTarget = target === "food-editor" ? (foodEditorReturnTarget || "main") : target;
+    closeBarcodeScanner(false);
+    openFoodEditor({
+      returnTarget,
+      prefillFood: prefill,
+      sourceNote: note,
+      sourceNoteType: options.sourceNoteType || "",
+      allowRescan: Boolean(options.allowRescan),
+      rescanMode: "barcode",
+      title: options.title || "",
+      description: options.description || ""
+    });
+  }
+
+  function parseProductMeasure(value) {
+    const raw = String(value || "").trim().toLowerCase().replace(",", ".");
+    if (!raw) return null;
+    const match = raw.match(/(\d+(?:\.\d+)?)\s*(ml|millilit(?:er|re|ro)s?|cl|l|lit(?:er|re|ro)s?|g|gr|gram(?:o|me|s)?s?|kg|kilogram(?:o|me|s)?s?)(?:\b|$)/i);
+    if (!match) return null;
+    let amount = Number(match[1]);
+    let unit = match[2].toLowerCase();
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+    if (unit === "cl") { amount *= 10; unit = "ml"; }
+    else if (/^l|^lit/.test(unit)) unit = "l";
+    else if (/^ml|^millilit/.test(unit)) unit = "ml";
+    else if (/^kg|^kilogram/.test(unit)) unit = "kg";
+    else unit = "g";
+    return { amount, unit };
+  }
+
+  function productServingDefinition(product) {
+    const packageCandidates = [
+      product?.quantity,
+      product?.product_quantity && product?.product_quantity_unit
+        ? `${product.product_quantity} ${product.product_quantity_unit}`
+        : ""
+    ];
+    const packageMeasure = packageCandidates.map(parseProductMeasure).find(Boolean) || null;
+    const labelMeasure = parseProductMeasure(product?.serving_size);
+    const selected = packageMeasure || labelMeasure || { amount: 1, unit: "unit" };
+    const directServingMatches = Boolean(
+      labelMeasure
+      && labelMeasure.unit === selected.unit
+      && Math.abs(labelMeasure.amount - selected.amount) < 0.001
+    );
+    return { ...selected, useDirectServing: !packageMeasure || directServingMatches };
+  }
+
+  function openFoodFactsProduct(product, code) {
+    const nutriments = product?.nutriments || {};
+    let caloriesPer100 = toNumber(nutriments["energy-kcal_100g"], NaN);
+    if (!Number.isFinite(caloriesPer100)) {
+      const energyKj = toNumber(nutriments["energy-kj_100g"] ?? nutriments.energy_100g, NaN);
+      if (Number.isFinite(energyKj)) caloriesPer100 = energyKj / 4.184;
+    }
+    const proteinPer100 = toNumber(nutriments.proteins_100g, NaN);
+    const fatPer100 = toNumber(nutriments.fat_100g, NaN);
+    const carbsPer100 = toNumber(nutriments.carbohydrates_100g, NaN);
+    const serving = productServingDefinition(product);
+    const metricFactor = ["g", "ml"].includes(serving.unit)
+      ? serving.amount / 100
+      : serving.unit === "kg" || serving.unit === "l" ? serving.amount * 10 : 1;
+    const servingCalories = toNumber(nutriments["energy-kcal_serving"], NaN);
+    const servingProtein = toNumber(nutriments.proteins_serving, NaN);
+    const servingFat = toNumber(nutriments.fat_serving, NaN);
+    const servingCarbs = toNumber(nutriments.carbohydrates_serving, NaN);
+    const valueForServing = (per100, direct) => serving.useDirectServing && Number.isFinite(direct)
+      ? direct
+      : Number.isFinite(per100) ? per100 * metricFactor : "";
+    const name = String(product.product_name_es || product.product_name || product.generic_name_es || product.generic_name || "").trim();
+    const calories = valueForServing(caloriesPer100, servingCalories);
+    const protein = valueForServing(proteinPer100, servingProtein);
+    const fat = valueForServing(fatPer100, servingFat);
+    const carbs = valueForServing(carbsPer100, servingCarbs);
+    const complete = Boolean(name) && [calories, protein, fat, carbs].every(Number.isFinite);
+    openScannedFoodEditor({
+      name,
+      barcode: code,
+      brand: String(product.brands || "").trim(),
+      calories: Number.isFinite(calories) ? calories : "",
+      protein: Number.isFinite(protein) ? protein : "",
+      fat: Number.isFinite(fat) ? fat : "",
+      carbs: Number.isFinite(carbs) ? carbs : "",
+      serving: servingLabel(serving.amount, serving.unit),
+      servingAmount: serving.amount,
+      servingUnit: serving.unit,
+      source: "openfoodfacts",
+      sourceUrl: `https://world.openfoodfacts.org/product/${code}`,
+      sourceImportedAt: new Date().toISOString(),
+      imageUrl: String(product.image_front_small_url || product.image_front_url || "")
+    }, complete
+      ? "Producto encontrado en Open Food Facts. Revisá la cantidad original del envase y los datos antes de guardarlo."
+      : "El producto existe, pero faltan datos. Completá lo que figure en la etiqueta antes de guardarlo.", { allowRescan: true });
+  }
+
+  async function fetchOpenFoodFactsProduct(code, fields) {
+    const query = new URLSearchParams({ fields, lc: "es" }).toString();
+    const candidates = [
+      `${OPEN_FOOD_FACTS_PROXY_URL}${encodeURIComponent(code)}?${query}`,
+      `${OPEN_FOOD_FACTS_PRODUCT_URL}/${encodeURIComponent(code)}.json?${query}`
+    ];
+    let lastError = null;
+
+    for (const url of candidates) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12_000);
+      try {
+        const response = await fetch(url, {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("json")) throw new Error("La respuesta no es JSON");
+        return await response.json();
+      } catch (error) {
+        lastError = error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    throw lastError || new Error("No se pudo consultar Open Food Facts");
+  }
+
+  async function lookupBarcode(value) {
+    if (barcodeLookupBusy) return;
+    const code = normalizeBarcode(value);
+    if (!validBarcode(code)) {
+      setBarcodeStatus("El código debe ser un EAN/UPC válido de 8, 12, 13 o 14 dígitos.", "error");
+      return;
+    }
+    let existing = findFoodByBarcode(code);
+    if (!existing && externalFoodsStatus === "loading" && externalFoodsLoadPromise) {
+      try { await externalFoodsLoadPromise; } catch (_) {}
+      existing = findFoodByBarcode(code);
+    }
+    if (existing) {
+      setBarcodeStatus("Producto encontrado en tu biblioteca.", "success");
+      showBarcodeMatch(existing);
+      return;
+    }
+    barcodeLookupBusy = true;
+    setBarcodeStatus(`Buscando ${code} en Open Food Facts…`, "loading");
+    try {
+      const fields = ["code","product_name","product_name_es","generic_name","generic_name_es","brands","quantity","serving_size","product_quantity","product_quantity_unit","nutriments","image_front_small_url","image_front_url"].join(",");
+      const data = await fetchOpenFoodFactsProduct(code, fields);
+      const productFound = Boolean(data?.product) && (data.status === 1 || data.status === "success" || data.status === undefined);
+      if (productFound) openFoodFactsProduct(data.product, code);
+      else openScannedFoodEditor(
+        { barcode: code, servingAmount: 1, servingUnit: "unit", serving: "1 unidad" },
+        `No encontramos un alimento asociado al código ${code}. Completá los datos de la etiqueta y guardalo; la próxima vez M.A.S.A. lo reconocerá.`,
+        {
+          allowRescan: true,
+          sourceNoteType: "warning",
+          title: "Alimento no encontrado",
+          description: "Solo pudimos leer el código de barras. Podés completar el alimento manualmente o volver a escanear."
+        }
+      );
+    } catch (error) {
+      console.warn("No se pudo consultar Open Food Facts:", error);
+      openScannedFoodEditor(
+        { barcode: code, servingAmount: 1, servingUnit: "unit", serving: "1 unidad" },
+        `No pudimos consultar Open Food Facts para el código ${code}. Completá los datos de la etiqueta o volvé a escanear.`,
+        {
+          allowRescan: true,
+          sourceNoteType: "warning",
+          title: "No se pudo comprobar el alimento",
+          description: "El código quedó cargado. Podés completar los datos manualmente o intentar el escaneo otra vez."
+        }
+      );
+    } finally {
+      barcodeLookupBusy = false;
+    }
+  }
+
+  function submitManualBarcode(event) {
+    event.preventDefault();
+    lookupBarcode(event.currentTarget.elements.barcode.value);
+  }
+
+  function openFoodModal(meal) {
+    activeMeal = meal;
+    activeFoodMode = "recent";
+    activeFoodSelection = null;
+    $("#food-meal-label").textContent = `Agregar en ${mealLabel(meal)} · ${formatDate(selectedDiaryDate)}`;
+    $("#food-modal").hidden = false;
+    const feedback = $("#food-add-feedback");
+    feedback.hidden = true;
+    feedback.textContent = "";
+    $("#food-search-input").value = "";
+    document.body.classList.add("modal-open");
+    switchFoodMode("recent", false);
+    updateFoodSearchDisplay();
+    focusOnOpen($("#food-search-input"));
+  }
+
+  function modalIsOpen(id) {
+    const element = $(`#${id}`);
+    return Boolean(element && !element.hidden);
+  }
+
+  function updateModalBodyState() {
+    const modalIds = [
+      "food-modal", "food-editor-modal", "recipe-modal", "library-modal",
+      "settings-modal", "meal-picker-modal", "daily-checkin-modal", "confirm-modal", "tips-modal", "about-modal", "barcode-modal"
+    ];
+    document.body.classList.toggle("modal-open", modalIds.some(modalIsOpen));
+  }
+
+  function closeFoodModal() {
+    activeFoodSelection = null;
+    $("#food-modal").hidden = true;
+    updateModalBodyState();
+  }
+
+  function hasActiveFoodSearch() {
+    return Boolean(String($("#food-search-input")?.value || "").trim());
+  }
+
+  function updateFoodSearchDisplay() {
+    const searching = hasActiveFoodSearch();
+    $("#food-search-panel").hidden = !searching;
+    $("#food-browse-area").hidden = searching;
+    activeFoodSelection = null;
+    if (searching) renderFoodResults();
+    else renderActiveFoodMode();
+  }
+
+  function switchFoodMode(mode, clearSearch = true) {
+    const modes = ["recent", "frequent", "recipe", "quick"];
+    activeFoodMode = modes.includes(mode) ? mode : "recent";
+    activeFoodSelection = null;
+    if (clearSearch && $("#food-search-input")) $("#food-search-input").value = "";
+    $$('[data-food-mode]').forEach(button => button.classList.toggle("active", button.dataset.foodMode === activeFoodMode));
+    modes.forEach(name => { $(`#food-mode-${name}`).hidden = name !== activeFoodMode; });
+    $("#food-search-panel").hidden = true;
+    $("#food-browse-area").hidden = false;
+    renderActiveFoodMode();
+  }
+
+  function renderActiveFoodMode() {
+    if (activeFoodMode === "recent") renderRecentFoodResults();
+    if (activeFoodMode === "frequent") renderFrequentFoodResults();
+    if (activeFoodMode === "recipe") renderRecipeResults();
+  }
+
+  function foodUsageKey(item) {
+    return String(item?.catalogId || item?.id || "");
+  }
+
+  function foodUsageFor(item) {
+    return state.foodUsage?.[foodUsageKey(item)] || null;
+  }
+  function foodUsageForMeal(item, meal = activeMeal) {
+    const usage = foodUsageFor(item);
+    return usage?.byMeal?.[meal] || usage || null;
+  }
+  function foodStats(item) {
+    const usage = foodUsageFor(item);
+    const lastUsed = String(usage?.lastUsed || item?.lastUsed || "");
+    const lastUsedAt = String(
+      usage?.lastUsedAt || item?.lastUsedAt || (lastUsed ? `${lastUsed}T12:00:00.000Z` : "")
+    );
+    return {
+      uses: Math.max(toNumber(item?.uses, 0), toNumber(usage?.uses, 0)),
+      lastUsed,
+      lastUsedAt
+    };
+  }
+  function mealFoodStats(item, meal = activeMeal) {
+    const usage = foodUsageFor(item)?.byMeal?.[meal];
+    const lastUsed = String(usage?.lastUsed || "");
+    return {
+      uses: Math.max(0, toNumber(usage?.uses, 0)),
+      lastUsed,
+      lastUsedAt: String(usage?.lastUsedAt || (lastUsed ? `${lastUsed}T12:00:00.000Z` : ""))
+    };
+  }
+  function compareFoodPriority(a, b) {
+    const aStats = foodStats(a);
+    const bStats = foodStats(b);
+    const useDiff = bStats.uses - aStats.uses;
+    if (useDiff) return useDiff;
+    const recentDiff = bStats.lastUsedAt.localeCompare(aStats.lastUsedAt);
+    if (recentDiff) return recentDiff;
+    const aLocal = a.kind === "external" ? 0 : 1;
+    const bLocal = b.kind === "external" ? 0 : 1;
+    if (aLocal !== bLocal) return bLocal - aLocal;
+    return String(a.name || "").localeCompare(String(b.name || ""), "es");
+  }
+  function compareMealFoodPriority(a, b, meal = activeMeal) {
+    const aMeal = mealFoodStats(a, meal);
+    const bMeal = mealFoodStats(b, meal);
+    return bMeal.uses - aMeal.uses
+      || bMeal.lastUsedAt.localeCompare(aMeal.lastUsedAt)
+      || compareFoodPriority(a, b);
+  }
+  function compareRecentFoods(a, b) {
+    const aMeal = mealFoodStats(a);
+    const bMeal = mealFoodStats(b);
+    const aStats = foodStats(a);
+    const bStats = foodStats(b);
+    return bMeal.lastUsedAt.localeCompare(aMeal.lastUsedAt)
+      || bMeal.uses - aMeal.uses
+      || bStats.lastUsedAt.localeCompare(aStats.lastUsedAt)
+      || bStats.uses - aStats.uses
+      || String(a.name || "").localeCompare(String(b.name || ""), "es");
+  }
+  function compareFrequentFoods(a, b) {
+    const aMeal = mealFoodStats(a);
+    const bMeal = mealFoodStats(b);
+    const aStats = foodStats(a);
+    const bStats = foodStats(b);
+    return bMeal.uses - aMeal.uses
+      || bMeal.lastUsedAt.localeCompare(aMeal.lastUsedAt)
+      || bStats.uses - aStats.uses
+      || bStats.lastUsedAt.localeCompare(aStats.lastUsedAt)
+      || String(a.name || "").localeCompare(String(b.name || ""), "es");
+  }
+
+  function localLibraryFoods() {
+    return [...state.foods, ...state.recipes].sort(compareFoodPriority);
+  }
+
+  function findFood(id, kind = "") {
+    if (kind === "external" || String(id).startsWith("external:")) {
+      return externalFoodsById.get(id) || null;
+    }
+    if (kind === "recipe") return state.recipes.find(item => item.id === id) || null;
+    if (kind === "food") return state.foods.find(item => item.id === id) || null;
+    return state.foods.find(item => item.id === id)
+      || state.recipes.find(item => item.id === id)
+      || externalFoodsById.get(id)
+      || null;
+  }
+
+  function findFoodByBarcode(value) {
+    const barcode = normalizeBarcode(value);
+    if (!barcode) return null;
+    return state.foods.find(item => normalizeBarcode(item.barcode) === barcode)
+      || externalFoods.find(item => normalizeBarcode(item.barcode) === barcode)
+      || null;
+  }
+
+  function normalizeSearchText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
+  function searchTokens(value) {
+    const normalized = normalizeSearchText(value);
+    if (!normalized) return [];
+    return normalized.split(" ").flatMap(part => part.match(/[a-z]+|\d+/g) || []);
+  }
+
+  function foodSearchText(item) {
+    return normalizeSearchText([
+      item.name,
+      item.brand,
+      item.barcode,
+      ...(Array.isArray(item.aliases) ? item.aliases : []),
+      item.sourceName
+    ].filter(Boolean).join(" "));
+  }
+
+  function createFoodSearchEntry(item, extraText = "") {
+    const nameText = normalizeSearchText(item?.name);
+    const searchText = normalizeSearchText(`${foodSearchText(item)} ${extraText}`);
+    return {
+      item,
+      nameText,
+      nameCompact: nameText.replace(/\s+/g, ""),
+      searchText,
+      searchCompact: searchText.replace(/\s+/g, ""),
+      tokens: searchTokens(searchText)
+    };
+  }
+
+  function createFoodQueryInfo(query) {
+    const text = normalizeSearchText(query);
+    return {
+      text,
+      compact: text.replace(/\s+/g, ""),
+      tokens: searchTokens(text)
+    };
+  }
+
+  function isOrderedSubsequence(needle, haystack) {
+    if (!needle || !haystack) return false;
+    let index = 0;
+    for (const char of haystack) {
+      if (char === needle[index]) index += 1;
+      if (index === needle.length) return true;
+    }
+    return false;
+  }
+
+  function tokenBuiltFromWordPrefixes(queryToken, candidateTokens) {
+    if (!queryToken || queryToken.length < 4 || !/^[a-z]+$/.test(queryToken)) return false;
+    const words = candidateTokens.filter(token => /^[a-z]+$/.test(token));
+    const memo = new Map();
+
+    function visit(queryIndex, wordIndex) {
+      if (queryIndex === queryToken.length) return true;
+      const key = `${queryIndex}:${wordIndex}`;
+      if (memo.has(key)) return memo.get(key);
+
+      for (let index = wordIndex; index < words.length; index += 1) {
+        const remaining = queryToken.length - queryIndex;
+        const maxLength = Math.min(words[index].length, remaining);
+        for (let length = maxLength; length >= 2; length -= 1) {
+          const fragment = queryToken.slice(queryIndex, queryIndex + length);
+          if (!words[index].startsWith(fragment)) continue;
+          if (visit(queryIndex + length, index + 1)) {
+            memo.set(key, true);
+            return true;
+          }
+        }
+      }
+
+      memo.set(key, false);
+      return false;
+    }
+
+    return visit(0, 0);
+  }
+
+  function foodSearchScoreFromEntry(entry, queryInfo) {
+    if (!queryInfo.text) return 0;
+    const { text, compact, tokens } = queryInfo;
+
+    if (entry.nameText === text) return 10000;
+    if (entry.nameCompact === compact) return 9800;
+    if (entry.nameText.startsWith(text)) return 9300 - Math.min(300, entry.nameText.length - text.length);
+    if (entry.nameCompact.startsWith(compact)) return 9000 - Math.min(300, entry.nameCompact.length - compact.length);
+
+    let tokenScore = 0;
+    let allTokensMatch = tokens.length > 0;
+    for (const queryToken of tokens) {
+      let best = 0;
+      for (const candidateToken of entry.tokens) {
+        if (candidateToken === queryToken) best = Math.max(best, 180);
+        else if (candidateToken.startsWith(queryToken)) best = Math.max(best, 140);
+        else if (queryToken.length >= 3 && candidateToken.includes(queryToken)) best = Math.max(best, 95);
+      }
+      if (!best && tokenBuiltFromWordPrefixes(queryToken, entry.tokens)) best = 120;
+      if (!best) {
+        allTokensMatch = false;
+        break;
+      }
+      tokenScore += best;
+    }
+    if (allTokensMatch) return 7600 + tokenScore;
+
+    if (entry.searchCompact.includes(compact)) {
+      return 6500 - Math.min(500, entry.searchCompact.indexOf(compact));
+    }
+
+    const coverage = compact.length / Math.max(1, entry.searchCompact.length);
+    if (compact.length >= 4 && coverage >= 0.42 && isOrderedSubsequence(compact, entry.searchCompact)) {
+      return 4800 + Math.round(coverage * 1000);
+    }
+
+    return 0;
+  }
+
+  function foodSearchScore(item, query, extraText = "") {
+    return foodSearchScoreFromEntry(createFoodSearchEntry(item, extraText), createFoodQueryInfo(query));
+  }
+
+  function searchExternalFoods(query, limit = 50) {
+    const queryInfo = createFoodQueryInfo(query);
+    if (!queryInfo.text) return externalFoods.slice(0, limit);
+
+    return externalFoodSearchIndex
+      .map(entry => ({ item: entry.item, score: foodSearchScoreFromEntry(entry, queryInfo) }))
+      .filter(result => result.score > 0)
+      .sort((a, b) => b.score - a.score || String(a.item.name || "").localeCompare(String(b.item.name || ""), "es"))
+      .slice(0, limit)
+      .map(result => result.item);
+  }
+
+  function usedExternalFoods() {
+    return Object.entries(state.foodUsage || {})
+      .map(([sourceId, usage]) => {
+        const id = sourceId.startsWith("external:") ? sourceId : `external:${sourceId}`;
+        return { item: externalFoodsById.get(id), usage };
+      })
+      .filter(row => row.item && toNumber(row.usage?.uses, 0) > 0)
+      .map(row => row.item);
+  }
+
+  function allUsedFoods() {
+    const local = [...state.foods, ...state.recipes].filter(item => foodStats(item).uses > 0);
+    return [...new Map([...local, ...usedExternalFoods()].map(item => [item.id, item])).values()];
+  }
+
+  function renderCatalogStatus(container) {
+    if (externalFoodsStatus === "loading") {
+      container.insertAdjacentHTML("beforeend", '<p class="empty-message">Cargando catálogo de alimentos…</p>');
+    }
+    if (externalFoodsStatus === "error") {
+      container.insertAdjacentHTML("beforeend", `<p class="empty-message">No se pudo cargar el catálogo: ${escapeHTML(externalFoodsError)}</p>`);
+    }
+  }
+
+  function renderFoodResults() {
+    const rawQuery = $("#food-search-input")?.value || "";
+    const query = normalizeSearchText(rawQuery);
+    const container = $("#food-results");
+    container.innerHTML = "";
+    renderCatalogStatus(container);
+
+    if (!query) return;
+    const localMatches = localLibraryFoods().filter(item => foodSearchScore(item, rawQuery) > 0);
+    const selected = [...localMatches, ...searchExternalFoods(rawQuery, 45)];
+    const unique = [...new Map(selected.map(item => [item.id, item])).values()]
+      .sort((a, b) => foodSearchScore(b, rawQuery) - foodSearchScore(a, rawQuery)
+        || compareMealFoodPriority(a, b, activeMeal))
+      .slice(0, 35);
+
+    if (!unique.length) {
+      if (externalFoodsStatus !== "loading") {
+        container.insertAdjacentHTML("beforeend", '<p class="empty-message">No hay coincidencias. Podés crear un alimento propio con ese nombre.</p>');
+      }
+      return;
+    }
+
+    unique.forEach(item => container.appendChild(foodResultButton(item)));
+  }
+
+  function renderRecentFoodResults() {
+    const container = $("#recent-food-results");
+    container.innerHTML = "";
+    const items = allUsedFoods().sort(compareRecentFoods).slice(0, 40);
+    if (!items.length) {
+      container.innerHTML = '<p class="empty-message">Todavía no hay alimentos recientes. Aparecerán después de agregarlos al registro.</p>';
+      return;
+    }
+    items.forEach(item => container.appendChild(foodResultButton(item, "recent")));
+  }
+
+  function renderFrequentFoodResults() {
+    const container = $("#frequent-food-results");
+    container.innerHTML = "";
+    const items = allUsedFoods().sort(compareFrequentFoods).slice(0, 40);
+    if (!items.length) {
+      container.innerHTML = '<p class="empty-message">Todavía no hay consumos suficientes para ordenar tus frecuentes.</p>';
+      return;
+    }
+    items.forEach(item => container.appendChild(foodResultButton(item, "frequent")));
+  }
+
+  function renderRecipeResults() {
+    const container = $("#recipe-results");
+    container.innerHTML = "";
+    if (!state.recipes.length) {
+      container.innerHTML = '<p class="empty-message">Todavía no guardaste recetas.</p>';
+      return;
+    }
+    [...state.recipes].sort((a, b) => compareMealFoodPriority(a, b, activeMeal)).forEach(item => container.appendChild(foodResultButton(item)));
+  }
+
+  const COMMON_UNIT_NAMES = {
+    unidad: ["unidad", "unidades"],
+    unidades: ["unidad", "unidades"],
+    porcion: ["porción", "porciones"],
+    porciones: ["porción", "porciones"],
+    taza: ["taza", "tazas"],
+    tazas: ["taza", "tazas"],
+    cucharada: ["cucharada", "cucharadas"],
+    cucharadas: ["cucharada", "cucharadas"],
+    cucharadita: ["cucharadita", "cucharaditas"],
+    cucharaditas: ["cucharadita", "cucharaditas"],
+    plato: ["plato", "platos"],
+    platos: ["plato", "platos"],
+    paquete: ["paquete", "paquetes"],
+    paquetes: ["paquete", "paquetes"],
+    cookie: ["unidad", "unidades"],
+    piece: ["unidad", "unidades"],
+    item: ["unidad", "unidades"],
+    unit: ["unidad", "unidades"],
+    each: ["unidad", "unidades"],
+    serving: ["porción", "porciones"],
+    portion: ["porción", "porciones"],
+    cup: ["taza", "tazas"],
+    plate: ["plato", "platos"],
+    slice: ["feta", "fetas"],
+    sandwich: ["sándwich", "sándwiches"],
+    roll: ["rollo", "rollos"],
+    bar: ["barra", "barras"],
+    tortilla: ["tortilla", "tortillas"],
+    cracker: ["galleta", "galletas"],
+    wrap: ["wrap", "wraps"],
+    donut: ["dona", "donas"],
+    burrito: ["burrito", "burritos"],
+    muffin: ["muffin", "muffins"],
+    bagel: ["bagel", "bagels"],
+    fruit: ["unidad", "unidades"],
+    packet: ["paquete", "paquetes"],
+    wing: ["ala", "alas"],
+    bun: ["pan", "panes"],
+    pancake: ["panqueque", "panqueques"],
+    taco: ["taco", "tacos"],
+    skewer: ["brocheta", "brochetas"],
+    waffle: ["waffle", "waffles"],
+    scoop: ["bocha", "bochas"],
+    container: ["recipiente", "recipientes"],
+    empanada: ["empanada", "empanadas"],
+    pieces: ["unidad", "unidades"],
+    g: ["g", "g"],
+    kg: ["kg", "kg"],
+    ml: ["ml", "ml"],
+    l: ["l", "l"],
+    fl_oz: ["oz líquida", "oz líquidas"],
+    tablespoon: ["cucharada", "cucharadas"],
+    tbsp: ["cucharada", "cucharadas"],
+    teaspoon: ["cucharadita", "cucharaditas"],
+    tsp: ["cucharadita", "cucharaditas"],
+    bowl: ["tazón", "tazones"],
+    glass: ["vaso", "vasos"],
+    can: ["lata", "latas"],
+    bottle: ["botella", "botellas"],
+    package: ["paquete", "paquetes"],
+    oz: ["oz", "oz"]
+  };
+
+  function canonicalEditableUnit(rawUnit) {
+    const normalized = normalizeHeader(rawUnit).replace(/\s+/g, "_");
+    if (/^(g|gr|gramo|gramos|gram)$/.test(normalized)) return "g";
+    if (/^(kg|kilo|kilos|kilogramo|kilogramos)$/.test(normalized)) return "kg";
+    if (/^(ml|mililitro|mililitros)$/.test(normalized)) return "ml";
+    if (/^(l|litro|litros)$/.test(normalized)) return "l";
+    if (/^(unidad|unidades|u|unit|units|piece|pieces)$/.test(normalized)) return "unit";
+    if (/^(porcion|porciones|serving|servings|portion|portions)$/.test(normalized)) return "serving";
+    if (/^(taza|tazas|cup|cups)$/.test(normalized)) return "cup";
+    if (/^(cucharada|cucharadas|tablespoon|tablespoons|tbsp)$/.test(normalized)) return "tablespoon";
+    if (/^(cucharadita|cucharaditas|teaspoon|teaspoons|tsp)$/.test(normalized)) return "teaspoon";
+    if (/^(plato|platos|plate|plates)$/.test(normalized)) return "plate";
+    if (/^(feta|fetas|rebanada|rebanadas|slice|slices)$/.test(normalized)) return "slice";
+    if (/^(paquete|paquetes|package|packages|packet|packets)$/.test(normalized)) return "package";
+    return "custom";
+  }
+
+  function editableUnitNames(unit, customUnit = "") {
+    if (unit === "custom") {
+      const label = String(customUnit || "unidad").trim() || "unidad";
+      return [label, label];
+    }
+    return unitNames(unit);
+  }
+
+  function servingLabel(amount, unit, customUnit = "") {
+    const [singular, plural] = editableUnitNames(unit, customUnit);
+    const label = Math.abs(toNumber(amount, 0) - 1) < 0.0001 ? singular : plural;
+    return `${formatQuantityAmount(amount)} ${label}`;
+  }
+
+  const EQUIVALENCE_UNIT_CHOICES = [
+    ["g", "gramos (g)"], ["kg", "kilogramos (kg)"], ["ml", "mililitros (ml)"], ["l", "litros (l)"],
+    ["unit", "unidad"], ["serving", "porción"], ["cup", "taza"], ["tablespoon", "cucharada"],
+    ["teaspoon", "cucharadita"], ["plate", "plato"], ["slice", "feta"], ["package", "paquete"], ["custom", "otra unidad…"]
+  ];
+
+  function equivalenceBaseUnitLabel(type) {
+    const form = type === "recipe" ? $("#recipe-form") : $("#food-editor-form");
+    const select = type === "recipe" ? form?.elements.yieldUnit : form?.elements.servingUnit;
+    const custom = type === "recipe" ? form?.elements.yieldUnitCustom : form?.elements.servingUnitCustom;
+    if (!select) return "unidad base";
+    return editableUnitNames(select.value, select.value === "custom" ? custom?.value : "")[1];
+  }
+
+  function equivalenceDraft(type) {
+    return type === "recipe" ? recipeEditorEquivalences : foodEditorEquivalences;
+  }
+
+  function renderEquivalenceEditor(type) {
+    const container = type === "recipe" ? $("#recipe-equivalence-list") : $("#food-equivalence-list");
+    if (!container) return;
+    const draft = equivalenceDraft(type);
+    const baseLabel = equivalenceBaseUnitLabel(type);
+    container.innerHTML = "";
+    if (!draft.length) {
+      container.innerHTML = '<p class="equivalence-empty">No agregaste equivalencias.</p>';
+      return;
+    }
+    draft.forEach((equivalence, index) => {
+      const row = document.createElement("article");
+      row.className = "equivalence-row";
+      row.dataset.equivalenceIndex = index;
+      row.dataset.equivalenceType = type;
+      row.innerHTML = `
+        <label><span>Cantidad</span><input name="equivalenceAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.amount)}"></label>
+        <label><span>Unidad alternativa</span><select name="equivalenceUnit">${EQUIVALENCE_UNIT_CHOICES.map(([value, label]) => `<option value="${value}" ${value === equivalence.unit ? "selected" : ""}>${escapeHTML(label)}</option>`).join("")}</select></label>
+        <label class="equivalence-custom-unit" ${equivalence.unit === "custom" ? "" : "hidden"}><span>Nombre</span><input name="equivalenceCustomUnit" maxlength="40" placeholder="Ej.: vaso" value="${escapeHTML(equivalence.customUnit || "")}"></label>
         <span class="equivalence-equals" aria-hidden="true">=</span>
-        <label><span>Equivale a</span><div class="equivalence-base-input"><input name="equivalenceBaseAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${C(i.baseAmount)}"><i>${C(n)}</i></div></label>
-        <button class="danger-text-action" data-remove-equivalence="${r}" type="button">Quitar</button>`,t.appendChild(s)})}function ei(e){const t=Pt(e);if(t.length>=20)return;const a=o(e==="recipe"?"#recipe-form":"#food-editor-form"),i=(e==="recipe"?a?.elements.yieldUnit?.value:a?.elements.servingUnit?.value)==="unit"?"serving":"unit";t.push({id:G(),amount:1,unit:i,customUnit:"",baseAmount:1}),Ee(e),o(e==="recipe"?"#recipe-equivalence-list":"#food-equivalence-list")?.querySelector(`[data-equivalence-index="${t.length-1}"] input`)?.select()}function sa(e){const t=e.target.closest("[data-equivalence-index]");if(!t)return;const a=t.dataset.equivalenceType,n=Pt(a)[Number(t.dataset.equivalenceIndex)];if(!n)return;n.amount=m(t.querySelector('[name="equivalenceAmount"]')?.value,0),n.unit=t.querySelector('[name="equivalenceUnit"]')?.value||"unit",n.customUnit=String(t.querySelector('[name="equivalenceCustomUnit"]')?.value||"").trim(),n.baseAmount=m(t.querySelector('[name="equivalenceBaseAmount"]')?.value,0);const i=t.querySelector(".equivalence-custom-unit");i&&(i.hidden=n.unit!=="custom")}function ti(e){const t=e.target.closest("[data-remove-equivalence]");if(!t)return;const n=t.closest("[data-equivalence-type]")?.dataset.equivalenceType;n&&(Pt(n).splice(Number(t.dataset.removeEquivalence),1),Ee(n))}function ai(e,t,a,n){const i=[],r=new Set,s=`${t}:${_(a)}`;for(const c of Pt(e)){const l=Dn(c);if(!l)return n.textContent="Complet\xE1 cantidades mayores a cero y el nombre de cada unidad personalizada.",n.hidden=!1,null;const u=`${l.unit}:${_(l.customUnit)}`;if(u===s)return n.textContent="La unidad alternativa debe ser distinta de la unidad base.",n.hidden=!1,null;if(r.has(u))return n.textContent="No repitas la misma unidad alternativa.",n.hidden=!1,null;r.add(u),i.push(l)}return i}function ht(e,t,a,n=""){const i=[...e.options].some(s=>s.value===a);e.value=i?a:"custom",e.value==="custom"&&(t.value=n||(a!=="custom"?a:""));const r=t.closest("label");r.hidden=e.value!=="custom",t.required=e.value==="custom"}function Ja(e,t){const a=e.value||"serving",n=a==="custom"?String(t.value||"").trim():"";return{unit:a,customUnit:n}}function ni(e){return["g","ml"].includes(e)?100:1}function ii(e){const t=_(e).replace(/\s+/g,"_");return jr[t]||[String(e||"unidad").trim(),String(e||"unidades").trim()]}function qe(e){const a=(String(e||"1 porci\xF3n").trim()||"1 porci\xF3n").match(/^([0-9]+(?:[.,][0-9]+)?)\s*(.*)$/),n=Math.max(.01,m(a?.[1],1)||1),i=String(a?.[2]||"porci\xF3n").trim()||"porci\xF3n",r=Qa(i),s=r==="custom"?i:"",[c,l]=Ut(r,s);return{value:"serving",baseAmount:n,singular:c,plural:l,unitKey:r,customUnit:s}}function Wr(e){const t=qe(e.serving),a=Math.max(.01,m(e.servingAmount,t.baseAmount)||t.baseAmount),n=e.servingUnit||t.unitKey,i=e.servingUnitCustom||t.customUnit,[r,s]=Ut(n,i);return{value:"serving",baseAmount:a,defaultAmount:a,singular:r,plural:s,unitKey:n,customUnit:i}}function zr(e,t){const a=Math.max(.01,m(e.servingAmount,qe(e.serving).baseAmount)||1),[n,i]=Ut(t.unit,t.customUnit);return{value:`equivalence:${t.id}`,baseAmount:Math.max(1e-6,t.amount*a/t.baseAmount),defaultAmount:t.amount,singular:n,plural:i,unitKey:t.unit,customUnit:t.customUnit,equivalenceId:t.id}}function se(e){if(e.kind!=="external"||e.userOverride)return[Wr(e),...Vt(e.equivalences).map(i=>zr(e,i))];const t=[{value:"g",baseAmount:Math.max(.1,m(e.metricQuantity,100)||100),defaultAmount:Math.max(.1,m(e.metricQuantity,100)||100),singular:"g",plural:"g"}],a=m(e.commonQuantity,0),n=String(e.commonUnit||"").trim();if(a>0&&n&&!/^(g|gram|grams)$/i.test(n)){const[i,r]=ii(n);t.push({value:"common",baseAmount:a,defaultAmount:1,singular:i,plural:r})}return t}function Za(e){const t=se(e),a=Ar(e,ee),n=t.find(s=>s.value===a?.unit);if(a&&n&&m(a.amount,0)>0)return{amount:m(a.amount,n.defaultAmount??n.baseAmount),unit:n.value};const r=(e.kind==="external"?t.find(s=>s.value==="common"):null)||t[0];return{amount:r.defaultAmount??r.baseAmount,unit:r.value}}function Ke(e){const t=m(e,0),a=Number.isInteger(t)?0:Math.abs(t)<10?2:1;return g(t,a)}function bt(e,t){return Math.abs(m(t,0)-1)<1e-4?e.singular:e.plural}function we(e,t,a){const n=se(e),i=n.find(s=>s.value===a)||n[0],r=Math.max(0,m(t,0))/i.baseAmount;return{calories:e.calories*r,protein:e.protein*r,fat:e.fat*r,carbs:e.carbs*r,option:i,factor:r}}function ca(e,t=""){const a=document.createElement("div"),n=Y?.id===e.id&&Y?.kind===e.kind,i=Re(e);a.className=`food-result-card${n?" active":""}`;const r=document.createElement("button");r.type="button",r.className="food-result",r.dataset.selectFood=e.id,r.dataset.foodKind=e.kind,r.setAttribute("aria-expanded",n?"true":"false");const s=e.kind==="recipe"&&e.ingredients?.length?`${e.ingredients.length} ingredientes \xB7 ${e.serving}`:e.serving;let c="";t==="recent"&&i.lastUsed&&(c=` \xB7 \xDAltimo: ${j(i.lastUsed)}`),t==="frequent"&&(c=` \xB7 ${i.uses} ${i.uses===1?"consumo":"consumos"}`);const l=e.kind==="food"?`<span class="food-origin-badge food-origin-own">${e.source==="openfoodfacts"?"C\xF3digo":e.source==="nutrition-label-ocr"?"R\xF3tulo":"Propio"}</span>`:e.kind==="external"&&e.userOverride?'<span class="food-origin-badge food-origin-edited">Editado</span>':"",u=e.kind==="external"?`<div class="food-catalog-actions"><button class="text-action" data-edit-catalog-food="${C(e.id)}" type="button">Editar alimento</button><button class="danger-text-action" data-hide-catalog-food="${C(e.id)}" type="button">Ocultar</button></div>`:e.kind==="recipe"?`<div class="food-catalog-actions"><button class="text-action" data-edit-user-food="${C(e.id)}" data-edit-user-kind="recipe" type="button">Editar receta</button></div>`:`<div class="food-catalog-actions"><button class="text-action" data-edit-user-food="${C(e.id)}" data-edit-user-kind="food" type="button">Editar alimento</button></div>`;if(r.innerHTML=`<div><div class="food-result-name"><b>${C(e.name)}</b>${l}</div><small>${C(s)} \xB7 P ${g(e.protein,1)} \xB7 G ${g(e.fat,1)} \xB7 C ${g(e.carbs,1)}${C(c)}</small></div><span>${g(Math.round(e.calories))} kcal</span>`,a.appendChild(r),!n)return a;const f=Za(e),p=se(e),w=we(e,f.amount,f.unit),y=document.createElement("form");return y.className="food-inline-add has-catalog-actions",y.dataset.foodAddForm="",y.dataset.foodId=e.id,y.dataset.foodKind=e.kind,y.dataset.currentUnit=f.unit,y.innerHTML=`
+        <label><span>Equivale a</span><div class="equivalence-base-input"><input name="equivalenceBaseAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.baseAmount)}"><i>${escapeHTML(baseLabel)}</i></div></label>
+        <button class="danger-text-action" data-remove-equivalence="${index}" type="button">Quitar</button>`;
+      container.appendChild(row);
+    });
+  }
+
+  function addEquivalence(type) {
+    const draft = equivalenceDraft(type);
+    if (draft.length >= 20) return;
+    const form = type === "recipe" ? $("#recipe-form") : $("#food-editor-form");
+    const baseUnit = type === "recipe" ? form?.elements.yieldUnit?.value : form?.elements.servingUnit?.value;
+    const alternativeUnit = baseUnit === "unit" ? "serving" : "unit";
+    draft.push({ id: createId(), amount: 1, unit: alternativeUnit, customUnit: "", baseAmount: 1 });
+    renderEquivalenceEditor(type);
+    const container = type === "recipe" ? $("#recipe-equivalence-list") : $("#food-equivalence-list");
+    container?.querySelector(`[data-equivalence-index="${draft.length - 1}"] input`)?.select();
+  }
+
+  function updateEquivalenceDraft(event) {
+    const row = event.target.closest("[data-equivalence-index]");
+    if (!row) return;
+    const type = row.dataset.equivalenceType;
+    const item = equivalenceDraft(type)[Number(row.dataset.equivalenceIndex)];
+    if (!item) return;
+    item.amount = toNumber(row.querySelector('[name="equivalenceAmount"]')?.value, 0);
+    item.unit = row.querySelector('[name="equivalenceUnit"]')?.value || "unit";
+    item.customUnit = String(row.querySelector('[name="equivalenceCustomUnit"]')?.value || "").trim();
+    item.baseAmount = toNumber(row.querySelector('[name="equivalenceBaseAmount"]')?.value, 0);
+    const customField = row.querySelector(".equivalence-custom-unit");
+    if (customField) customField.hidden = item.unit !== "custom";
+  }
+
+  function removeEquivalence(event) {
+    const button = event.target.closest("[data-remove-equivalence]");
+    if (!button) return;
+    const row = button.closest("[data-equivalence-type]");
+    const type = row?.dataset.equivalenceType;
+    if (!type) return;
+    equivalenceDraft(type).splice(Number(button.dataset.removeEquivalence), 1);
+    renderEquivalenceEditor(type);
+  }
+
+  function validatedEquivalences(type, baseUnit, baseCustom, errorElement) {
+    const normalized = [];
+    const seen = new Set();
+    const baseKey = `${baseUnit}:${normalizeHeader(baseCustom)}`;
+    for (const raw of equivalenceDraft(type)) {
+      const item = normalizeEquivalence(raw);
+      if (!item) {
+        errorElement.textContent = "Completá cantidades mayores a cero y el nombre de cada unidad personalizada.";
+        errorElement.hidden = false;
+        return null;
+      }
+      const key = `${item.unit}:${normalizeHeader(item.customUnit)}`;
+      if (key === baseKey) {
+        errorElement.textContent = "La unidad alternativa debe ser distinta de la unidad base.";
+        errorElement.hidden = false;
+        return null;
+      }
+      if (seen.has(key)) {
+        errorElement.textContent = "No repitas la misma unidad alternativa.";
+        errorElement.hidden = false;
+        return null;
+      }
+      seen.add(key);
+      normalized.push(item);
+    }
+    return normalized;
+  }
+
+  function setEditableUnitFields(select, customInput, unit, customUnit = "") {
+    const optionExists = [...select.options].some(option => option.value === unit);
+    select.value = optionExists ? unit : "custom";
+    if (select.value === "custom") customInput.value = customUnit || (unit !== "custom" ? unit : "");
+    const field = customInput.closest("label");
+    field.hidden = select.value !== "custom";
+    customInput.required = select.value === "custom";
+  }
+
+  function editableUnitFromForm(select, customInput) {
+    const unit = select.value || "serving";
+    const customUnit = unit === "custom" ? String(customInput.value || "").trim() : "";
+    return { unit, customUnit };
+  }
+
+  function defaultServingAmountForUnit(unit) {
+    return ["g", "ml"].includes(unit) ? 100 : 1;
+  }
+
+  function unitNames(rawUnit) {
+    const normalized = normalizeHeader(rawUnit).replace(/\s+/g, "_");
+    return COMMON_UNIT_NAMES[normalized]
+      || [String(rawUnit || "unidad").trim(), String(rawUnit || "unidades").trim()];
+  }
+
+  function parseServingDefinition(serving) {
+    const raw = String(serving || "1 porción").trim() || "1 porción";
+    const match = raw.match(/^([0-9]+(?:[.,][0-9]+)?)\s*(.*)$/);
+    const baseAmount = Math.max(0.01, toNumber(match?.[1], 1) || 1);
+    const rawUnit = String(match?.[2] || "porción").trim() || "porción";
+    const unitKey = canonicalEditableUnit(rawUnit);
+    const customUnit = unitKey === "custom" ? rawUnit : "";
+    const [singular, plural] = editableUnitNames(unitKey, customUnit);
+    return { value: "serving", baseAmount, singular, plural, unitKey, customUnit };
+  }
+
+  function baseFoodQuantityOption(item) {
+    const parsed = parseServingDefinition(item.serving);
+    const baseAmount = Math.max(0.01, toNumber(item.servingAmount, parsed.baseAmount) || parsed.baseAmount);
+    const unitKey = item.servingUnit || parsed.unitKey;
+    const customUnit = item.servingUnitCustom || parsed.customUnit;
+    const [singular, plural] = editableUnitNames(unitKey, customUnit);
+    return { value: "serving", baseAmount, defaultAmount: baseAmount, singular, plural, unitKey, customUnit };
+  }
+
+  function equivalenceQuantityOption(item, equivalence) {
+    const baseServingAmount = Math.max(0.01, toNumber(item.servingAmount, parseServingDefinition(item.serving).baseAmount) || 1);
+    const [singular, plural] = editableUnitNames(equivalence.unit, equivalence.customUnit);
+    return {
+      value: `equivalence:${equivalence.id}`,
+      baseAmount: Math.max(0.000001, equivalence.amount * baseServingAmount / equivalence.baseAmount),
+      defaultAmount: equivalence.amount,
+      singular,
+      plural,
+      unitKey: equivalence.unit,
+      customUnit: equivalence.customUnit,
+      equivalenceId: equivalence.id
+    };
+  }
+
+  function foodQuantityOptions(item) {
+    if (item.kind !== "external" || item.userOverride) {
+      return [baseFoodQuantityOption(item), ...normalizeEquivalences(item.equivalences).map(equivalence => equivalenceQuantityOption(item, equivalence))];
+    }
+
+    const options = [{
+      value: "g",
+      baseAmount: Math.max(0.1, toNumber(item.metricQuantity, 100) || 100),
+      defaultAmount: Math.max(0.1, toNumber(item.metricQuantity, 100) || 100),
+      singular: "g",
+      plural: "g"
+    }];
+
+    const commonQuantity = toNumber(item.commonQuantity, 0);
+    const commonUnit = String(item.commonUnit || "").trim();
+    if (commonQuantity > 0 && commonUnit && !/^(g|gram|grams)$/i.test(commonUnit)) {
+      const [singular, plural] = unitNames(commonUnit);
+      options.push({
+        value: "common",
+        baseAmount: commonQuantity,
+        defaultAmount: 1,
+        singular,
+        plural
+      });
+    }
+
+    return options;
+  }
+
+  function defaultFoodQuantity(item) {
+    const options = foodQuantityOptions(item);
+    const usage = foodUsageForMeal(item, activeMeal);
+    const savedOption = options.find(option => option.value === usage?.unit);
+
+    if (usage && savedOption && toNumber(usage.amount, 0) > 0) {
+      return { amount: toNumber(usage.amount, savedOption.defaultAmount ?? savedOption.baseAmount), unit: savedOption.value };
+    }
+
+    const databaseOption = item.kind === "external"
+      ? options.find(option => option.value === "common")
+      : null;
+    const option = databaseOption || options[0];
+    return { amount: option.defaultAmount ?? option.baseAmount, unit: option.value };
+  }
+
+  function formatQuantityAmount(value) {
+    const numeric = toNumber(value, 0);
+    const digits = Number.isInteger(numeric) ? 0 : Math.abs(numeric) < 10 ? 2 : 1;
+    return formatNumber(numeric, digits);
+  }
+
+  function quantityUnitText(option, amount) {
+    return Math.abs(toNumber(amount, 0) - 1) < 0.0001 ? option.singular : option.plural;
+  }
+
+  function quantityPreview(item, amount, unit) {
+    const options = foodQuantityOptions(item);
+    const option = options.find(candidate => candidate.value === unit) || options[0];
+    const factor = Math.max(0, toNumber(amount, 0)) / option.baseAmount;
+    return {
+      calories: item.calories * factor,
+      protein: item.protein * factor,
+      fat: item.fat * factor,
+      carbs: item.carbs * factor,
+      option,
+      factor
+    };
+  }
+
+  function foodResultButton(item, context = "") {
+    const wrapper = document.createElement("div");
+    const selected = activeFoodSelection?.id === item.id && activeFoodSelection?.kind === item.kind;
+    const stats = foodStats(item);
+    wrapper.className = `food-result-card${selected ? " active" : ""}`;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "food-result";
+    button.dataset.selectFood = item.id;
+    button.dataset.foodKind = item.kind;
+    button.setAttribute("aria-expanded", selected ? "true" : "false");
+
+    const recipeDetail = item.kind === "recipe" && item.ingredients?.length
+      ? `${item.ingredients.length} ingredientes · ${item.serving}`
+      : item.serving;
+    let usageDetail = "";
+    if (context === "recent" && stats.lastUsed) usageDetail = ` · Último: ${formatDate(stats.lastUsed)}`;
+    if (context === "frequent") usageDetail = ` · ${stats.uses} ${stats.uses === 1 ? "consumo" : "consumos"}`;
+
+    const originBadge = item.kind === "food"
+      ? `<span class="food-origin-badge food-origin-own">${item.source === "openfoodfacts" ? "Código" : item.source === "nutrition-label-ocr" ? "Rótulo" : "Propio"}</span>`
+      : item.kind === "external" && item.userOverride
+        ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
+        : "";
+    // MASA_V29_MOBILE_ABOUT_SEARCH_EDIT_V2: alimentos propios y recetas también se editan desde los resultados.
+    const editActions = item.kind === "external"
+      ? `<div class="food-catalog-actions"><button class="text-action" data-edit-catalog-food="${escapeHTML(item.id)}" type="button">Editar alimento</button><button class="danger-text-action" data-hide-catalog-food="${escapeHTML(item.id)}" type="button">Ocultar</button></div>`
+      : item.kind === "recipe"
+        ? `<div class="food-catalog-actions"><button class="text-action" data-edit-user-food="${escapeHTML(item.id)}" data-edit-user-kind="recipe" type="button">Editar receta</button></div>`
+        : `<div class="food-catalog-actions"><button class="text-action" data-edit-user-food="${escapeHTML(item.id)}" data-edit-user-kind="food" type="button">Editar alimento</button></div>`;
+    button.innerHTML = `<div><div class="food-result-name"><b>${escapeHTML(item.name)}</b>${originBadge}</div><small>${escapeHTML(recipeDetail)} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}${escapeHTML(usageDetail)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span>`;
+    wrapper.appendChild(button);
+
+    if (!selected) return wrapper;
+
+    const defaults = defaultFoodQuantity(item);
+    const options = foodQuantityOptions(item);
+    const preview = quantityPreview(item, defaults.amount, defaults.unit);
+    const form = document.createElement("form");
+    form.className = "food-inline-add has-catalog-actions";
+    form.dataset.foodAddForm = "";
+    form.dataset.foodId = item.id;
+    form.dataset.foodKind = item.kind;
+    form.dataset.currentUnit = defaults.unit;
+    form.innerHTML = `
       <label>
         <span>Cantidad consumida</span>
-        <input name="amount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${C(f.amount)}" required>
+        <input name="amount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(defaults.amount)}" required>
       </label>
       <label>
         <span>Unidad</span>
-        <select name="unit" ${p.length===1?"disabled":""}>
-          ${p.map(x=>`<option value="${C(x.value)}" ${x.value===f.unit?"selected":""}>${C(x.plural)}</option>`).join("")}
+        <select name="unit" ${options.length === 1 ? "disabled" : ""}>
+          ${options.map(option => `<option value="${escapeHTML(option.value)}" ${option.value === defaults.unit ? "selected" : ""}>${escapeHTML(option.plural)}</option>`).join("")}
         </select>
       </label>
       <div class="food-inline-preview" aria-live="polite">
-        <b data-food-preview-calories>${g(Math.round(w.calories))} kcal</b>
-        <small data-food-preview-macros>P ${g(w.protein,1)} \xB7 G ${g(w.fat,1)} \xB7 C ${g(w.carbs,1)}</small>
+        <b data-food-preview-calories>${formatNumber(Math.round(preview.calories))} kcal</b>
+        <small data-food-preview-macros>P ${formatNumber(preview.protein,1)} · G ${formatNumber(preview.fat,1)} · C ${formatNumber(preview.carbs,1)}</small>
       </div>
-      ${u}
+      ${editActions}
       <div class="food-inline-actions">
         <button class="text-action" data-cancel-food type="button">Cancelar</button>
         <button class="primary-action" type="submit">Agregar</button>
-      </div>`,a.appendChild(y),a}function Hr(){return Ba()?o("#food-search-panel"):o(`#food-mode-${Te}`)}function la(){requestAnimationFrame(()=>{const t=Hr()?.querySelector(".food-result-card.active .food-inline-add"),a=t?.querySelector('input[name="amount"]');St()&&t?.scrollIntoView({behavior:"smooth",block:"center",inline:"nearest"}),window.setTimeout(()=>{a?.focus({preventScroll:!0}),a?.select()},St()?260:0)})}function da(){Ba()?oa():It()}function Yr(e,t){Y={id:e,kind:t},da(),la()}function Kr(){Y=null,da()}function ri(e){const t=$e(e.dataset.foodId,e.dataset.foodKind);if(!t)return;const a=m(e.elements.amount.value,0),n=e.elements.unit?.value||e.dataset.currentUnit,i=we(t,a,n);e.querySelector("[data-food-preview-calories]").textContent=`${g(Math.round(i.calories))} kcal`,e.querySelector("[data-food-preview-macros]").textContent=`P ${g(i.protein,1)} \xB7 G ${g(i.fat,1)} \xB7 C ${g(i.carbs,1)}`}function Gr(e){!$e(e.dataset.foodId,e.dataset.foodKind)||!e.elements.unit||(e.dataset.currentUnit=e.elements.unit.value,ri(e),e.elements.amount.focus())}function oi(){const e=o("#food-add-feedback");e&&(e.textContent="",e.hidden=!0)}function Vr(){Y=null,o("#food-search-input").value="",ut(),it(o("#food-search-input"))}function Xr(e,t,a,n){const i=$e(e,t);if(!i)return;const r=m(a,NaN),s=se(i),c=s.find(b=>b.value===n)||s[0];if(!Number.isFinite(r)||r<=0||!c)return;const l=we(i,r,c.value),u=`${Ke(r)} ${bt(c,r)}`,f=mt(i),p=lt({...i,id:G(),sourceId:f,quantity:r,quantityUnit:c.value,serving:u,calories:l.calories,protein:l.protein,fat:l.fat,carbs:l.carbs,meal:ee});if(!p)return;const w=new Date().toISOString();d.diary[L]=[...He(),p],d.foodUsage||={};const y=d.foodUsage[f]||{},x=y.byMeal?.[ee]||{};d.foodUsage[f]={amount:r,unit:c.value,uses:Math.max(0,Math.round(m(y.uses,0)))+1,lastUsed:L,lastUsedAt:w,byMeal:{...y.byMeal||{},[ee]:{amount:r,unit:c.value,uses:Math.max(0,Math.round(m(x.uses,0)))+1,lastUsed:L,lastUsedAt:w}}},i.kind!=="external"&&(i.uses=m(i.uses,0)+1,i.lastUsed=L,i.lastUsedAt=w),F(d),D(),oi(i.name,u),Vr()}function Qr(){clearTimeout(kn),kn=setTimeout(()=>{Y=null,ut()},120)}function Jr(e){const t=e.target.closest("[data-edit-user-food]");if(t){const r={editId:t.dataset.editUserFood,returnTarget:"food"};t.dataset.editUserKind==="recipe"?Rt(r):ue(r);return}const a=e.target.closest("[data-edit-catalog-food]");if(a){ue({catalogId:a.dataset.editCatalogFood,returnTarget:"food"});return}const n=e.target.closest("[data-hide-catalog-food]");if(n){so(n.dataset.hideCatalogFood);return}if(e.target.closest("[data-cancel-food]")){Kr();return}const i=e.target.closest("[data-select-food]");i&&Yr(i.dataset.selectFood,i.dataset.foodKind)}function Zr(e){const t=e.target.closest("[data-food-add-form]");t&&(e.preventDefault(),Xr(t.dataset.foodId,t.dataset.foodKind,t.elements.amount.value,t.elements.unit?.value||t.dataset.currentUnit))}function eo(e){const t=e.target.closest("[data-food-add-form]");!t||e.target.name!=="amount"||ri(t)}function to(e){const t=e.target.closest("[data-food-add-form]");!t||e.target.name!=="unit"||Gr(t)}function ao(e){e.preventDefault();const t=e.currentTarget,a=Wi(t.elements.name.value),n=Gt(t.elements.calories.value,1,Ct.calories);if(!a||!Number.isFinite(n)){t.reportValidity();return}const i=lt({id:G(),name:a,calories:n,protein:0,fat:0,carbs:0,serving:"carga libre",entryMode:"calories",quantity:0,quantityUnit:"",meal:ee});if(!i)return;d.diary[L]=[...He(),i],F(d);const r=i.name,s=Math.round(i.calories);t.reset(),D(),oi(r,`${g(s)} kcal`),it(t.elements.name)}function si(e="food"){e instanceof Event&&(e="food"),qi=e||"food",de(),o("#library-modal").hidden=!1,document.body.classList.add("modal-open")}function en(){o("#library-modal").hidden=!0,oe()}function no(e,t=40){const a=Ga(e);if(!a.text)return[];const n=[];for(const i of Qe){const r=Da(i,d.catalogOverrides?.[i.id]),s=Ka(r,Xn(i)),c=Va(s,a);c>0&&n.push({item:r,score:c})}return n.sort((i,r)=>r.score-i.score||String(i.item.name||"").localeCompare(String(r.item.name||""),"es")).slice(0,t).map(i=>i.item)}function io(e){const t=document.createElement("article"),a=d.catalogOverrides?.[e.id],n=a?.hidden?"Oculto":a?"Editado":"Cat\xE1logo general";return t.className=`library-item library-catalog-search-item${a?.hidden?" catalog-hidden":""}`,t.innerHTML=`
-      <div><div class="library-item-title"><b>${C(e.name)}</b>${a?'<span class="food-origin-badge food-origin-edited">Editado</span>':""}</div><small>${C(n)} \xB7 ${C(e.serving)} \xB7 ${g(Math.round(e.calories))} kcal</small></div>
-      <div class="library-item-actions"><button class="text-action" data-edit-library="${C(e.id)}" data-library-kind="external" type="button">Editar</button></div>`,t}function tn(){const e=o("#library-catalog-search-panel"),t=o("#library-catalog-search-input"),a=o("#library-catalog-search-results");if(!e||!t||!a||e.hidden)return;const n=t.value.trim();if(a.innerHTML="",!n){a.innerHTML='<p class="empty-message">Escrib\xED un nombre para buscar en toda la base.</p>';return}if(pe==="loading"){a.innerHTML='<p class="empty-message">Cargando cat\xE1logo de alimentos\u2026</p>';return}const i=no(n);if(!i.length){a.innerHTML='<p class="empty-message">No se encontraron alimentos con ese nombre.</p>';return}i.forEach(r=>a.appendChild(io(r)))}function ro(){clearTimeout($n),$n=setTimeout(tn,120)}function oo(){const e=o("#library-catalog-search-panel"),t=o("#library-search-catalog"),a=o("#library-catalog-search-input"),n=e.hidden;e.hidden=!n,t.setAttribute("aria-expanded",String(n)),t.textContent=n?"Cerrar b\xFAsqueda":"Buscar alimento de la base",n&&(tn(),it(a))}function an(e,t={}){const a=document.createElement("article");a.className="library-item";const n=e.kind==="recipe"?`${e.ingredients?.length||0} ingredientes \xB7 ${e.serving}`:e.serving;if(t.catalog){const i=!!t.override?.hidden;return a.classList.toggle("catalog-hidden",i),a.innerHTML=`
-        <div><b>${C(e.name)}</b><small>${i?"Oculto de tu cat\xE1logo":`${C(n)} \xB7 ${g(Math.round(e.calories))} kcal`}</small></div>
-        <div class="library-item-actions">
-          <button class="text-action" data-edit-library="${C(e.id)}" data-library-kind="external" type="button">Editar</button>
-          <button class="text-action" data-restore-catalog="${C(e.id)}" type="button">Restaurar original</button>
-        </div>`,a}return a.innerHTML=`
-      <div><b>${C(e.name)}</b><small>${C(n)} \xB7 ${g(Math.round(e.calories))} kcal</small></div>
-      <div class="library-item-actions">
-        <button class="text-action" data-edit-library="${C(e.id)}" data-library-kind="${C(e.kind)}" type="button">Editar</button>
-        <button class="danger-text-action" data-delete-library="${C(e.id)}" data-library-kind="${C(e.kind)}" type="button">Borrar</button>
-      </div>`,a}function de(){const e=o("#library-food-list"),t=o("#library-recipe-list"),a=o("#library-catalog-list");e.innerHTML="",t.innerHTML="",a.innerHTML="",o("#library-food-count").textContent=d.foods.length,o("#library-recipe-count").textContent=d.recipes.length;const n=Object.entries(d.catalogOverrides||{});o("#library-catalog-count").textContent=n.length,d.foods.length?[...d.foods].sort((i,r)=>i.name.localeCompare(r.name,"es")).forEach(i=>e.appendChild(an(i))):e.innerHTML='<p class="empty-message">No creaste alimentos propios.</p>',d.recipes.length?[...d.recipes].sort((i,r)=>i.name.localeCompare(r.name,"es")).forEach(i=>t.appendChild(an(i))):t.innerHTML='<p class="empty-message">No creaste recetas.</p>',n.length?n.map(([i,r])=>({item:ct(i),override:r})).filter(i=>i.item).sort((i,r)=>i.item.name.localeCompare(r.item.name,"es")).forEach(i=>a.appendChild(an(i.item,{catalog:!0,override:i.override}))):a.innerHTML='<p class="empty-message">Todav\xEDa no modificaste alimentos del cat\xE1logo general.</p>',tn()}function ua(e){const t=e.target.closest("[data-restore-catalog]");if(t){co(t.dataset.restoreCatalog);return}const a=e.target.closest("[data-edit-library]");if(a){const u={editId:a.dataset.editLibrary,returnTarget:"library"};a.dataset.libraryKind==="recipe"?Rt(u):a.dataset.libraryKind==="external"?ue({catalogId:a.dataset.editLibrary,returnTarget:"library"}):ue(u);return}const n=e.target.closest("[data-delete-library]");if(!n)return;const i=n.dataset.deleteLibrary,r=n.dataset.libraryKind,s=$e(i,r);if(!s)return;const c=r==="food"?d.recipes.filter(u=>u.ingredients?.some(f=>f.foodId===i||f.sourceId===i)).length:0,l=c?`
+      </div>`;
+    wrapper.appendChild(form);
+    return wrapper;
+  }
 
-Aparece en ${c} receta(s). Esas recetas conservar\xE1n los valores guardados del ingrediente.`:"";window.confirm(`\xBFBorrar \u201C${s.name}\u201D de tu biblioteca?${l}`)&&(r==="recipe"?d.recipes=d.recipes.filter(u=>u.id!==i):d.foods=d.foods.filter(u=>u.id!==i),delete d.foodUsage?.[mt(s)],F(d),de(),It())}function so(e){const t=Wt.get(e);t&&(d.catalogOverrides||={},d.catalogOverrides[e]=Xt({...d.catalogOverrides[e]||{},id:e,hidden:!0}),delete d.foodUsage?.[mt(t)],F(d),st(),Y=null,da(),o("#library-modal")?.hidden||de())}function co(e){d.catalogOverrides?.[e]&&(delete d.catalogOverrides[e],F(d),st(),de(),da(),o("#recipe-modal")?.hidden||me())}function ue(e={}){e instanceof Event&&(e={}),Ae=e.editId||null,K=e.catalogId||null,_e=e.prefillFood?Ce(e.prefillFood):null,Z=e.returnTarget||(O("library-modal")?"library":"food");const t=o("#food-editor-form");t.reset(),o("#food-editor-error").hidden=!0;const a=K?ct(K):Ae?d.foods.find(r=>r.id===Ae):null,n=a||_e;xt=Ce(n?.equivalences||[]),Ht=e.rescanMode==="label"?"label":"barcode",o("#food-editor-title").textContent=e.title||(a?"Editar alimento":_e?"Revisar alimento escaneado":"Nuevo alimento"),o("#food-editor-description").textContent=e.description||(K?"Los cambios quedan solamente en tu cuenta.":a?"Los cambios tambi\xE9n recalculan las recetas que usan este alimento.":_e?"Revis\xE1 los datos antes de incorporarlo a tu biblioteca.":"Guardalo una vez y reutilizalo en registros y recetas."),o("#save-food-editor").textContent=a?"Guardar cambios":"Guardar alimento";const i=o("#food-editor-source-note");if(i.hidden=!e.sourceNote,i.textContent=e.sourceNote||"",i.classList.toggle("warning",e.sourceNoteType==="warning"),i.classList.toggle("success",e.sourceNoteType==="success"),o("#rescan-food-editor").hidden=!e.allowRescan,o("#close-food-editor").hidden=!!e.allowRescan,o(".food-editor-scan-row").hidden=!!(a||K),n){const r=qe(n.serving);t.elements.name.value=n.name||"",t.elements.barcode.value=ne(n.barcode),t.elements.brand.value=n.brand||"";const s=m(n.calories,NaN);t.elements.calories.value=Number.isFinite(s)?Q(s,0):"",t.elements.servingAmount.value=Q(n.servingAmount||n.metricQuantity||r.baseAmount,2),ht(t.elements.servingUnit,t.elements.servingUnitCustom,n.servingUnit||r.unitKey,n.servingUnitCustom||r.customUnit),["protein","fat","carbs"].forEach(c=>{const l=m(n[c],NaN);t.elements[c].value=Number.isFinite(l)?Q(l,1):""})}else t.elements.servingAmount.value=1,ht(t.elements.servingUnit,t.elements.servingUnitCustom,"unit"),e.prefillName&&(t.elements.name.value=e.prefillName);Ee("food"),Z==="library"&&(o("#library-modal").hidden=!0),Z==="recipe"&&(o("#recipe-modal").hidden=!0),Z==="food"&&(o("#food-modal").hidden=!0),o("#food-editor-modal").hidden=!1,document.body.classList.add("modal-open"),it(t.elements.name)}function nn(){o("#food-editor-modal").hidden=!0;const e=Z;Z="",Ae=null,K=null,_e=null,xt=[],Ht="barcode",o("#rescan-food-editor").hidden=!0,o("#close-food-editor").hidden=!1,o("#food-editor-source-note").classList.remove("warning","success"),e==="food"&&(o("#food-modal").hidden=!1),e==="library"&&(de(),o("#library-modal").hidden=!1),e==="recipe"&&(o("#recipe-modal").hidden=!1,me(),Ge()),oe()}function rn(e=B){return e.reduce((t,a)=>({calories:t.calories+m(a.calories,0),protein:t.protein+m(a.protein,0),fat:t.fat+m(a.fat,0),carbs:t.carbs+m(a.carbs,0)}),{calories:0,protein:0,fat:0,carbs:0})}function ci(e){if(!e?.ingredients?.length)return e;const t=rn(e.ingredients),a=Math.max(.01,m(e.recipeYield,1)||1),i=Math.max(.01,m(e.recipeServingAmount,qe(e.serving).baseAmount)||1)/a;return e.calories=t.calories*i,e.protein=t.protein*i,e.fat=t.fat*i,e.carbs=t.carbs*i,e}function li(e){const t=mt(e);d.recipes.forEach(a=>{let n=!1;a.ingredients=(a.ingredients||[]).map(i=>{if(i.foodId!==e.id&&i.sourceId!==t)return i;const s=se(e).find(u=>u.value===i.unit),c=Math.max(0,m(i.quantityFactor,0)),l=s?we(e,i.amount,s.value):{calories:e.calories*c,protein:e.protein*c,fat:e.fat*c,carbs:e.carbs*c,factor:c};return n=!0,Fa({...i,sourceId:t,foodId:e.id,kind:e.kind,name:e.name,unit:s?.value||i.unit,serving:s?`${Ke(i.amount)} ${bt(s,i.amount)}`:i.serving,quantityFactor:l.factor,calories:l.calories,protein:l.protein,fat:l.fat,carbs:l.carbs})}).filter(Boolean),n&&ci(a)})}function lo(e){e.preventDefault();const t=e.currentTarget,a=Ae?d.foods.find(h=>h.id===Ae):null,n=K?ct(K):null,i=a||_e||{},r=ne(t.elements.barcode.value),s=o("#food-editor-error");if(s.hidden=!0,r&&!Qt(r)){s.textContent="El c\xF3digo de barras no es v\xE1lido.",s.hidden=!1,t.elements.barcode.focus();return}const c=r&&d.foods.find(h=>h.id!==a?.id&&ne(h.barcode)===r);if(c){s.textContent=`Ese c\xF3digo ya pertenece a ${c.name}.`,s.hidden=!1;return}const l=Ja(t.elements.servingUnit,t.elements.servingUnitCustom);if(l.unit==="custom"&&!l.customUnit){t.elements.servingUnitCustom.focus();return}const u=Math.max(.01,Q(t.elements.servingAmount.value,2)||1),f=ai("food",l.unit,l.customUnit,s);if(!f)return;const p=Q(t.elements.calories.value,0),w=Q(t.elements.protein.value,1),y=Q(t.elements.fat.value,1),x=Q(t.elements.carbs.value,1);if(K&&n){d.catalogOverrides||={},d.catalogOverrides[K]=Xt({id:K,hidden:!1,name:t.elements.name.value,calories:p,serving:pt(u,l.unit,l.customUnit),servingAmount:u,servingUnit:l.unit,servingUnitCustom:l.customUnit,equivalences:f,protein:w,fat:y,carbs:x}),st();const h=ct(K);h&&li(h),F(d);const M=Z;o("#food-editor-modal").hidden=!0,K=null,Ae=null,xt=[],Z="",M==="library"?(de(),o("#library-modal").hidden=!1):M==="recipe"?(o("#recipe-modal").hidden=!1,me(),Ge()):O("food-modal")?ut():D(),oe();return}const b=ie({id:a?.id||G(),kind:"food",name:t.elements.name.value,barcode:r,brand:t.elements.brand.value,source:i.source||"",sourceUrl:i.sourceUrl||"",sourceImportedAt:i.sourceImportedAt||"",imageUrl:i.imageUrl||"",calories:p,serving:pt(u,l.unit,l.customUnit),servingAmount:u,servingUnit:l.unit,servingUnitCustom:l.customUnit,equivalences:f,protein:w,fat:y,carbs:x,uses:a?.uses||0,lastUsed:a?.lastUsed||"",lastUsedAt:a?.lastUsedAt||""});if(!b)return;a?d.foods=d.foods.map(h=>h.id===a.id?b:h):d.foods.push(b),li(b),F(d);const v=Z;if(o("#food-editor-modal").hidden=!0,Ae=null,K=null,_e=null,xt=[],Z="",v==="recipe"){const h=Za(b);ui(b,h.amount,h.unit),o("#recipe-modal").hidden=!1,o("#recipe-ingredient-search").value="",me(),Ge()}else v==="library"?(de(),o("#library-modal").hidden=!1):v==="food"||O("food-modal")?(o("#food-modal").hidden=!1,o("#food-search-input").value=b.name,ut(),Y={id:b.id,kind:"food"},oa(),la()):D();oe()}function Rt(e={}){e instanceof Event&&(e={}),xe=e.editId||null,Je=e.returnTarget||(O("library-modal")?"library":"food");const t=o("#recipe-form");t.reset();const a=xe?d.recipes.find(i=>i.id===xe):null;B=a?.ingredients?Ce(a.ingredients):[],zt=Ce(a?.equivalences||[]),he=null,o("#recipe-title").textContent=a?"Editar receta":"Crear receta por ingredientes",o("#recipe-description").textContent=a?"Modific\xE1 ingredientes, cantidades o porciones; los valores se recalculan autom\xE1ticamente.":"Busc\xE1 cada ingrediente en la base, indic\xE1 su cantidad y agregalo a la receta.",o("#save-recipe").textContent=a?"Guardar cambios":"Guardar receta";const n=qe(a?.serving||"1 porci\xF3n");t.elements.name.value=a?.name||"",t.elements.yield.value=a?.recipeYield||1,t.elements.servingAmount.value=a?.recipeServingAmount||a?.servingAmount||n.baseAmount||1,ht(t.elements.yieldUnit,t.elements.yieldUnitCustom,a?.recipeYieldUnit||a?.servingUnit||n.unitKey||"serving",a?.recipeYieldUnitCustom||a?.servingUnitCustom||n.customUnit),t.elements.yieldUnit.dataset.currentUnit=t.elements.yieldUnit.value,o("#recipe-ingredient-search").value="",o("#recipe-error").hidden=!0,Je==="library"&&(o("#library-modal").hidden=!0),o("#recipe-modal").hidden=!1,document.body.classList.add("modal-open"),Ee("recipe"),me(),Ge(),it(t.elements.name)}function on(){o("#recipe-modal").hidden=!0,he=null,B=[],zt=[],xe=null;const e=Je;Je="",e==="library"&&(de(),o("#library-modal").hidden=!1),oe()}function uo(e){const t=Ye(e),a=d.foods.filter(i=>!t||gt(i,e)>0);let n=[];return t?n=Qn(e,30):n=[...Xa().filter(r=>r.kind!=="recipe").sort(Ya),...De.slice(0,12)],[...new Map([...a,...n].filter(i=>i.kind!=="recipe").map(i=>[i.id,i])).values()].sort((i,r)=>t?gt(r,e)-gt(i,e)||Ha(i,r,ee):Ya(i,r)).slice(0,24)}function me(){const e=o("#recipe-ingredient-results"),t=o("#recipe-ingredient-search")?.value||"",a=_(t),n=uo(t);e.innerHTML="",pe==="loading"&&Jn(e),n.forEach(s=>e.appendChild(mo(s))),!n.length&&pe!=="loading"&&(e.innerHTML='<p class="empty-message">No encontramos ese ingrediente en la base.</p>');const i=a&&n.some(s=>_(s.name)===a),r=o("#create-missing-ingredient");r.hidden=!a||i,r.textContent=a?`Crear \u201C${t.trim()}\u201D`:"Crear alimento nuevo"}function mo(e){const t=document.createElement("div"),a=he?.id===e.id&&he?.kind===e.kind;t.className=`food-result-card${a?" active":""}`;const n=document.createElement("button");n.type="button",n.className="food-result",n.dataset.selectRecipeIngredient=e.id,n.dataset.foodKind=e.kind;const i=e.kind==="food"?`<span class="food-origin-badge food-origin-own">${e.source==="openfoodfacts"?"C\xF3digo":e.source==="nutrition-label-ocr"?"R\xF3tulo":"Propio"}</span>`:e.kind==="external"&&e.userOverride?'<span class="food-origin-badge food-origin-edited">Editado</span>':"";if(n.innerHTML=`<div><div class="food-result-name"><b>${C(e.name)}</b>${i}</div><small>${C(e.serving)} \xB7 P ${g(e.protein,1)} \xB7 G ${g(e.fat,1)} \xB7 C ${g(e.carbs,1)}</small></div><span>${g(Math.round(e.calories))} kcal</span>`,t.appendChild(n),!a)return t;const r=Za(e),s=se(e),c=we(e,r.amount,r.unit),l=document.createElement("div");return l.className="food-inline-add recipe-inline-add",l.dataset.recipeIngredientAdd="",l.dataset.foodId=e.id,l.dataset.foodKind=e.kind,l.dataset.currentUnit=r.unit,l.innerHTML=`
-      <label><span>Cantidad</span><input name="amount" type="number" min="0.01" step="any" inputmode="decimal" value="${C(r.amount)}"></label>
-      <label><span>Unidad</span><select name="unit" ${s.length===1?"disabled":""}>${s.map(u=>`<option value="${C(u.value)}" ${u.value===r.unit?"selected":""}>${C(u.plural)}</option>`).join("")}</select></label>
-      <div class="food-inline-preview"><b data-recipe-preview-calories>${g(Math.round(c.calories))} kcal</b><small data-recipe-preview-macros>P ${g(c.protein,1)} \xB7 G ${g(c.fat,1)} \xB7 C ${g(c.carbs,1)}</small></div>
-      <div class="food-inline-actions"><button class="text-action" data-cancel-recipe-ingredient type="button">Cancelar</button><button class="primary-action" data-add-recipe-ingredient type="button">Agregar</button></div>`,t.appendChild(l),t}function di(e){const t=$e(e.dataset.foodId,e.dataset.foodKind);if(!t)return;const a=m(e.querySelector('[name="amount"]').value,0),i=e.querySelector('[name="unit"]')?.value||e.dataset.currentUnit,r=we(t,a,i);e.querySelector("[data-recipe-preview-calories]").textContent=`${g(Math.round(r.calories))} kcal`,e.querySelector("[data-recipe-preview-macros]").textContent=`P ${g(r.protein,1)} \xB7 G ${g(r.fat,1)} \xB7 C ${g(r.carbs,1)}`}function fo(e){const t=$e(e.dataset.foodId,e.dataset.foodKind),a=e.querySelector('[name="unit"]');!t||!a||(e.dataset.currentUnit=a.value,di(e))}function ui(e,t,a){const n=m(t,NaN),i=se(e),r=i.find(u=>u.value===a)||i[0];if(!Number.isFinite(n)||n<=0||!r)return;const s=we(e,n,r.value),c=Fa({id:G(),sourceId:mt(e),foodId:e.id,kind:e.kind,name:e.name,amount:n,unit:r.value,serving:`${Ke(n)} ${bt(r,n)}`,quantityFactor:s.factor,calories:s.calories,protein:s.protein,fat:s.fat,carbs:s.carbs});if(!c)return;const l=B.find(u=>u.sourceId===c.sourceId&&u.unit===c.unit);l?(l.amount+=c.amount,l.calories+=c.calories,l.protein+=c.protein,l.fat+=c.fat,l.carbs+=c.carbs,l.quantityFactor=Math.max(0,m(l.quantityFactor,0))+s.factor,l.serving=`${Ke(l.amount)} ${bt(r,l.amount)}`):B.push(c),he=null,o("#recipe-error").hidden=!0,Ge()}function go(e){if(e.target.closest("[data-cancel-recipe-ingredient]")){he=null,me();return}const t=e.target.closest("[data-add-recipe-ingredient]");if(t){const n=t.closest("[data-recipe-ingredient-add]"),i=$e(n.dataset.foodId,n.dataset.foodKind);if(!i)return;ui(i,n.querySelector('[name="amount"]').value,n.querySelector('[name="unit"]')?.value||n.dataset.currentUnit),o("#recipe-ingredient-search").value="",me();return}const a=e.target.closest("[data-select-recipe-ingredient]");a&&(he={id:a.dataset.selectRecipeIngredient,kind:a.dataset.foodKind},me(),requestAnimationFrame(()=>{const n=o("#recipe-ingredient-results .food-result-card.active input[name='amount']");n?.focus(),n?.select()}))}function po(e){const t=e.target.closest("[data-recipe-ingredient-add]");!t||e.target.name!=="amount"||di(t)}function ho(e){const t=e.target.closest("[data-recipe-ingredient-add]");!t||e.target.name!=="unit"||fo(t)}function bo(){clearTimeout(Nn),Nn=setTimeout(()=>{he=null,me()},120)}function mi(e){return $e(e.foodId,e.kind)||$e(e.sourceId,e.kind)||null}function Ge(){const e=o("#recipe-ingredient-list");if(e.innerHTML="",o("#recipe-ingredient-count").textContent=B.length,!B.length){e.innerHTML='<p class="empty-message">Busc\xE1 un alimento y agregalo con la cantidad usada en la receta.</p>',Ve();return}B.forEach((t,a)=>{const n=mi(t),i=n?se(n):[{value:t.unit,baseAmount:t.amount,singular:t.unit,plural:t.unit}],r=document.createElement("article");r.className="recipe-ingredient-row",r.dataset.recipeIngredientIndex=a,r.dataset.currentUnit=t.unit,r.innerHTML=`
-        <div class="recipe-ingredient-name"><b>${C(t.name)}</b><small data-draft-nutrition>${g(Math.round(t.calories))} kcal \xB7 P ${g(t.protein,1)} \xB7 G ${g(t.fat,1)} \xB7 C ${g(t.carbs,1)}</small></div>
-        <label><span>Cantidad</span><input name="draftAmount" type="number" min="0.01" step="any" value="${C(t.amount)}"></label>
-        <label><span>Unidad</span><select name="draftUnit" ${i.length===1?"disabled":""}>${i.map(s=>`<option value="${C(s.value)}" ${s.value===t.unit?"selected":""}>${C(s.plural)}</option>`).join("")}</select></label>
-        <button class="danger-text-action" data-remove-recipe-ingredient="${a}" type="button">Quitar</button>`,e.appendChild(r)}),Ve()}function fi(e,t=!1){const a=Number(e.dataset.recipeIngredientIndex),n=B[a];if(!n)return;const i=mi(n),r=e.querySelector('[name="draftAmount"]'),s=e.querySelector('[name="draftUnit"]');t&&i&&s&&(e.dataset.currentUnit=s.value);const c=Math.max(.01,m(r.value,n.amount)),l=s?.value||n.unit;if(i){const u=se(i).find(p=>p.value===l)||se(i)[0],f=we(i,c,u.value);Object.assign(n,{amount:c,unit:u.value,name:i.name,serving:`${Ke(c)} ${bt(u,c)}`,quantityFactor:f.factor,calories:f.calories,protein:f.protein,fat:f.fat,carbs:f.carbs})}else{const u=c/Math.max(.01,n.amount);n.amount=c,n.quantityFactor=Math.max(0,m(n.quantityFactor,0))*u,n.calories*=u,n.protein*=u,n.fat*=u,n.carbs*=u}e.querySelector("[data-draft-nutrition]").textContent=`${g(Math.round(n.calories))} kcal \xB7 P ${g(n.protein,1)} \xB7 G ${g(n.fat,1)} \xB7 C ${g(n.carbs,1)}`,Ve()}function vo(e){const t=e.target.closest("[data-remove-recipe-ingredient]");t&&(B.splice(Number(t.dataset.removeRecipeIngredient),1),Ge())}function yo(e){const t=e.target.closest("[data-recipe-ingredient-index]");!t||e.target.name!=="draftAmount"||fi(t,!1)}function wo(e){const t=e.target.closest("[data-recipe-ingredient-index]");!t||e.target.name!=="draftUnit"||fi(t,!0)}function Ve(){const e=o("#recipe-form"),t=Math.max(.01,m(e?.elements.yield.value,1)||1),a=Math.max(.01,m(e?.elements.servingAmount.value,1)||1);let n=rn();if(!B.length&&xe){const c=d.recipes.find(l=>l.id===xe);if(c){const l=Math.max(.01,m(c.recipeServingAmount,qe(c.serving).baseAmount)||1),u=t/l;n={calories:c.calories*u,protein:c.protein*u,fat:c.fat*u,carbs:c.carbs*u}}}const i=a/t,r={calories:n.calories*i,protein:n.protein*i,fat:n.fat*i,carbs:n.carbs*i},s=Ja(e.elements.yieldUnit,e.elements.yieldUnitCustom);o("#recipe-total-calories").textContent=`${g(Math.round(n.calories))} kcal`,o("#recipe-total-macros").textContent=`P ${g(n.protein,1)} \xB7 G ${g(n.fat,1)} \xB7 C ${g(n.carbs,1)}`,o("#recipe-serving-label").textContent=`Por ${pt(a,s.unit,s.customUnit)}`,o("#recipe-serving-calories").textContent=`${g(Math.round(r.calories))} kcal`,o("#recipe-serving-macros").textContent=`P ${g(r.protein,1)} \xB7 G ${g(r.fat,1)} \xB7 C ${g(r.carbs,1)}`}function xo(e){e.preventDefault();const t=e.currentTarget,a=xe?d.recipes.find(w=>w.id===xe):null,n=o("#recipe-error");if(!B.length&&!a){n.textContent="Agreg\xE1 al menos un ingrediente antes de guardar la receta.",n.hidden=!1;return}const i=Math.max(.01,m(t.elements.yield.value,1)||1),r=Math.max(.01,m(t.elements.servingAmount.value,1)||1),s=Ja(t.elements.yieldUnit,t.elements.yieldUnitCustom);if(s.unit==="custom"&&!s.customUnit){t.elements.yieldUnitCustom.focus();return}const c=ai("recipe",s.unit,s.customUnit,n);if(!c)return;const l=B.length?rn():null,u=r/i,f=ie({id:a?.id||G(),kind:"recipe",name:t.elements.name.value,serving:pt(r,s.unit,s.customUnit),servingAmount:r,servingUnit:s.unit,servingUnitCustom:s.customUnit,recipeYield:i,recipeYieldUnit:s.unit,recipeYieldUnitCustom:s.customUnit,recipeServingAmount:r,equivalences:c,ingredients:Ce(B),calories:l?l.calories*u:a.calories,protein:l?l.protein*u:a.protein,fat:l?l.fat*u:a.fat,carbs:l?l.carbs*u:a.carbs,uses:a?.uses||0,lastUsed:a?.lastUsed||"",lastUsedAt:a?.lastUsedAt||""});if(!f)return;a?d.recipes=d.recipes.map(w=>w.id===a.id?f:w):d.recipes.push(f),F(d);const p=Je;o("#recipe-modal").hidden=!0,xe=null,B=[],zt=[],he=null,Je="",p==="library"?(de(),o("#library-modal").hidden=!1):O("food-modal")?(Wa("recipe"),Y={id:f.id,kind:"recipe"},Zn(),la()):D(),oe()}function sn(e){const t=String(e?.sourceId||"");if(!t)return ie(e);const a=d.foods.find(i=>i.id===t)||d.recipes.find(i=>i.id===t)||je.get(t)||je.get(`external:${t}`)||ct(t)||ct(`external:${t}`),n=ie(e);return a&&e?.quantityUnit&&!se(a).some(i=>i.value===e.quantityUnit)?n||a:a||n}function Mo(e){const t=He().find(s=>s.id===e.dataset.diaryEditForm);if(!t)return;const a=e.querySelector("[data-diary-edit-preview]");if(rt(t)){const s=Gt(e.elements.calories?.value,1,Ct.calories,0);a&&(a.textContent=`${g(Math.round(s))} kcal`);return}const n=sn(t);if(!n)return;const i=e.elements.unit?.value||t.quantityUnit,r=we(n,m(e.elements.amount.value,0),i);a&&(a.textContent=`${g(Math.round(r.calories))} kcal`)}function cn(){be&&(be=null,Zt(z()))}function Co(e){const t=e.target.closest("[data-remove-diary]");if(t){e.stopPropagation(),d.diary[L]=He().filter(n=>n.id!==t.dataset.removeDiary),be===t.dataset.removeDiary&&(be=null),F(d),D();return}const a=e.target.closest(".meal-item[data-edit-diary]");if(a){be=a.dataset.editDiary,Zt(z()),requestAnimationFrame(()=>document.querySelector('[data-diary-edit-form] input[name="calories"], [data-diary-edit-form] input[name="amount"]')?.select());return}be&&!e.target.closest(".meal-item.editing")&&cn()}function ko(e){be&&(e.target.closest("#meal-grid")||cn())}function gi(e){const t=e.target.closest("[data-diary-edit-form]");!t||!["amount","unit","calories"].includes(e.target.name)||Mo(t)}function No(e){const t=e.target.closest("[data-diary-edit-form]");if(!t)return;e.preventDefault();const a=He(),n=a.findIndex(r=>r.id===t.dataset.diaryEditForm);if(n<0)return;const i=a[n];if(rt(i)){const r=Gt(t.elements.calories?.value,1,Ct.calories);if(!Number.isFinite(r)){t.reportValidity();return}a[n]=lt({...i,entryMode:"calories",quantity:0,quantityUnit:"",serving:"carga libre",calories:r,protein:0,fat:0,carbs:0})}else{const r=sn(i),s=Gt(t.elements.amount?.value,.01,Ct.quantity),c=t.elements.unit?.value||i.quantityUnit;if(!r||!Number.isFinite(s)){t.reportValidity();return}const l=we(r,s,c),u=l.option;a[n]=lt({...i,entryMode:"quantity",quantity:s,quantityUnit:u.value,serving:`${Ke(s)} ${bt(u,s)}`,calories:l.calories,protein:l.protein,fat:l.fat,carbs:l.carbs})}d.diary[L]=a,be=null,F(d),D()}function ln(){const e=ve(),t=L===ka;e!==ka&&(ka=e,t&&(L=e),Ue=!1,D()),dn()}function pi(){Na&&window.clearTimeout(Na);const e=new Date,t=new Date(e);t.setHours(3,0,1,0),t<=e&&t.setDate(t.getDate()+1),Na=window.setTimeout(()=>{ln(),pi()},Math.min(t.getTime()-e.getTime(),2147e6))}function dn(){const e=new Date;if(!zi(e)||!d.configured)return;const t=ve(e);if(d.lastCheckinDate===t)return;if(d.weighIns.some(n=>n.date===t)){d.lastCheckinDate=t,F(d);return}o("#daily-checkin-modal").hidden=!1,document.body.classList.add("modal-open")}function un(e=null){const t=ve();Number.isFinite(e)&&e>0&&(d.weighIns=Ne(d.weighIns,[{date:t,weight:e}])),d.lastCheckinDate=t,F(d),o("#daily-checkin-modal").hidden=!0,document.body.classList.remove("modal-open"),D()}function $o(e){e.preventDefault();const t=m(e.currentTarget.elements.weight.value,NaN);if(!Number.isFinite(t)||t<=0){e.currentTarget.elements.weight.focus();return}un(t)}function hi(){const e=o("#profile-form");S("[data-native-date]").forEach(t=>{const a=t.dataset.nativeDate,n=I(e.elements[a]?.value);t.value=n||"",t.max=a==="birthDate"?R():"",t.min=a==="goalDate"?te(X(k(R()),1)):""})}function Eo(e){const t=document.querySelector(`[data-native-date="${e}"]`);t&&(hi(),typeof t.showPicker=="function"?t.showPicker():t.click())}function So(e){const t=e.target.closest("[data-native-date]");if(!t||!t.value)return;const a=o("#profile-form").elements[t.dataset.nativeDate];a.value=ot(t.value),a.dispatchEvent(new Event("input",{bubbles:!0}))}function D(){const e=d.configured&&Nt(d.profile,d.weighIns);if(o("#empty-state").hidden=e,o("#dashboard").hidden=!e,!e)return;const t=d.profile,a=re(),n=An(a,t.trendWindow),i=a[0],r=a.at(-1),s=n.at(-1)?.trend,c=z(t,a),l=qt(t,c,a),u=Number.isFinite(l.observedWeekly)?l.observedWeekly:Un(a,60),f=t.name?t.name.trim():"",p=Number.isFinite(c.targetCalories),w=Number.isFinite(c.maintenance);o("#daily-eyebrow").textContent=f?`OBJETIVOS DIARIOS DE ${f.toUpperCase()}`:"OBJETIVOS DIARIOS",o("#daily-title").textContent=f?`${f}, este es tu plan diario.`:"Tu plan diario.",o("#target-calories").textContent=p?g(Math.round(c.targetCalories)):"\u2014",o("#maintenance-calories").textContent=w?`${g(Math.round(c.maintenance))} kcal`:"\u2014",o("#calorie-adjustment").textContent=Number.isFinite(c.dailyAdjustment)?`${c.dailyAdjustment>0?"+":""}${g(Math.round(c.dailyAdjustment))} kcal`:"\u2014",o("#formula-name").textContent=c.rmr.fallback?"Mifflin (respaldo)":_i[c.rmr.used]||"\u2014",o("#activity-name").textContent=Oi[String(t.activityFactor)]||g(t.activityFactor,2),o("#protein-grams").textContent=Number.isFinite(c.proteinG)?`${g(Math.round(c.proteinG))} g`:"\u2014",o("#fat-grams").textContent=Number.isFinite(c.fatG)?`${g(Math.round(c.fatG))} g`:"\u2014",o("#carb-grams").textContent=Number.isFinite(c.carbsG)?`${g(Math.round(c.carbsG))} g`:"\u2014",o("#protein-detail").textContent=t.macroMode==="athletic"?`${g(c.macroRule.proteinPerKg,1)} g/kg \xB7 ${g(c.proteinPct,0)}%`:`${g(c.proteinPct,0)}% de las calor\xEDas`,o("#fat-detail").textContent=t.macroMode==="athletic"?`${g(c.macroRule.effectiveFatPerKg,1)} g/kg \xB7 ${g(c.fatPct,0)}%`:`${g(c.fatPct,0)}% de las calor\xEDas`,o("#carb-detail").textContent=t.macroMode==="athletic"?`calor\xEDas restantes \xB7 ${g(c.carbsPct,0)}%`:`${g(c.carbsPct,0)}% de las calor\xEDas`,o("#protein-bar").style.setProperty("--macro-width",`${P(c.proteinPct||0,0,100)}%`),o("#fat-bar").style.setProperty("--macro-width",`${P(c.fatPct||0,0,100)}%`),o("#carb-bar").style.setProperty("--macro-width",`${P(c.carbsPct||0,0,100)}%`);const y=o("#macro-balance-note");y.className="inline-note",y.textContent=t.macroMode==="custom"?`Distribuci\xF3n personalizada: ${g(c.proteinPct,0)}% prote\xEDna, ${g(c.fatPct,0)}% grasas y ${g(c.carbsPct,0)}% carbohidratos.`:t.macroMode==="balanced"?"Modo balanceado: 20% prote\xEDna, 30% grasas y 50% carbohidratos.":"Modo atl\xE9tico: prote\xEDna y grasas seg\xFAn peso; carbohidratos con la energ\xEDa restante.",o("#current-weight").textContent=ae(r?.weight),o("#trend-weight").textContent=ae(s,2),o("#observed-rate").textContent=Number.isFinite(u)?`${u>0?"+":""}${g(u,2)} kg/sem`:"Faltan datos",o("#current-body-fat").textContent=Number.isFinite(m(t.bodyFat,NaN))?`${g(t.bodyFat,1)}%`:"Sin dato",o("#weight-context").textContent=r?`\xDAltimo registro: ${j(r.date)}. La tendencia actual est\xE1 en ${ae(s,2)}.`:"El peso diario puede moverse mucho. La l\xEDnea de tendencia es la que importa.",gr(),Zt(c),Dt(),Lo(t,c),qo(t,c,a),Ho(t,c,a,n,u),Zo(n),o("#stat-change").textContent=i&&r?Sa(r.weight-i.weight):"\u2014",o("#stat-bmi").textContent=g(c.bmi,1),o("#stat-bmi-note").textContent=or(c.bmi),o("#stat-body-fat").textContent=Number.isFinite(m(t.bodyFat,NaN))?`${g(t.bodyFat,1)}%`:"Sin dato",o("#stat-ffmi").textContent=g(c.ffmi,1),o("#plan-start").textContent=j(t.planStartDate||i?.date),o("#plan-start-weight").textContent=ae(m(t.planStartWeight,i?.weight))}function Lo(e,t){const a=e.goalType==="loss"?"Bajar":e.goalType==="gain"?"Subir":"Mantener";o("#plan-kicker").textContent=e.name?`PLAN DE ${e.name.toUpperCase()}`:"PLAN ACTUAL",o("#plan-title").textContent=e.goalType==="maintain"?`Mantener la tendencia cerca de ${ae(t.weight)}.`:`${a} con un ritmo de ${g(t.rate.selected,2)}% semanal.`,o("#plan-description").textContent=e.goalDate&&Number.isFinite(t.rate.required)?`La fecha elegida requiere ${g(t.rate.required,2)}% semanal. La app calcula con ${g(t.rate.selected,2)}%.`:"El objetivo define la direcci\xF3n; la tendencia real indica cu\xE1ndo conviene corregir la estimaci\xF3n.",o("#target-weight").textContent=e.goalType==="maintain"?"Mantener":ae(t.targetWeight),o("#target-date").textContent=e.goalDate?j(e.goalDate):"Sin fecha fija",o("#estimated-date").textContent=t.estimatedDate?j(t.estimatedDate):"\u2014",o("#required-rate").textContent=`${g(t.rate.selected,2)} %/sem`;const n=o("#goal-status");n.className="signal";let i;e.goalType==="maintain"?(n.textContent="MANTENIMIENTO",i="En mantenimiento importa la banda de varias semanas, no que cada d\xEDa repita exactamente el mismo peso."):t.rate.selected>t.rate.bounds.suggestedMax?(n.textContent="RITMO ALTO",n.classList.add("alert"),i=`El ritmo manual supera el m\xE1ximo de referencia de ${g(t.rate.bounds.suggestedMax,2)}% semanal usado por la herramienta.`):t.rate.capped?(n.textContent="FECHA EXIGENTE",n.classList.add("warn"),i=`La fecha exige ${g(t.rate.required,2)}% semanal. El c\xE1lculo se limita a ${g(t.rate.bounds.suggestedMax,2)}% y estima una llegada posterior.`):t.rate.selected<t.rate.bounds.suggestedMin?(n.textContent="RITMO SUAVE",i="El ritmo est\xE1 por debajo del rango habitual. Puede ser m\xE1s lento, pero tambi\xE9n m\xE1s f\xE1cil de sostener."):(n.textContent="RANGO HABITUAL",i=`El ritmo est\xE1 dentro de ${g(t.rate.bounds.suggestedMin,2)}\u2013${g(t.rate.bounds.suggestedMax,2)}% semanal.`),t.rmr.fallback&&(i+=" Cunningham no pudo usarse y se aplic\xF3 Mifflin\u2013St Jeor."),Math.abs(m(e.calibrationOffset,0))>=1&&(i+=` La estimaci\xF3n incluye una calibraci\xF3n de ${e.calibrationOffset>0?"+":""}${g(e.calibrationOffset,0)} kcal basada en el progreso previo.`),o("#goal-guidance").textContent=i}function q(e,t,a){o(`#insight-fact-label-${e}`).textContent=t;const n=["expected-today","expected-difference","stat-change"];o(`#${n[e-1]}`).textContent=a}function Fo(e,t,a,n,i){o(".progress-model-data").hidden=!1;const r=a.at(-1),s=a[0],c=n.at(-1)?.trend,l=rr(e,t,k(r?.date||R())),u=Number.isFinite(c)&&Number.isFinite(l)?c-l:null;q(1,"Esperado hoy",ae(l,2)),q(2,"Diferencia",Sa(u)),q(3,"Cambio total",s&&r?Sa(r.weight-s.weight):"\u2014");let f=e.name?`${e.name}, todav\xEDa faltan datos.`:"Todav\xEDa faltan datos.",p="Con algunos pesajes m\xE1s se puede separar una variaci\xF3n puntual de una direcci\xF3n sostenida.";if(Number.isFinite(i)&&a.length>=5){const w=t.signedWeeklyKg,y=e.goalType==="maintain"?Math.abs(i)<.15:Math.sign(i)===Math.sign(w),x=Math.abs(w)>.02?Math.abs(i)/Math.abs(w):null;e.goalType==="maintain"?Math.abs(i)<.15?(f=e.name?`Estable, ${e.name}.`:"Tendencia estable.",p=`El ritmo reciente es ${i>0?"+":""}${g(i,2)} kg por semana, suficientemente cerca de una banda de mantenimiento.`):(f=e.name?`${e.name}, sal\xEDs del mantenimiento.`:"Fuera del mantenimiento.",p=`La tendencia reciente cambia ${i>0?"+":""}${g(i,2)} kg por semana. Conviene observar si se sostiene antes de corregir calor\xEDas.`):y?x<.65?(f=e.name?`${e.name}, vas m\xE1s lento que el plan.`:"M\xE1s lento que el plan.",p=`La tendencia marca ${g(Math.abs(i),2)} kg por semana frente a ${g(Math.abs(w),2)} kg previstos. Si la diferencia se mantiene, MASA puede recalibrar la estimaci\xF3n.`):x>1.4?(f=e.name?`${e.name}, vas m\xE1s r\xE1pido que el plan.`:"M\xE1s r\xE1pido que el plan.",p=`El ritmo observado es ${g(Math.abs(i),2)} kg por semana frente a ${g(Math.abs(w),2)} kg previstos. Revis\xE1 energ\xEDa, rendimiento y sostenibilidad antes de buscar todav\xEDa m\xE1s velocidad.`):(f=e.name?`Bien alineado, ${e.name}.`:"Bien alineado con el plan.",p=`El ritmo observado es ${g(Math.abs(i),2)} kg por semana y el previsto es ${g(Math.abs(w),2)} kg. La diferencia entra dentro del ruido esperable del peso diario.`):(f=e.name?`${e.name}, el rumbo se invirti\xF3.`:"Rumbo contrario al objetivo.",p=`El ritmo observado es ${i>0?"+":""}${g(i,2)} kg por semana. Unos d\xEDas pueden enga\xF1ar; varias semanas en la misma direcci\xF3n justifican revisar adherencia o c\xE1lculo.`),Number.isFinite(u)&&Math.abs(u)>=.5&&(p+=` Hoy la tendencia est\xE1 ${g(Math.abs(u),2)} kg ${u>0?"por encima":"por debajo"} de la proyecci\xF3n original.`)}o("#chart-insight-title").textContent=f,o("#chart-insight").textContent=p,o("#chart-insight-meta").textContent=a.length?`${a.length} pesajes entre ${j(a[0]?.date)} y ${j(r?.date)} \xB7 tendencia de ${d.profile.trendWindow} pesajes v\xE1lidos`:"Todav\xEDa no hay pesajes suficientes."}function Do(){return[...d.calibrationHistory||[]].filter(e=>I(e?.date)).sort((e,t)=>String(e.date).localeCompare(String(t.date))).at(-1)||null}function Ao(){const e=Do(),t=I(e?.date),a=t?te(X(k(t),E.reviewIntervalDays)):"",n=!a||k(R())>=k(a);return{latestReview:e,lastReviewDate:t,nextReviewDate:a,reviewDue:n}}function To(e=0,t=0,a=0){const n=P(e/E.minIntakeDays,0,1),i=P(t/E.minSpanDays,0,1),r=P(a/E.minWeighIns,0,1);return Math.round((n+i+r)/3*100)}function Io({intakeDays:e,completedDays:t,weighInCount:a,spanDays:n}){const i=P((e-E.minIntakeDays)/14,0,1),r=P((a-E.minWeighIns)/8,0,1),s=P((n-E.minSpanDays)/17,0,1),c=P(t/Math.max(1,e),0,1),l=P(.25+i*.25+r*.2+s*.2+c*.1,.25,1),u=P(.15+l*.35,.2,.5),f=l>=.72?"Alta":l>=.45?"Media":"Baja";return{score:l,alpha:u,label:f}}function qt(e=d.profile,t=z(e,d.weighIns),a=d.weighIns){const n=Ao(),i=Object.keys(d.diary||{}).sort().map(T=>{const Fe=ta(T);return{iso:T,date:k(T),calories:Fe.calories,completed:!!d.completedDays?.[T],hasEntries:(d.diary[T]||[]).length>0}}).filter(T=>T.date&&T.hasEntries&&Number.isFinite(T.calories)&&T.calories>0),r={ready:!1,status:"learning",intakeDays:0,completedDays:0,weighInCount:0,spanDays:0,progress:0,confidenceLabel:"Inicial",confidenceScore:0,alpha:0,calendarDue:n.reviewDue,reviewDue:n.reviewDue,hasNewData:!n.lastReviewDate,newIntakeDays:0,newWeighIns:0,nextReviewDate:n.nextReviewDate,lastReviewDate:n.lastReviewDate,currentTarget:t.targetCalories,currentMaintenance:t.maintenance};if(!i.length)return{...r,reason:"Todav\xEDa no hay ingestas registradas. El gasto adaptativo empieza a aprender cuando registr\xE1s comidas y pesajes."};const s=i.at(-1).date,c=X(s,-(E.windowDays-1)),l=i.filter(T=>T.date>=c&&T.date<=s),u=l.filter(T=>T.completed),f=u.length>=E.minIntakeDays,p=f?u:l,w=p[0]?.date,y=p.at(-1)?.date,x=w&&y?Math.round(ye(w,y))+1:0,b=w&&y?[...a].filter(T=>{const Fe=k(T.date);return Fe&&Fe>=X(w,-3)&&Fe<=X(y,3)}).sort((T,Fe)=>T.date.localeCompare(Fe.date)):[],v=n.lastReviewDate?p.filter(T=>T.iso>n.lastReviewDate).length:p.length,h=n.lastReviewDate?b.filter(T=>T.date>n.lastReviewDate).length:b.length,M=!n.lastReviewDate||v>=E.minNewIntakeDays&&h>=E.minNewWeighIns,N=To(p.length,x,b.length),$={...r,calendarDue:n.reviewDue,reviewDue:n.reviewDue&&M,hasNewData:M,newIntakeDays:v,newWeighIns:h,intakeDays:p.length,completedDays:u.length,completedOnly:f,weighInCount:b.length,spanDays:x,progress:N,firstDate:w,lastDate:y};if(p.length<E.minIntakeDays)return{...$,reason:`Faltan ${E.minIntakeDays-p.length} d\xEDas de ingestas para la primera estimaci\xF3n.`};if(x<E.minSpanDays)return{...$,reason:`Los registros cubren ${x} d\xEDas. Se necesitan ${E.minSpanDays} para separar el ruido diario de la tendencia.`};if(b.length<E.minWeighIns)return{...$,reason:`Hay ${b.length} pesajes comparables en el per\xEDodo. Se necesitan ${E.minWeighIns}.`};const A=In(b),U=Tn(A,60,"trend");if(!Number.isFinite(U)||!Number.isFinite(t.targetCalories)||!Number.isFinite(t.dailyAdjustment)||!Number.isFinite(t.maintenance))return{...$,reason:"No se pudo calcular una tendencia estable con los datos actuales."};const le=p.reduce((T,Fe)=>T+Fe.calories,0)/p.length,J=le-U*7700/7;if(!Number.isFinite(J)||J<1e3||J>6e3)return{...$,reason:"Los datos producen un gasto fuera de un rango plausible. Revis\xE1 d\xEDas incompletos, cantidades y pesajes."};const ge=Io({intakeDays:p.length,completedDays:u.length,weighInCount:b.length,spanDays:x}),Se=t.maintenance*(1-ge.alpha)+J*ge.alpha,Le=Se+t.dailyAdjustment,H=Le-t.targetCalories,Xe=P(Math.round(H),-E.maxAdjustment,E.maxAdjustment),Oe=m(e.calibrationOffset,0),Ai=P(Oe+Xe,-900,900),Ti=Ai-Oe,Ii=Math.abs(Ti)>=E.minMeaningfulAdjustment,Ws=n.reviewDue?M?Ii?"ready":"stable":"waiting-data":"waiting",zs=A.at(-1)?.trend??b.at(-1)?.weight;return{...$,ready:!0,status:Ws,progress:100,averageCalories:le,observedWeekly:U,observedMaintenance:J,adaptiveMaintenance:Se,currentMaintenance:t.maintenance,confidenceLabel:ge.label,confidenceScore:ge.score,alpha:ge.alpha,recommendedTarget:Le,rawChange:H,appliedChange:Ti,newOffset:Ai,meaningful:Ii,latest:b.at(-1),latestTrend:zs,limited:Math.abs(H)>E.maxAdjustment}}function Uo(e,t,a){const n=qt(e,t,a);return n.ready&&n.reviewDue&&n.meaningful?n:null}function bi(e){if(!e?.ready)return e?.reason||"Todav\xEDa no hay datos suficientes.";const t=e.observedWeekly<-.01?"bajando":e.observedWeekly>.01?"subiendo":"estable",a=Math.max(e.intakeDays||0,e.weighInCount||0),n=e.completedOnly?`${a} d\xEDas de registro`:`${a} d\xEDas de registro; cerrar los d\xEDas completos aumenta la confianza`,i=`El gasto observado es ${g(Math.round(e.observedMaintenance))} kcal y el gasto adaptativo usado por M.A.S.A. queda en ${g(Math.round(e.adaptiveMaintenance))} kcal, con confianza ${e.confidenceLabel.toLowerCase()}.`;if(!e.calendarDue)return`Con ${n}, el peso viene ${t} ${g(Math.abs(e.observedWeekly),2)} kg/semana. ${i} La pr\xF3xima revisi\xF3n corresponde el ${j(e.nextReviewDate)}.`;if(!e.hasNewData)return`La fecha m\xEDnima de revisi\xF3n ya lleg\xF3, pero M.A.S.A. espera datos nuevos para no recalcular con el mismo per\xEDodo. Faltan ${Math.max(0,E.minNewIntakeDays-e.newIntakeDays,E.minNewWeighIns-e.newWeighIns)} d\xEDas de registro.`;if(!e.meaningful)return`Con ${n}, el peso viene ${t} ${g(Math.abs(e.observedWeekly),2)} kg/semana. ${i} El objetivo actual est\xE1 suficientemente cerca y no necesita cambiar.`;const r=e.currentTarget+e.appliedChange;return`Con ${n}, el peso viene ${t} ${g(Math.abs(e.observedWeekly),2)} kg/semana. ${i} El objetivo pasar\xEDa de ${g(Math.round(e.currentTarget))} a ${g(Math.round(r))} kcal por d\xEDa (${e.appliedChange>0?"+":""}${g(e.appliedChange)}).${e.limited?` Por seguridad, cada revisi\xF3n se limita a ${E.maxAdjustment} kcal.`:""}`}function vi(e){const t=Math.max(e?.intakeDays||0,e?.weighInCount||0);if(!e?.ready){const a=Math.max(0,E.minIntakeDays-(e?.intakeDays||0),E.minSpanDays-(e?.spanDays||0),E.minWeighIns-(e?.weighInCount||0));return{registeredDays:t,reviewText:a>0?`Faltan ${a} d\xEDas de registro`:"Validando la tendencia"}}if(!e.calendarDue){const a=k(e.nextReviewDate),n=a?Math.max(0,Math.ceil(ye(k(R()),a))):0;return{registeredDays:t,reviewText:n?`Faltan ${n} d\xEDas para revisar`:"Revisi\xF3n pr\xF3xima"}}if(!e.hasNewData){const a=Math.max(0,E.minNewIntakeDays-(e.newIntakeDays||0),E.minNewWeighIns-(e.newWeighIns||0));return{registeredDays:t,reviewText:a?`Faltan ${a} d\xEDas de registro`:"Esperando registros nuevos"}}return{registeredDays:t,reviewText:e.meaningful?"Conviene revisar el ajuste":"Todav\xEDa est\xE1 dentro del rango"}}function Po(e,t,a=d.weighIns){const n=qt(e,t,a),i=o("#automatic-adjustment-summary"),r=o("#automatic-adjustment-facts"),s=o("#run-auto-adjustment");if(!i||!r||!s)return n;i.textContent=bi(n);const c=vi(n);r.innerHTML=`<div><span>Gasto adaptativo</span><b>${n.ready?`${g(Math.round(n.adaptiveMaintenance))} kcal`:"Aprendiendo"}</b></div><div><span>Confianza</span><b>${n.confidenceLabel}</b></div><div><span>Registro acumulado</span><b>${c.registeredDays} d\xEDas</b></div><div><span>Revisi\xF3n</span><b>${c.reviewText}</b></div>`;const l=!!(n.ready&&n.reviewDue),u=!!(l&&n.meaningful);return s.hidden=!l,s.disabled=!u,l&&(s.textContent=u?"Revisar ajuste autom\xE1tico":"Todav\xEDa est\xE1 dentro del rango"),n}function yi(e,t=d.profile){if(!e?.ready||!e.reviewDue||!e.meaningful)return null;const a=!0;return t.calibrationOffset=e.newOffset,t.planStartDate=e.latest?.date||R(),t.planStartWeight=Number(m(e.latestTrend,e.latest?.weight).toFixed(2)),d.calibrationHistory=[...d.calibrationHistory||[],{date:R(),intakeDays:e.intakeDays,completedDays:e.completedDays,weighInCount:e.weighInCount,spanDays:e.spanDays,averageCalories:Math.round(e.averageCalories),observedWeekly:Number(e.observedWeekly.toFixed(3)),observedMaintenance:Math.round(e.observedMaintenance),adaptiveMaintenance:Math.round(e.adaptiveMaintenance),confidence:Number(e.confidenceScore.toFixed(3)),alpha:Number(e.alpha.toFixed(3)),previousTarget:Math.round(e.currentTarget),targetChange:e.appliedChange,newOffset:e.newOffset,reviewOnly:!1}].slice(-30),{adjusted:a}}function Ro(){const e=o("#profile-form"),t=m(e.elements.currentWeight.value,NaN),a=gn(),n=Number.isFinite(t)?Ne(d.weighIns,[{date:R(),weight:t}]):d.weighIns,i=z(a,n,t),r=o("#automatic-adjustment-feedback"),s=Ei(a,t);if(s){fe(r,`Antes de revisar: ${s.message}`,!0),Si(s.field);return}const c=qt(a,i,n);if(!c.ready){fe(r,c.reason,!0);return}if(!c.calendarDue){fe(r,`La pr\xF3xima revisi\xF3n corresponde el ${j(c.nextReviewDate)}.`);return}if(!c.hasNewData){const w=Math.max(0,E.minNewIntakeDays-c.newIntakeDays,E.minNewWeighIns-c.newWeighIns);fe(r,`La fecha m\xEDnima ya lleg\xF3, pero faltan ${w} d\xEDas de registro para volver a revisar.`);return}if(!c.meaningful){fe(r,"Todav\xEDa est\xE1 dentro del rango; no hace falta aplicar un ajuste.");return}const l=Math.round(c.currentTarget+c.appliedChange),u=Math.max(c.intakeDays||0,c.weighInCount||0),f=`M.A.S.A. propone llevar el objetivo diario a ${g(l)} kcal. La correcci\xF3n es gradual y usa ${u} d\xEDas de registro, con confianza ${c.confidenceLabel.toLowerCase()}. \xBFAplicar el ajuste autom\xE1tico?`;!window.confirm(f)||(d.weighIns=n,d.profile=a,!yi(c,d.profile))||(d.configured=!0,F(d),$i(),ga(),fe(r,`Ajuste autom\xE1tico aplicado. Nuevo objetivo aproximado: ${g(l)} kcal por d\xEDa.`),D())}function qo(e,t,a){const n=qt(e,t,a);at=Uo(e,t,a);const i=o("#recalibration-panel");if(!i)return;i.hidden=!1,i.dataset.state=n.status;const r=o("#recalibration-title"),s=o("#recalibration-text"),c=o("#recalibration-facts"),l=o("#recalibration-note"),u=o("#recalibration-progress-fill"),f=o("#apply-recalibration");o("#recalibration-kicker").textContent=n.status==="ready"?"REAJUSTE DISPONIBLE":"GASTO ADAPTATIVO",n.ready?n.calendarDue?n.hasNewData?n.meaningful?r.textContent=`${e.name?`${e.name}, hay`:"Hay"} un reajuste listo para revisar.`:r.textContent="Revisi\xF3n completa: el objetivo sigue bien calibrado.":r.textContent="La fecha lleg\xF3; faltan registros nuevos.":r.textContent=`Pr\xF3xima revisi\xF3n: ${j(n.nextReviewDate)}.`:r.textContent="M.A.S.A. est\xE1 aprendiendo de tus registros.",s.textContent=bi(n);const p=vi(n);c.innerHTML=`<div><span>Gasto estimado</span><b>${n.ready?`${g(Math.round(n.adaptiveMaintenance))} kcal`:`${g(Math.round(t.maintenance))} kcal iniciales`}</b></div><div><span>Confianza</span><b>${n.confidenceLabel}</b></div><div><span>Registro acumulado</span><b>${p.registeredDays} d\xEDas</b></div><div><span>Revisi\xF3n</span><b>${p.reviewText}</b></div>`,u.style.width=`${n.progress}%`,l.textContent=n.ready?`La correcci\xF3n mezcla el gasto anterior con el observado usando \u03B2 = ${g(n.alpha,2)}. Las revisiones se separan por ${E.reviewIntervalDays} d\xEDas y requieren registros nuevos desde la revisi\xF3n anterior.`:"El c\xE1lculo necesita suficiente distancia entre fechas, d\xEDas de ingesta y pesajes comparables; no reacciona a un peso aislado.";const w=!!(n.ready&&n.reviewDue),y=!!at;f.hidden=!w,f.disabled=!y,w&&(f.textContent=y?"Revisar ajuste autom\xE1tico":"Todav\xEDa est\xE1 dentro del rango")}function Oo(){if(!at)return;const e=Math.round(at.currentTarget+at.appliedChange);!window.confirm(`El objetivo diario pasar\xE1 a aproximadamente ${g(e)} kcal. \xBFAplicar el ajuste autom\xE1tico?`)||!yi(at,d.profile)||(F(d),D())}function wi(e){return[...e.weighIns.map(t=>t.date),...Object.keys(d.diary||{})].map(k).filter(Boolean)}function jo(e){const t=wi(e);return t.length?new Date(Math.max(...t.map(a=>a.getTime()))):k(R())}function _o(e){const t=wi(e);return t.length?new Date(Math.min(...t.map(a=>a.getTime()))):null}function Ot(e,t=!1){if(Mt==="all")return{start:null,end:null};const a={"1m":1,"3m":3,"6m":6}[Mt]||3,n=jo(e),i=_o(e),r=Fn(n,-a);return{start:i&&r<i?i:r,end:t?Fn(n,a):n}}function mn(e,t){return e&&(!t.start||e>=t.start)&&(!t.end||e<=t.end)}function ma(e){return Object.keys(d.diary||{}).sort().map(t=>{const a=k(t),n=ta(t);return{date:a,iso:t,calories:n.calories,hasEntries:(d.diary[t]||[]).length>0,completed:!!d.completedDays?.[t]}}).filter(t=>t.hasEntries&&mn(t.date,e))}function xi(e,t,a){const n=(a||[]).filter(v=>v.hasEntries&&Number.isFinite(v.calories)),i=n.filter(v=>v.completed),r=i.length>=3?i:n;if(!r.length||!Number.isFinite(e.targetCalories))return{logged:n,used:r,completedOnly:!1,average:null,difference:null,observedWeekly:null,spanDays:0,remainingReviewDays:21};const s=r.reduce((v,h)=>v+h.calories,0)/r.length,c=s-e.targetCalories,l=r[0].date,u=r.at(-1).date,f=Math.max(1,Math.round(ye(l,u))+1),p=t.filter(v=>{const h=k(v.date);return h>=X(l,-4)&&h<=X(u,4)}),w=Un(p,100),y=Number.isFinite(w)?s-w*7700/7:null,x=Number.isFinite(y)&&Number.isFinite(e.dailyAdjustment)?y+e.dailyAdjustment:null,b=Number.isFinite(x)?x-e.targetCalories:null;return{logged:n,used:r,completedOnly:i.length>=3,average:s,difference:c,observedWeekly:w,estimatedMaintenance:y,recommendedTarget:x,targetAdjustment:b,spanDays:f,remainingReviewDays:Math.max(0,21-f),firstDate:l,lastDate:u,weighInCount:p.length}}function Mi(e){const t=Ot(e,!1),a=e.trends.filter(i=>mn(k(i.date),t)),n=[];return a.forEach((i,r)=>{if(r===0)return;const s=k(i.date);let c=null;for(let y=r-1;y>=0;y-=1){const x=a[y];if(ye(k(x.date),s)>=5){c=x;break}}if(!c)return;const l=k(c.date),u=ye(l,s);if(u>16)return;const f=ma({start:X(l,1),end:s});if(f.length<3||!Number.isFinite(e.plan.targetCalories))return;const p=f.reduce((y,x)=>y+x.calories,0)/f.length,w=(i.trend-c.trend)*7/u;n.length&&ye(n.at(-1).date,s)<5||n.push({date:s,calorieDifference:p-e.plan.targetCalories,weeklyWeightChange:w,loggedDays:f.length})}),n}function Bo(e){if(e.length<3)return null;const t=e.reduce((s,c)=>s+c.calorieDifference,0)/e.length,a=e.reduce((s,c)=>s+c.weeklyWeightChange,0)/e.length,n=e.reduce((s,c)=>s+(c.calorieDifference-t)*(c.weeklyWeightChange-a),0),i=Math.sqrt(e.reduce((s,c)=>s+(c.calorieDifference-t)**2,0)),r=Math.sqrt(e.reduce((s,c)=>s+(c.weeklyWeightChange-a)**2,0));return i&&r?n/(i*r):null}function Wo(e){const t={weight:{eyebrow:"PLAN VS REALIDAD",title:"Tu peso real frente al camino previsto.",description:"La l\xEDnea s\xF3lida muestra la tendencia real. La punteada conserva el plan original.",legend:["Peso real","Tendencia","Plan","Objetivo"],classes:["legend-real","legend-trend","legend-plan","legend-goal"]},calories:{eyebrow:"CONSUMO VS OBJETIVO",title:"Las calor\xEDas que registr\xE1s frente al n\xFAmero del plan.",description:"El promedio se calcula con d\xEDas terminados cuando hay suficientes; de lo contrario usa todos los d\xEDas con ingestas.",legend:["Consumidas","Objetivo","",""],classes:["legend-trend","legend-plan","",""]},weekly:{eyebrow:"PROMEDIO SEMANAL",title:"Una lectura m\xE1s estable de tus calor\xEDas.",description:"Cada barra muestra el promedio diario de una semana. La l\xEDnea punteada es el objetivo diario.",legend:["Promedio semanal","Objetivo","",""],classes:["legend-trend","legend-plan","",""]}}[e];o("#progress-chart-eyebrow").textContent=t.eyebrow,o("#progress-chart-title").textContent=t.title,o("#progress-chart-description").textContent=t.description,t.legend.forEach((a,n)=>{const i=o(`#progress-legend-${n+1}`);i.textContent=a,i.hidden=!a,i.className=t.classes[n]||""}),S("[data-progress-chart]").forEach(a=>a.classList.toggle("active",a.dataset.progressChart===e))}function zo(e){o(".progress-model-data").hidden=!0;const t=ma(Ot(e,!1)),a=xi(e.plan,e.weighIns,t);if(!Number.isFinite(a.average)){q(1,"Promedio","\u2014"),q(2,"Diferencia","\u2014"),q(3,"Ritmo de peso","\u2014"),o("#chart-insight-title").textContent="Faltan d\xEDas comparables.",o("#chart-insight").textContent="Registr\xE1 ingestas en varios d\xEDas y algunos pesajes dentro del mismo per\xEDodo para comparar consumo, objetivo y cambio de peso.",o("#chart-insight-meta").textContent="La lectura mejora al terminar los d\xEDas y registrar el peso con cierta regularidad.";return}const n=a.difference,i=a.observedWeekly;q(1,"Promedio",`${g(Math.round(a.average))} kcal`),q(2,"Diferencia",`${n>0?"+":""}${g(Math.round(n))} kcal`),q(3,"Ritmo de peso",Number.isFinite(i)?`${i>0?"+":""}${g(i,2)} kg/sem`:"Faltan pesajes");const r=Math.abs(n)<50?"est\xE1s pr\xE1cticamente en el objetivo":`consum\xEDs en promedio ${g(Math.abs(Math.round(n)))} kcal ${n>0?"m\xE1s":"menos"} que el objetivo`,s=Number.isFinite(i)?Math.abs(i)<.05?"el peso se mantiene pr\xE1cticamente estable":`el peso ${i<0?"sigue bajando":"sigue subiendo"} a ${g(Math.abs(i),2)} kg por semana`:"todav\xEDa no hay suficientes pesajes del mismo per\xEDodo";o("#chart-insight-title").textContent=`${r.charAt(0).toUpperCase()}${r.slice(1)}.`;let c=`${r}, y ${s}.`;if(Number.isFinite(a.targetAdjustment)&&a.weighInCount>=3){const l=Math.round(a.targetAdjustment/25)*25;Math.abs(l)<50?c+=" El objetivo actual est\xE1 razonablemente alineado con lo observado; no aparece un ajuste relevante por ahora.":a.remainingReviewDays>0?c+=` Si este patr\xF3n se mantiene unos ${a.remainingReviewDays} d\xEDas m\xE1s, tendr\xEDa sentido revisar el objetivo en aproximadamente ${l>0?"+":""}${g(l)} kcal por d\xEDa.`:c+=` El per\xEDodo ya alcanza tres semanas: el modelo sugiere revisar el objetivo en aproximadamente ${l>0?"+":""}${g(l)} kcal por d\xEDa, antes de aplicar cambios autom\xE1ticamente.`}else{const l=Math.max(1,a.remainingReviewDays);c+=` Manten\xE9 registros durante aproximadamente ${l} d\xEDas m\xE1s junto con pesajes para estimar si el objetivo necesita una correcci\xF3n.`}o("#chart-insight").textContent=c,o("#chart-insight-meta").textContent=`${a.used.length} d\xEDas usados \xB7 ${a.completedOnly?"solo d\xEDas terminados":"d\xEDas con alguna ingesta"} \xB7 per\xEDodo de ${a.spanDays} d\xEDas`}function Qs(e){o(".progress-model-data").hidden=!0;const t=Mi(e),a=Bo(t);if(!t.length){q(1,"Per\xEDodos","0"),q(2,"Desv\xEDo medio","\u2014"),q(3,"Cambio medio","\u2014"),o("#chart-insight-title").textContent="Todav\xEDa no se pueden cruzar los datos.",o("#chart-insight").textContent="Hacen falta varios per\xEDodos que contengan tanto ingestas como pesajes. La gr\xE1fica usa ventanas de aproximadamente una semana para reducir el ruido diario.",o("#chart-insight-meta").textContent="Como referencia, tres o cuatro semanas completas empiezan a producir una lectura \xFAtil.";return}const n=t.reduce((r,s)=>r+s.calorieDifference,0)/t.length,i=t.reduce((r,s)=>r+s.weeklyWeightChange,0)/t.length;if(q(1,"Per\xEDodos",String(t.length)),q(2,"Desv\xEDo medio",`${n>0?"+":""}${g(Math.round(n))} kcal`),q(3,"Cambio medio",`${i>0?"+":""}${g(i,2)} kg/sem`),!Number.isFinite(a)||t.length<4)o("#chart-insight-title").textContent="La relaci\xF3n empieza a aparecer.",o("#chart-insight").textContent="Ya existen per\xEDodos comparables, pero todav\xEDa son pocos para describir una relaci\xF3n estable entre el desv\xEDo cal\xF3rico y la variaci\xF3n de peso.";else{const r=Math.abs(a)<.25?"d\xE9bil":Math.abs(a)<.55?"moderada":"marcada",s=a>0?"los per\xEDodos con m\xE1s calor\xEDas tienden a acompa\xF1arse de una variaci\xF3n de peso m\xE1s alta":"los per\xEDodos con m\xE1s calor\xEDas no se est\xE1n reflejando todav\xEDa en una variaci\xF3n de peso m\xE1s alta";o("#chart-insight-title").textContent=`Relaci\xF3n ${r} en tus datos.`,o("#chart-insight").textContent=`En estos per\xEDodos, ${s}. Es una asociaci\xF3n descriptiva y no demuestra causalidad: agua, horarios y d\xEDas incompletos pueden mover mucho el resultado.`}o("#chart-insight-meta").textContent=`${t.length} per\xEDodos comparables \xB7 cada punto exige al menos 3 d\xEDas con ingestas entre dos tendencias de peso`}function vt(){if(!W)return;Wo(tt);const e=o("#progress-chart");let t=!1;tt==="calories"?(t=Go(e,W),zo(W)):tt==="weekly"?(t=Qo(e,W),Xo(W)):(t=Ko(e,W),Fo(W.profile,W.plan,W.weighIns,W.trends,W.observedWeekly)),o("#progress-chart-empty").hidden=t}function Ci(e){const t=["weight","calories","weekly"],a=t.indexOf(tt);tt=t[(a+e+t.length)%t.length],vt()}function Ho(e,t,a,n,i){const r=[],s=k(e.planStartDate)||k(a[0]?.date),c=m(e.planStartWeight,a[0]?.weight);if(s&&Number.isFinite(c)){const l=Math.min(104,Math.max(26,Math.ceil(t.estimatedWeeks||52)));for(let u=0;u<=l;u+=1){const f=X(s,u*7),p=qn(e,c,s,t.targetWeight,t.rate.selected,f);if(r.push({date:te(f),weight:p}),Number.isFinite(t.targetWeight)&&Math.abs(p-t.targetWeight)<.03&&f>new Date)break}}W={profile:e,plan:t,weighIns:a,trends:n,planProjection:r,observedWeekly:i},vt()}function Yo(e){const t=Ot(e,!0),a=n=>mn(k(n.date),t);return{weighIns:e.weighIns.filter(a),trends:e.trends.filter(a),planProjection:e.planProjection.filter(a),start:t.start,end:t.end}}function jt(e){if(!e)return null;const t=e.getBoundingClientRect();if(!t.width||!t.height)return null;const a=Math.min(2,window.devicePixelRatio||1);e.width=Math.round(t.width*a),e.height=Math.round(t.height*a);const n=e.getContext("2d");return n.setTransform(a,0,0,a,0,0),{ctx:n,width:t.width,height:t.height}}function Ko(e,t){const a=jt(e);if(!a)return t.weighIns.length>=2;const{ctx:n,width:i,height:r}=a;n.clearRect(0,0,i,r);const s=Yo(t),c=[...s.weighIns.map(h=>({date:k(h.date),value:h.weight})),...s.planProjection.map(h=>({date:k(h.date),value:h.weight}))].filter(h=>h.date&&Number.isFinite(h.value));if(c.length<2)return!1;const l={left:48,right:18,top:22,bottom:36};let u=Math.min(...c.map(h=>h.date.getTime())),f=Math.max(...c.map(h=>h.date.getTime()));s.start&&(u=s.start.getTime()),s.end&&(f=s.end.getTime());let p=Math.min(...c.map(h=>h.value)),w=Math.max(...c.map(h=>h.value));Number.isFinite(t.plan.targetWeight)&&(p=Math.min(p,t.plan.targetWeight),w=Math.max(w,t.plan.targetWeight));const y=Math.max(.7,(w-p)*.14);p-=y,w+=y;const x=h=>l.left+(h.getTime()-u)/Math.max(1,f-u)*(i-l.left-l.right),b=h=>l.top+(w-h)/Math.max(.1,w-p)*(r-l.top-l.bottom);n.font="11px ui-monospace, monospace",n.textAlign="right",n.textBaseline="middle";for(let h=0;h<=4;h+=1){const M=p+(w-p)*h/4,N=b(M);n.strokeStyle="rgba(242,239,230,.12)",n.lineWidth=1,n.beginPath(),n.moveTo(l.left,N),n.lineTo(i-l.right,N),n.stroke(),n.fillStyle="rgba(242,239,230,.55)",n.fillText(g(M,1),l.left-8,N)}n.textAlign="center",n.textBaseline="top";const v=i<520?3:5;for(let h=0;h<=v;h+=1){const M=u+(f-u)*h/v,N=new Date(M);n.fillStyle="rgba(242,239,230,.48)",n.fillText(new Intl.DateTimeFormat("es-UY",{month:"short",year:Mt==="all"?"2-digit":void 0}).format(N),x(N),r-l.bottom+11)}return Number.isFinite(t.plan.targetWeight)&&(n.strokeStyle="rgba(141,124,255,.82)",n.lineWidth=1.5,n.setLineDash([4,5]),n.beginPath(),n.moveTo(l.left,b(t.plan.targetWeight)),n.lineTo(i-l.right,b(t.plan.targetWeight)),n.stroke(),n.setLineDash([])),fn(n,s.weighIns.map(h=>({date:k(h.date),value:h.weight})),x,b,"rgba(242,239,230,.38)",1.4,!1),Jo(n,s.weighIns.map(h=>({date:k(h.date),value:h.weight})),x,b,"#f2efe6",2.4),fn(n,s.trends.map(h=>({date:k(h.date),value:h.trend})),x,b,"#c8ff46",3,!1),fn(n,s.planProjection.map(h=>({date:k(h.date),value:h.weight})),x,b,"#ff6b52",2.3,!0),!0}function Go(e,t){const a=Ot(t,!1),n=ma(a),i=jt(e);if(!i)return n.length>0;const{ctx:r,width:s,height:c}=i;if(r.clearRect(0,0,s,c),!n.length||!Number.isFinite(t.plan.targetCalories))return!1;const l=t.plan.targetCalories,u=Math.max(l,...n.map(M=>M.calories),500)*1.12,f={left:52,right:18,top:22,bottom:40},p=a.start?.getTime()??n[0].date.getTime(),w=a.end?.getTime()??n.at(-1).date.getTime(),y=M=>f.left+(M.getTime()-p)/Math.max(864e5,w-p)*(s-f.left-f.right),x=M=>f.top+(u-M)/u*(c-f.top-f.bottom),b=s-f.left-f.right,v=Math.max(3,Math.min(22,b/Math.max(n.length*1.7,12)));r.font="10px ui-monospace, monospace",r.textAlign="right",r.textBaseline="middle";for(let M=0;M<=4;M+=1){const N=u*M/4,$=x(N);r.strokeStyle="rgba(242,239,230,.12)",r.beginPath(),r.moveTo(f.left,$),r.lineTo(s-f.right,$),r.stroke(),r.fillStyle="rgba(242,239,230,.52)",r.fillText(g(N,0),f.left-7,$)}r.save(),r.strokeStyle="#ff6b52",r.lineWidth=2,r.setLineDash([7,5]),r.beginPath(),r.moveTo(f.left,x(l)),r.lineTo(s-f.right,x(l)),r.stroke(),r.restore(),n.forEach(M=>{const N=y(M.date),$=x(M.calories);r.fillStyle=M.completed?"#c8ff46":"#8d7cff",r.fillRect(N-v/2,$,v,x(0)-$)}),r.textAlign="center",r.textBaseline="top";const h=s<520?3:5;for(let M=0;M<=h;M+=1){const N=new Date(p+(w-p)*M/h);r.fillStyle="rgba(242,239,230,.48)",r.fillText(new Intl.DateTimeFormat("es-UY",{month:"short",day:Mt==="1m"?"2-digit":void 0}).format(N),y(N),c-f.bottom+10)}return!0}function Vo(e){const t=new Date(e),a=t.getDay();return t.setHours(0,0,0,0),t.setDate(t.getDate()-(a+6)%7),t}function ki(e){const t=ma(Ot(e,!1)),a=new Map;return t.forEach(n=>{const i=Vo(n.date),r=te(i);a.has(r)||a.set(r,{date:i,days:[]}),a.get(r).days.push(n)}),[...a.values()].sort((n,i)=>n.date-i.date).map(n=>{const i=n.days.filter(c=>c.completed),r=i.length>=3?i:n.days,s=r.reduce((c,l)=>c+l.calories,0)/Math.max(1,r.length);return{date:n.date,average:s,difference:Number.isFinite(e.plan.targetCalories)?s-e.plan.targetCalories:null,loggedDays:n.days.length,usedDays:r.length,completedOnly:i.length>=3}})}function Xo(e){o(".progress-model-data").hidden=!0;const t=ki(e),a=t.at(-1);if(!a||!Number.isFinite(e.plan.targetCalories)){q(1,"Semanas","0"),q(2,"Promedio","\u2014"),q(3,"D\xEDas usados","\u2014"),o("#chart-insight-title").textContent="Todav\xEDa falta una semana con registros.",o("#chart-insight").textContent="Registr\xE1 comidas durante varios d\xEDas. Esta vista agrupa los datos por semana para que un d\xEDa aislado no domine la lectura.",o("#chart-insight-meta").textContent="La barra semanal aparece desde el primer d\xEDa registrado y mejora al completar m\xE1s d\xEDas.";return}const n=a.difference,i=Math.abs(n)<=Math.max(75,e.plan.targetCalories*.05),r=new Intl.DateTimeFormat("es-UY",{day:"2-digit",month:"short"}).format(a.date);q(1,"Semana desde",r),q(2,"Promedio",`${g(Math.round(a.average))} kcal`),q(3,"D\xEDas usados",String(a.usedDays)),o("#chart-insight-title").textContent=i?"La \xFAltima semana est\xE1 cerca del objetivo.":`La \xFAltima semana qued\xF3 ${g(Math.abs(Math.round(n)))} kcal ${n>0?"por encima":"por debajo"}.`,o("#chart-insight").textContent=i?"El promedio semanal est\xE1 dentro de un margen peque\xF1o. Conviene mantener el registro antes de hacer cambios por uno o dos d\xEDas puntuales.":`El promedio diario de esa semana fue ${g(Math.round(a.average))} kcal. Mir\xE1 si el patr\xF3n se repite durante otra semana antes de modificar el objetivo.`,o("#chart-insight-meta").textContent=`${t.length} semanas visibles \xB7 ${a.completedOnly?"usa d\xEDas terminados":"usa todos los d\xEDas con ingestas"}`}function Qo(e,t){const a=ki(t),n=jt(e);if(!n)return a.length>0;const{ctx:i,width:r,height:s}=n;if(i.clearRect(0,0,r,s),!a.length||!Number.isFinite(t.plan.targetCalories))return!1;const c=t.plan.targetCalories,l=Math.max(c,...a.map(x=>x.average),500)*1.12,u={left:54,right:18,top:22,bottom:48},p=(r-u.left-u.right)/Math.max(1,a.length),w=Math.max(12,Math.min(48,p*.58)),y=x=>u.top+(l-x)/l*(s-u.top-u.bottom);i.font="10px ui-monospace, monospace",i.textAlign="right",i.textBaseline="middle";for(let x=0;x<=4;x+=1){const b=l*x/4,v=y(b);i.strokeStyle="rgba(242,239,230,.12)",i.beginPath(),i.moveTo(u.left,v),i.lineTo(r-u.right,v),i.stroke(),i.fillStyle="rgba(242,239,230,.52)",i.fillText(g(b,0),u.left-7,v)}return i.save(),i.strokeStyle="#ff6b52",i.lineWidth=2,i.setLineDash([7,5]),i.beginPath(),i.moveTo(u.left,y(c)),i.lineTo(r-u.right,y(c)),i.stroke(),i.restore(),a.forEach((x,b)=>{const v=u.left+p*(b+.5),h=y(x.average),M=Math.max(75,c*.05);i.fillStyle=Math.abs(x.average-c)<=M?"#c8ff46":x.average>c?"#ff6b52":"#8d7cff",i.fillRect(v-w/2,h,w,y(0)-h);const N=r<520?Math.max(2,Math.ceil(a.length/5)):Math.max(1,Math.ceil(a.length/10));((r<520?b%N===0:a.length<=14||b%N===0)||b===a.length-1)&&(i.fillStyle="rgba(242,239,230,.5)",i.textAlign="center",i.textBaseline="top",i.fillText(new Intl.DateTimeFormat("es-UY",{day:"2-digit",month:"short"}).format(x.date),v,s-u.bottom+10))}),!0}function Js(e,t){const a=Mi(t),n=jt(e);if(!n)return a.length>0;const{ctx:i,width:r,height:s}=n;if(i.clearRect(0,0,r,s),!a.length)return!1;const c={left:58,right:22,top:24,bottom:48};let l=Math.min(0,...a.map(v=>v.calorieDifference)),u=Math.max(0,...a.map(v=>v.calorieDifference)),f=Math.min(0,...a.map(v=>v.weeklyWeightChange)),p=Math.max(0,...a.map(v=>v.weeklyWeightChange));const w=Math.max(100,(u-l)*.15),y=Math.max(.12,(p-f)*.18);l-=w,u+=w,f-=y,p+=y;const x=v=>c.left+(v-l)/Math.max(1,u-l)*(r-c.left-c.right),b=v=>c.top+(p-v)/Math.max(.01,p-f)*(s-c.top-c.bottom);i.font="10px ui-monospace, monospace";for(let v=0;v<=4;v+=1){const h=l+(u-l)*v/4,M=f+(p-f)*v/4;i.strokeStyle="rgba(242,239,230,.1)",i.beginPath(),i.moveTo(x(h),c.top),i.lineTo(x(h),s-c.bottom),i.stroke(),i.beginPath(),i.moveTo(c.left,b(M)),i.lineTo(r-c.right,b(M)),i.stroke(),i.fillStyle="rgba(242,239,230,.5)",i.textAlign="center",i.textBaseline="top",i.fillText(`${h>0?"+":""}${g(h,0)}`,x(h),s-c.bottom+9),i.textAlign="right",i.textBaseline="middle",i.fillText(`${M>0?"+":""}${g(M,2)}`,c.left-8,b(M))}return i.strokeStyle="rgba(255,107,82,.82)",i.lineWidth=1.5,i.beginPath(),i.moveTo(x(0),c.top),i.lineTo(x(0),s-c.bottom),i.stroke(),i.strokeStyle="rgba(141,124,255,.82)",i.beginPath(),i.moveTo(c.left,b(0)),i.lineTo(r-c.right,b(0)),i.stroke(),a.forEach(v=>{i.beginPath(),i.arc(x(v.calorieDifference),b(v.weeklyWeightChange),5,0,Math.PI*2),i.fillStyle=v.calorieDifference>0?"#ff6b52":"#c8ff46",i.fill(),i.strokeStyle="#10131a",i.lineWidth=1.5,i.stroke()}),i.fillStyle="rgba(242,239,230,.55)",i.textAlign="center",i.textBaseline="bottom",i.fillText("kcal/d\xEDa frente al objetivo",c.left+(r-c.left-c.right)/2,s-3),!0}function fn(e,t,a,n,i,r,s,c=[8,7]){const l=t.filter(u=>u.date&&Number.isFinite(u.value));l.length<2||(e.save(),e.beginPath(),l.forEach((u,f)=>f?e.lineTo(a(u.date),n(u.value)):e.moveTo(a(u.date),n(u.value))),e.strokeStyle=i,e.lineWidth=r,e.lineJoin="round",e.lineCap="round",s&&e.setLineDash(c),e.stroke(),e.restore())}function Jo(e,t,a,n,i,r){e.fillStyle=i,t.forEach(s=>{!s.date||!Number.isFinite(s.value)||(e.beginPath(),e.arc(a(s.date),n(s.value),r,0,Math.PI*2),e.fill())})}function Zo(e){const t=o("#history-list"),a=o("#history-date-select");t.innerHTML="";const n=[...e].reverse();if(o("#history-empty").hidden=n.length>0,o("#history-count").textContent=`${n.length} ${n.length===1?"registro":"registros"} \xB7 elegir por fecha`,a.hidden=n.length===0,a.innerHTML="",!n.length){Me=null;return}(!Me||!n.some(s=>s.id===Me))&&(Me=n[0].id),n.forEach(s=>{const c=document.createElement("option");c.value=s.id,c.textContent=`${j(s.date)} \xB7 ${ae(s.weight)}`,a.appendChild(c)}),a.value=Me;const i=n.find(s=>s.id===Me)||n[0],r=document.createElement("article");r.className="history-row",r.dataset.id=i.id,r.innerHTML=`
-      <label><span>Fecha</span><input class="date-input" data-field="date" type="text" inputmode="numeric" maxlength="10" value="${ot(i.date)}" aria-label="Fecha del pesaje"></label>
-      <label><span>Peso</span><input data-field="weight" type="number" min="20" max="400" step="0.1" value="${i.weight}" aria-label="Peso en kg"></label>
-      <div class="history-trend"><span>Tendencia</span><b>${ae(i.trend,2)}</b></div>
-      <button class="history-delete" type="button" data-delete-weight="${i.id}">Eliminar</button>`,t.appendChild(r)}function Ni(){const e=document.querySelector(".settings-sheet");e&&e.classList.toggle("is-scrolled",e.scrollTop>110)}function yt(e=!1,t="profile"){et=e||!d.configured,$i(),o("#settings-modal").hidden=!1,o("#close-settings").hidden=et,o("#cancel-profile").hidden=et,document.body.classList.add("modal-open"),wt(t),ga(),requestAnimationFrame(Ni)}function fa(){et||(o("#settings-modal").hidden=!0,document.body.classList.remove("modal-open"))}function wt(e){const t=e==="account"||e==="weights"?"account":"profile";S("[data-settings-tab]").forEach(a=>a.classList.toggle("active",a.dataset.settingsTab===t)),o("#settings-profile").hidden=t!=="profile",o("#settings-account").hidden=t!=="account",t==="account"&&window.MASA_CLOUD?.refreshAccountSecurity?.()}function $i(){Ca=!0;const e=o("#profile-form"),t=d.profile,a=Aa(),n=o("#account-display-name");n&&(n.value=t.name||""),e.elements.birthDate.value=ot(t.birthDate),e.elements.sex.value=t.sex||"male",e.elements.heightCm.value=t.heightCm||"",e.elements.currentWeight.value=a?.weight||"",e.elements.bodyFat.value=t.bodyFat||"";const i=e.querySelector(`[name="formula"][value="${t.formula}"]`)||e.querySelector('[name="formula"][value="mifflin"]');i.checked=!0,e.elements.activityFactor.value=String(t.activityFactor||1.35),e.elements.goalType.value=t.goalType||"loss",e.elements.goalMetric.value=t.goalMetric||"weight",e.elements.goalWeight.value=t.goalWeight||"",e.elements.goalBodyFat.value=t.goalBodyFat||"",e.elements.goalDate.value=ot(t.goalDate),e.elements.rateMode.value=t.rateMode||"auto",e.elements.weeklyRatePct.value=t.weeklyRatePct||.5,e.elements.macroMode.value=t.macroMode||"athletic";const r=z(t,d.weighIns);e.elements.proteinPct.value=t.macroMode==="custom"?Math.round(t.proteinPct):20,e.elements.fatPct.value=t.macroMode==="custom"?Math.round(t.fatPct):30,e.elements.carbPct.value=t.macroMode==="custom"?Math.round(t.carbPct):50,hi(),setTimeout(()=>{Ca=!1},0)}function gn(){const e=o("#profile-form");return La({...d.profile,name:d.profile.name||"",birthDate:I(e.elements.birthDate.value),sex:e.elements.sex.value,heightCm:e.elements.heightCm.value,bodyFat:e.elements.bodyFat.value,formula:e.elements.formula.value,activityFactor:e.elements.activityFactor.value,goalType:e.elements.goalType.value,goalMetric:e.elements.goalMetric.value,goalWeight:e.elements.goalWeight.value,goalBodyFat:e.elements.goalBodyFat.value,goalDate:I(e.elements.goalDate.value),rateMode:e.elements.rateMode.value,weeklyRatePct:e.elements.weeklyRatePct.value,macroMode:e.elements.macroMode.value,proteinPct:e.elements.proteinPct.value,fatPct:e.elements.fatPct.value,carbPct:e.elements.carbPct.value},d.weighIns)}function es(){const e=o("#profile-form"),t=m(e.elements.bodyFat.value,NaN),a=e.querySelector('[name="formula"][value="cunningham"]');a.disabled=!Number.isFinite(t),o("#cunningham-choice").classList.toggle("disabled",a.disabled),a.disabled&&a.checked&&(e.querySelector('[name="formula"][value="mifflin"]').checked=!0);const n=e.elements.goalType.value,i=e.elements.goalMetric.value,r=n==="maintain";e.elements.goalMetric.disabled=r,o("#goal-weight-field").hidden=r||i!=="weight",o("#goal-bodyfat-field").hidden=r||i!=="bodyFat",o("#manual-rate-field").hidden=r||e.elements.rateMode.value!=="manual",e.elements.goalDate.disabled=r,e.elements.rateMode.disabled=r,o("#activity-explanation").textContent=`${ji[e.elements.activityFactor.value]||""} Elegilo por la rutina completa, no solamente por el entrenamiento.`;const s=e.elements.macroMode.value==="custom";o("#custom-macro-fields").hidden=!s,o("#macro-sum-line").hidden=!s;const c=["proteinPct","fatPct","carbPct"].reduce((u,f)=>u+m(e.elements[f].value,0),0);o("#macro-percent-sum").textContent=`${g(c,0)}%`,o("#macro-percent-sum").closest(".macro-sum-line").classList.toggle("invalid",s&&Math.abs(c-100)>.01);const l={balanced:"balanceado",athletic:"atl\xE9tico",custom:"personalizado"};o("#macro-mode-label").textContent=l[e.elements.macroMode.value]||"atl\xE9tico"}function ga(e){const t=o("#profile-form");!Ca&&e?.target?.matches('[name="proteinPct"],[name="fatPct"],[name="carbPct"]')&&(t.elements.macroMode.value="custom"),es();const a=gn(),n=m(t.elements.currentWeight.value,NaN),i=Number.isFinite(n)?Ne(d.weighIns,[{date:R(),weight:n}]):d.weighIns,r=z(a,i,n);o("#preview-maintenance").textContent=Number.isFinite(r.maintenance)?`${g(Math.round(r.maintenance))} kcal`:"\u2014",o("#preview-calories").textContent=Number.isFinite(r.targetCalories)?`${g(Math.round(r.targetCalories))} kcal`:"\u2014",o("#preview-protein").textContent=Number.isFinite(r.proteinG)?`${g(Math.round(r.proteinG))} g`:"\u2014",o("#preview-fat").textContent=Number.isFinite(r.fatG)?`${g(Math.round(r.fatG))} g`:"\u2014",o("#preview-carbs").textContent=Number.isFinite(r.carbsG)?`${g(Math.round(r.carbsG))} g`:"\u2014",o("#preview-date").textContent=r.estimatedDate?j(r.estimatedDate):"\u2014",ts(a,r),as(a,r),Po(a,r,i)}function ts(e,t){const a=o("#goal-explanation");if(a.className="explanation-box",e.goalType==="maintain"){a.textContent="En mantenimiento no se aplica d\xE9ficit ni super\xE1vit. La referencia es sostener una tendencia estable.";return}if(e.goalMetric==="bodyFat"&&!Number.isFinite(m(e.bodyFat,NaN))){a.textContent="Para usar porcentaje de grasa como objetivo necesit\xE1s una estimaci\xF3n actual. Si no la conoc\xE9s, eleg\xED peso corporal.",a.classList.add("alert");return}if(!e.goalDate){a.textContent="Defin\xED una fecha objetivo. Si escrib\xEDs solo d\xEDa y mes, MASA usa el a\xF1o actual.",a.classList.add("alert");return}if(!Number.isFinite(t.targetWeight)){a.textContent="Falta un objetivo v\xE1lido.",a.classList.add("alert");return}if(t.rate.capped){a.textContent=`La fecha elegida exige ${g(t.rate.required,2)}% semanal. En autom\xE1tico se usa el m\xE1ximo de referencia de ${g(t.rate.bounds.suggestedMax,2)}%.`,a.classList.add("warn");return}if(t.rate.selected>t.rate.bounds.suggestedMax){a.textContent=`El ritmo manual supera ${g(t.rate.bounds.suggestedMax,2)}% semanal. La cuenta se muestra, pero queda marcada como agresiva.`,a.classList.add("alert");return}a.textContent=`Ritmo usado: ${g(t.rate.selected,2)}% semanal. La fecha objetivo y el ritmo se validan por separado.`}function as(e,t){const a=o("#macro-explanation");a.className="explanation-box";const n=m(e.proteinPct,0)+m(e.fatPct,0)+m(e.carbPct,0);if(e.macroMode==="balanced"){a.textContent="Balanceado: 20% de prote\xEDna, 30% de grasas y 50% de carbohidratos. Replica una distribuci\xF3n general por porcentajes.";return}if(e.macroMode==="athletic"){a.textContent=`Atl\xE9tico: ${g(t.macroRule.proteinPerKg,1)} g/kg de prote\xEDna, ${g(t.macroRule.effectiveFatPerKg,1)} g/kg de grasas y carbohidratos con las calor\xEDas restantes.`;return}if(Math.abs(n-100)>.01){a.textContent=`Los tres porcentajes suman ${g(n,0)}%. Deben sumar exactamente 100%.`,a.classList.add("alert");return}a.textContent=`Personalizado: ${g(e.proteinPct,0)}% prote\xEDna, ${g(e.fatPct,0)}% grasas y ${g(e.carbPct,0)}% carbohidratos.`}function Ei(e,t){const a=k(e.birthDate),n=k(R());if(!a)return{message:"Ingres\xE1 una fecha de nacimiento v\xE1lida en formato dd/mm/aaaa.",field:"birthDate"};if(a>n)return{message:"La fecha de nacimiento no puede ser posterior a hoy.",field:"birthDate"};if(!Number.isFinite(m(e.heightCm,NaN)))return{message:"Ingres\xE1 tu altura.",field:"heightCm"};if(!Number.isFinite(t)||t<=0)return{message:"Ingres\xE1 tu peso actual.",field:"currentWeight"};if(e.formula==="cunningham"&&!Number.isFinite(m(e.bodyFat,NaN)))return{message:"Cunningham necesita un porcentaje de grasa.",field:"bodyFat"};if(e.goalType!=="maintain"){if(e.goalMetric==="weight"&&!Number.isFinite(m(e.goalWeight,NaN)))return{message:"Ingres\xE1 un peso objetivo.",field:"goalWeight"};if(e.goalMetric==="bodyFat"&&!Number.isFinite(m(e.goalBodyFat,NaN)))return{message:"Ingres\xE1 el porcentaje de grasa objetivo.",field:"goalBodyFat"};if(e.goalMetric==="bodyFat"&&!Number.isFinite(m(e.bodyFat,NaN)))return{message:"Para un objetivo de grasa necesit\xE1s indicar el porcentaje actual.",field:"bodyFat"};if(!e.goalDate)return{message:"Ingres\xE1 una fecha objetivo.",field:"goalDate"};if(k(e.goalDate)<=n)return{message:"La fecha objetivo debe ser futura.",field:"goalDate"}}if(e.macroMode==="custom"){const i=[e.proteinPct,e.fatPct,e.carbPct].map(r=>m(r,NaN));if(!i.every(Number.isFinite))return{message:"Complet\xE1 los tres porcentajes de macros.",field:"proteinPct"};if(Math.abs(i.reduce((r,s)=>r+s,0)-100)>.01)return{message:"Los porcentajes de macros deben sumar 100%.",field:"proteinPct"}}return null}function Si(e){wt("profile");const t=o("#profile-form").elements[e];t&&(t.classList.add("invalid-field"),t.scrollIntoView({behavior:"smooth",block:"center"}),setTimeout(()=>t.focus(),280))}function ns(e){e.preventDefault();const t=e.currentTarget,a=m(t.elements.currentWeight.value,NaN),n=gn();S("#profile-form .invalid-field").forEach(s=>s.classList.remove("invalid-field"));const i=Ei(n,a);if(i){fe(o("#profile-feedback"),i.message,!0),Si(i.field);return}d.weighIns=Ne(d.weighIns,[{date:R(),weight:a}]);const r=re(d.weighIns)[0];n.planStartDate||(n.planStartDate=r.date),Number.isFinite(m(n.planStartWeight,NaN))||(n.planStartWeight=r.weight),d.profile=n,d.configured=!0,F(d),et=!1,o("#settings-modal").hidden=!0,document.body.classList.remove("modal-open"),fe(o("#profile-feedback"),""),D()}function is(e){e.preventDefault();const t=o("#account-display-name"),a=String(t?.value||"").trim().slice(0,60);d.profile=La({...d.profile,name:a},d.weighIns),F(d),t&&(t.value=a),fe(o("#account-profile-feedback"),a?"Nombre actualizado.":"Nombre eliminado."),D()}function rs(){const e=o("#toggle-account-password"),t=o("#account-password-manager"),a=e.getAttribute("aria-expanded")==="true";e.setAttribute("aria-expanded",String(!a)),e.querySelector("i").textContent=a?"\uFF0B":"\u2212",t.hidden=a,a||window.MASA_CLOUD?.refreshAccountSecurity?.()}function os(e){e.preventDefault();const t=m(o("#quick-weight").value,NaN),a=L;if(!Number.isFinite(t)||t<=0||!a){fe(o("#weight-feedback"),"Revis\xE1 el peso.",!0);return}d.weighIns=Ne(d.weighIns,[{date:a,weight:t}]),F(d),Ue=!1,fe(o("#weight-feedback"),`Registrado: ${ae(t)} \xB7 ${j(a)}.`),D()}function ss(e){const t=e.target.closest("input[data-field]");if(!t)return;const a=t.closest(".history-row"),n=d.weighIns.find(s=>s.id===a?.dataset.id);if(!n)return;const i=I(a.querySelector('[data-field="date"]').value),r=m(a.querySelector('[data-field="weight"]').value,NaN);!i||!Number.isFinite(r)||r<=0||(d.weighIns=d.weighIns.filter(s=>s.id!==n.id),d.weighIns=Ne(d.weighIns,[{id:n.id,date:i,weight:r}]),F(d),D())}function cs(e){const t=e.target.closest("[data-delete-weight]");t&&(d.weighIns=d.weighIns.filter(a=>a.id!==t.dataset.deleteWeight),Me===t.dataset.deleteWeight&&(Me=null),F(d),D(),d.configured||yt(!0,"profile"))}let pa=null;async function pn(){return globalThis.XLSX?globalThis.XLSX:(pa||(pa=new Promise((e,t)=>{const a=document.createElement("script");a.src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",a.async=!0,a.onload=()=>globalThis.XLSX?e(globalThis.XLSX):t(new Error("El m\xF3dulo de Excel no qued\xF3 disponible.")),a.onerror=()=>t(new Error("No se pudo cargar el m\xF3dulo de Excel. Revis\xE1 la conexi\xF3n y volv\xE9 a intentarlo.")),document.head.appendChild(a)}).catch(e=>{throw pa=null,e})),pa)}function Li(e){if(e instanceof Date&&!Number.isNaN(e.getTime()))return te(e);if(typeof e=="number"&&globalThis.XLSX?.SSF?.parse_date_code){const t=globalThis.XLSX.SSF.parse_date_code(e);if(t)return I(`${t.d}/${t.m}/${t.y}`)}return I(e)}async function Fi(e,t=[]){const a=await pn(),n=a.read(await e.arrayBuffer(),{type:"array",cellDates:!0}),i=t.find(r=>n.SheetNames.includes(r))||n.SheetNames[0];return i?a.utils.sheet_to_json(n.Sheets[i],{defval:"",raw:!0}):[]}function ce(e,t){return Object.keys(e||{}).map(n=>[n,_(n)]).find(([,n])=>t.some(i=>n===i||i.length>=4&&n.includes(i)))?.[0]||null}function ls(e){if(!Array.isArray(e)||!e.length)return[];const t=e.find(i=>i&&Object.keys(i).length)||{},a=ce(t,["fecha","date","dia"]),n=ce(t,["pesokg","peso","weight","kg"]);return!a||!n?[]:e.map(i=>({date:Li(i[a]),weight:m(i[n],NaN)})).filter(i=>i.date&&Number.isFinite(i.weight)&&i.weight>0)}function ds(e){const t=_(e);return["desayuno","breakfast"].includes(t)?"breakfast":["almuerzo","lunch"].includes(t)?"lunch":["merienda","snack","afternoonsnack"].includes(t)?"snack":["cena","dinner"].includes(t)?"dinner":"extras"}function us(e){const t=_(e);return e===!0||e===1||["si","yes","true","terminado","completo"].includes(t)}function ms(e){if(!Array.isArray(e)||!e.length)return[];const t=e.find(n=>n&&Object.keys(n).length)||{},a={id:ce(t,["id"]),date:ce(t,["fecha","date","dia"]),meal:ce(t,["comida","meal"]),name:ce(t,["descripcion","alimento","nombre","food"]),serving:ce(t,["porcion","serving"]),calories:ce(t,["calorias","calories","kcal"]),protein:ce(t,["proteinag","proteina","protein"]),fat:ce(t,["grasasg","grasa","grasas","fat"]),carbs:ce(t,["carbohidratosg","carbohidratos","carbs"]),completed:ce(t,["diaterminado","terminado","completed"])};return!a.date||!a.name||!a.calories?[]:e.map(n=>{const i=lt({id:String(a.id?n[a.id]:"").trim()||G(),name:n[a.name],calories:n[a.calories],protein:a.protein?n[a.protein]:0,fat:a.fat?n[a.fat]:0,carbs:a.carbs?n[a.carbs]:0,serving:a.serving?n[a.serving]:"1 porci\xF3n",meal:ds(a.meal?n[a.meal]:"")});return i?{date:Li(n[a.date]),entry:i,completed:a.completed?us(n[a.completed]):!1}:null}).filter(n=>n?.date)}function fs(e,t){Object.keys(d.diary).forEach(a=>{d.diary[a]=(d.diary[a]||[]).filter(n=>n.id!==t.id),d.diary[a].length||delete d.diary[a]}),d.diary[e]=[...d.diary[e]||[],t]}async function gs(){try{const e=await pn(),t=[];Object.keys(d.diary).sort().forEach(u=>{(d.diary[u]||[]).forEach(f=>t.push({ID:f.id,Fecha:k(u),Comida:jn(f.meal),Descripci\u00F3n:f.name,Porci\u00F3n:f.serving||"1 porci\xF3n",Calor\u00EDas:m(f.calories,0),"Prote\xEDna (g)":m(f.protein,0),"Grasas (g)":m(f.fat,0),"Carbohidratos (g)":m(f.carbs,0),"D\xEDa terminado":d.completedDays?.[u]?"S\xED":"No"}))});const n=[...new Set([...Object.keys(d.diary),...Object.keys(d.completedDays||{})])].sort().map(u=>{const f=ta(u);return{Fecha:k(u),Calor\u00EDas:Math.round(f.calories),"Prote\xEDna (g)":Number(f.protein.toFixed(1)),"Grasas (g)":Number(f.fat.toFixed(1)),"Carbohidratos (g)":Number(f.carbs.toFixed(1)),"D\xEDa terminado":d.completedDays?.[u]?"S\xED":"No"}}),i=e.utils.book_new(),r=e.utils.json_to_sheet(t.length?t:[{ID:"",Fecha:"",Comida:"",Descripci\u00F3n:"",Porci\u00F3n:"",Calor\u00EDas:"","Prote\xEDna (g)":"","Grasas (g)":"","Carbohidratos (g)":"","D\xEDa terminado":""}],{cellDates:!0});r["!cols"]=[{wch:38},{wch:13},{wch:14},{wch:34},{wch:18},{wch:11},{wch:14},{wch:12},{wch:18},{wch:16}],r["!autofilter"]={ref:r["!ref"]};const s=e.utils.decode_range(r["!ref"]);for(let u=1;u<=s.e.r;u+=1){const f=r[e.utils.encode_cell({r:u,c:1})];f&&(f.z="dd/mm/yyyy")}const c=e.utils.json_to_sheet(n.length?n:[{Fecha:"",Calor\u00EDas:"","Prote\xEDna (g)":"","Grasas (g)":"","Carbohidratos (g)":"","D\xEDa terminado":""}],{cellDates:!0});c["!cols"]=[{wch:13},{wch:12},{wch:14},{wch:12},{wch:18},{wch:16}],c["!autofilter"]={ref:c["!ref"]};const l=e.utils.decode_range(c["!ref"]);for(let u=1;u<=l.e.r;u+=1){const f=c[e.utils.encode_cell({r:u,c:0})];f&&(f.z="dd/mm/yyyy")}e.utils.book_append_sheet(i,r,"Registros"),e.utils.book_append_sheet(i,c,"Resumen diario"),e.writeFile(i,`consumo-masa-${R()}.xlsx`,{compression:!0})}catch(e){window.alert(e.message||"No se pudo exportar el consumo.")}}async function ps(e){const t=e.target.files?.[0];if(t)try{let a;/\.(xlsx|xls)$/i.test(t.name)?a=await Fi(t,["Registros"]):a=hs(await t.text());const n=ms(a);if(!n.length)throw new Error("No se encontraron filas v\xE1lidas de ingestas.");n.forEach(({date:i,entry:r,completed:s})=>{fs(i,r),s&&(d.completedDays[i]=!0)}),F(d),Jt(n.at(-1).date),Ft("today"),window.alert(`Se importaron ${n.length} ingestas.`)}catch(a){window.alert(a.message||"No se pudo importar el consumo.")}finally{e.target.value=""}}function hs(e){const t=String(e||"").replace(/^\uFEFF/,"").trim();if(!t)return[];const a=t.split(/\r?\n/).filter(r=>r.trim());if(a.length<2)return[];const n=a[0].includes("	")?"	":a[0].includes(";")?";":",",i=ha(a[0],n);return a.slice(1).map(r=>{const s=ha(r,n);return Object.fromEntries(i.map((c,l)=>[c,s[l]??""]))})}function hn(e){Ma=e;const t=o("#import-file");t.value="",t.accept=e==="library"?".json,application/json":".xlsx,.xls,.csv,.tsv,.txt,.json",t.click()}async function bs(e){const t=e.target.files?.[0];if(t)try{if(/\.(xlsx|xls)$/i.test(t.name)){if(Ma==="library")throw new Error("La biblioteca de recetas y alimentos se importa desde un archivo JSON exportado por MASA.");const r=ls(await Fi(t,["Pesajes"]));if(!r.length)throw new Error("No se encontraron columnas de fecha y peso en la planilla.");if(d.weighIns=Ne(d.weighIns,r),!d.profile.planStartDate){const s=re(d.weighIns)[0];d.profile.planStartDate=s.date,d.profile.planStartWeight=s.weight}d.configured=Nt(d.profile,d.weighIns),F(d),D(),d.configured?wt("weights"):yt(!0,"profile");return}const a=await t.text();if(t.name.toLowerCase().endsWith(".json")||a.trim().startsWith("{")||a.trim().startsWith("[")){const r=JSON.parse(a);if(Ma==="library"){const c=Ms(r);F(d),D(),o("#library-modal")?.hidden||de(),window.alert(`Biblioteca importada: ${c.foods} alimento(s), ${c.recipes} receta(s) y ${c.catalog} cambio(s) del cat\xE1logo.`);return}const s=ke(r);if(s.weighIns.length){d.weighIns=Ne(d.weighIns,s.weighIns),d.configured=Nt(d.profile,d.weighIns),F(d),D(),d.configured?wt("weights"):yt(!0,"profile");return}throw new Error("No se encontraron pesajes v\xE1lidos.")}const i=vs(a);if(!i.length)throw new Error("No se encontraron columnas de fecha y peso.");if(d.weighIns=Ne(d.weighIns,i),!d.profile.planStartDate){const r=re(d.weighIns)[0];d.profile.planStartDate=r.date,d.profile.planStartWeight=r.weight}d.configured=Nt(d.profile,d.weighIns),F(d),D(),d.configured?wt("weights"):yt(!0,"profile")}catch(a){window.alert(a.message||"No se pudo importar el archivo.")}finally{e.target.value=""}}function vs(e){const t=e.replace(/^\uFEFF/,"").trim();if(!t)return[];const a=t.split(/\r?\n/).filter(l=>l.trim());if(a.length<2)return[];const n=a[0],i=n.includes("	")?"	":n.includes(";")?";":",",r=ha(n,i).map(_);let s=r.findIndex(l=>["fecha","date","dia"].some(u=>l.includes(u))),c=r.findIndex(l=>["peso","weight","kg"].some(u=>l.includes(u)));return(s<0||c<0)&&(s=0,c=1),a.slice(1).map(l=>{const u=ha(l,i);return{date:I(u[s]),weight:m(u[c],NaN)}}).filter(l=>l.date&&Number.isFinite(l.weight)&&l.weight>0)}function ha(e,t){const a=[];let n="",i=!1;for(let r=0;r<e.length;r+=1){const s=e[r];s==='"'?i&&e[r+1]==='"'?(n+='"',r+=1):i=!i:s===t&&!i?(a.push(n.trim()),n=""):n+=s}return a.push(n.trim()),a}function _(e){return String(e||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"")}async function ys(){try{const e=await pn(),t=re().map(r=>({Fecha:k(r.date),"Peso (kg)":m(r.weight,0)})),a=e.utils.book_new(),n=e.utils.json_to_sheet(t.length?t:[{Fecha:"","Peso (kg)":""}],{cellDates:!0});n["!cols"]=[{wch:14},{wch:14}],n["!autofilter"]={ref:n["!ref"]};const i=e.utils.decode_range(n["!ref"]);for(let r=1;r<=i.e.r;r+=1){const s=n[e.utils.encode_cell({r,c:0})];s&&(s.z="dd/mm/yyyy");const c=n[e.utils.encode_cell({r,c:1})];c&&(c.z="0.0")}e.utils.book_append_sheet(a,n,"Pesajes"),e.writeFile(a,`pesajes-masa-${R()}.xlsx`,{compression:!0})}catch(e){window.alert(e.message||"No se pudieron exportar los pesajes.")}}function ws(){return{format:"masa-library",version:19,exportedAt:new Date().toISOString(),foods:Ce(d.foods||[]),recipes:Ce(d.recipes||[]),catalogOverrides:Ce(d.catalogOverrides||{})}}function Di(){const e=ws();Cs(`biblioteca-masa-${R()}.json`,JSON.stringify(e,null,2),"application/json")}function xs(e={}){if(!e||typeof e!="object"||Array.isArray(e))throw new Error("El archivo no contiene una biblioteca v\xE1lida de MASA.");const t=Array.isArray(e.foods)?e.foods.map(ie).filter(Boolean):[],a=Array.isArray(e.recipes)?e.recipes.map(i=>ie({...i,kind:"recipe"})).filter(Boolean):[],n={};if(Object.entries(e.catalogOverrides||{}).forEach(([i,r])=>{const s=Xt(r,i);s&&(n[i]=s)}),!t.length&&!a.length&&!Object.keys(n).length)throw new Error("El archivo no contiene alimentos, recetas ni cambios del cat\xE1logo para importar.");return{foods:t,recipes:a,catalogOverrides:n}}function Ms(e){const t=xs(e),a=[...d.foods],n=new Map;t.foods.forEach(s=>{const c=_(s.name),l=a.findIndex(p=>p.id===s.id),u=a.findIndex(p=>_(p.name)===c),f=l>=0?l:u;if(f>=0){const p=a[f].id;n.set(s.id,p),a[f]=ie({...s,id:p,kind:"food"})}else n.set(s.id,s.id),a.push(s)});const i=t.recipes.map(s=>ie({...s,kind:"recipe",ingredients:(s.ingredients||[]).map(c=>{if(c.kind!=="food")return c;const l=c.foodId||c.sourceId,u=n.get(l)||l;return{...c,foodId:u,sourceId:u}})})).filter(Boolean),r=[...d.recipes];return i.forEach(s=>{const c=_(s.name),l=r.findIndex(p=>p.id===s.id),u=r.findIndex(p=>_(p.name)===c),f=l>=0?l:u;if(f>=0){const p=r[f].id;r[f]=ie({...s,id:p,kind:"recipe"})}else r.push(s)}),d.foods=a,d.recipes=r.map(ci),d.catalogOverrides={...d.catalogOverrides||{},...t.catalogOverrides||{}},st(),{foods:t.foods.length,recipes:t.recipes.length,catalog:Object.keys(t.catalogOverrides||{}).length}}function Cs(e,t,a){const n=new Blob([t],{type:a}),i=URL.createObjectURL(n),r=document.createElement("a");r.href=i,r.download=e,document.body.appendChild(r),r.click(),r.remove(),URL.revokeObjectURL(i)}function ks(){o("#confirm-modal").hidden=!1,document.body.classList.add("modal-open")}function bn(){o("#confirm-modal").hidden=!0,oe()}async function Ns(){d=$t(),F(d);try{await window.MASA_CLOUD.flush()}catch(e){window.alert(`Los datos se borraron en este dispositivo, pero no se pudo confirmar el borrado online: ${e.message}`)}bn(),o("#settings-modal").hidden=!0,document.body.classList.remove("modal-open"),D()}function fe(e,t,a=!1){e.textContent=t,e.classList.toggle("error",a)}function $s(e){const t=e.target.closest(".date-input");if(!t)return;const a=t.value.replace(/\D/g,"").slice(0,8);t.value=a.length<=2?a:a.length<=4?`${a.slice(0,2)}/${a.slice(2)}`:`${a.slice(0,2)}/${a.slice(2,4)}/${a.slice(4)}`}function Es(e){const t=e.target.closest(".date-input");if(!t||!t.value.trim())return;const a=I(t.value);a&&(t.value=ot(a))}function vn(e){const t=o("#floating-tooltip");if(!t||!e?.dataset.tooltip)return;t.textContent=e.dataset.tooltip,t.hidden=!1;const a=e.getBoundingClientRect(),n=t.getBoundingClientRect(),i=10;let r=a.left+a.width/2-n.width/2;r=P(r,i,window.innerWidth-n.width-i);let s=a.top-n.height-10;s<i&&(s=a.bottom+10),t.style.left=`${r}px`,t.style.top=`${s}px`,t.dataset.owner=e.id||e.getAttribute("aria-label")||"help"}function _t(){const e=o("#floating-tooltip");e&&(e.hidden=!0)}function Ss(){S(".help-dot[data-tooltip]").forEach(e=>{e.addEventListener("mouseenter",()=>vn(e)),e.addEventListener("focus",()=>vn(e)),e.addEventListener("mouseleave",_t),e.addEventListener("blur",_t),e.addEventListener("click",t=>{t.stopPropagation();const a=o("#floating-tooltip");!a.hidden&&a.dataset.owner===(e.id||e.getAttribute("aria-label")||"help")?_t():vn(e)})}),document.addEventListener("click",_t),window.addEventListener("scroll",_t,{passive:!0})}function Ls(){const e=o("#food-editor-form");ht(e.elements.servingUnit,e.elements.servingUnitCustom,e.elements.servingUnit.value),Ee("food")}function Fs(){const e=o("#recipe-form"),t=e.elements.yieldUnit,a=t.dataset.currentUnit||"serving",n=ni(a),i=m(e.elements.servingAmount.value,n);ht(t,e.elements.yieldUnitCustom,t.value);const r=ni(t.value);Math.abs(i-n)<1e-4&&(e.elements.servingAmount.value=r),t.dataset.currentUnit=t.value,Ee("recipe"),Ve()}function Ds(){o("#tips-modal").hidden=!1,document.body.classList.add("modal-open")}function yn(){try{localStorage.setItem(xn,"1")}catch{}o("#tips-modal").hidden=!0,oe(),setTimeout(dn,120)}function As(){let e=!1;try{e=localStorage.getItem(xn)==="1"}catch{}return e?!1:(Ds(),!0)}function Ts(){o("#about-modal").hidden=!1,document.body.classList.add("modal-open")}function wn(){o("#about-modal").hidden=!0,oe()}function Is(){o("#open-about").addEventListener("click",Ts),o("#accept-about").addEventListener("click",wn),S("[data-close-about]").forEach(e=>e.addEventListener("click",wn)),o("#accept-tips").addEventListener("click",yn),S("[data-close-tips]").forEach(e=>e.addEventListener("click",yn)),o("#begin-setup").addEventListener("click",()=>yt(!0,"profile")),o("#open-profile").addEventListener("click",()=>yt(!1,"profile")),o("#brand-home").addEventListener("click",()=>Ft("today")),S("[data-app-view]").forEach(e=>e.addEventListener("click",()=>Ft(e.dataset.appView))),o("#close-settings").addEventListener("click",fa),o("#cancel-profile").addEventListener("click",fa),S("[data-close-settings]").forEach(e=>e.addEventListener("click",fa)),S("[data-settings-tab]").forEach(e=>e.addEventListener("click",()=>wt(e.dataset.settingsTab))),document.querySelector(".settings-sheet")?.addEventListener("scroll",Ni,{passive:!0}),o("#profile-form").addEventListener("submit",ns),o("#profile-form").addEventListener("input",ga),o("#profile-form").addEventListener("change",ga),document.addEventListener("input",$s),document.addEventListener("blur",Es,!0),S("[data-calendar-for]").forEach(e=>e.addEventListener("click",()=>Eo(e.dataset.calendarFor))),S("[data-native-date]").forEach(e=>e.addEventListener("change",So)),o("#diary-prev-day").addEventListener("click",()=>On(-1)),o("#diary-next-day").addEventListener("click",()=>On(1)),o("#diary-today-button").addEventListener("click",()=>Jt(ve())),o("#diary-date-button").addEventListener("click",cr),o("#diary-native-date").addEventListener("change",e=>Jt(e.target.value)),document.addEventListener("visibilitychange",()=>{document.hidden||ln()}),window.addEventListener("focus",ln),o("#quick-weight-form").addEventListener("submit",os),o("#edit-today-weight").addEventListener("click",fr),o("#account-identity-form").addEventListener("submit",is),o("#toggle-account-password").addEventListener("click",rs),o("#toggle-history-manager").addEventListener("click",()=>{const e=o("#toggle-history-manager"),t=e.getAttribute("aria-expanded")==="true";e.setAttribute("aria-expanded",String(!t)),e.querySelector("i").textContent=t?"\uFF0B":"\u2212",o("#history-manager").hidden=t}),o("#history-date-select").addEventListener("change",e=>{Me=e.currentTarget.value,D()}),o("#history-list").addEventListener("change",ss),o("#history-list").addEventListener("click",cs),o("#import-library").addEventListener("click",()=>hn("library")),o("#export-library").addEventListener("click",Di),o("#import-history").addEventListener("click",()=>hn("history")),o("#export-weights").addEventListener("click",ys),o("#import-file").addEventListener("change",bs),o("#export-intakes").addEventListener("click",gs),o("#import-intakes").addEventListener("click",()=>{o("#intake-import-file").value="",o("#intake-import-file").click()}),o("#intake-import-file").addEventListener("change",ps),o("#start-over").addEventListener("click",ks),o("#cancel-confirm").addEventListener("click",()=>{bn(),document.body.classList.add("modal-open")}),o("#confirm-action").addEventListener("click",Ns),o("#apply-recalibration").addEventListener("click",Oo),o("#run-auto-adjustment").addEventListener("click",Ro),S("[data-add-meal]").forEach(e=>e.addEventListener("click",()=>Yn(e.dataset.addMeal))),o("#global-add-intake").addEventListener("click",Bn),o("#close-meal-picker").addEventListener("click",aa),S("[data-close-meal-picker]").forEach(e=>e.addEventListener("click",aa)),S("[data-pick-meal]").forEach(e=>e.addEventListener("click",()=>mr(e.dataset.pickMeal))),o("#change-active-meal").addEventListener("click",()=>{ra(),Bn()}),S("[data-diary-view]").forEach(e=>e.addEventListener("click",()=>_n(e.dataset.diaryView))),S("[data-calorie-range]").forEach(e=>e.addEventListener("click",()=>{Sn=St()?7:m(e.dataset.calorieRange,14),Ua(),Lt(z())})),o("#finish-day").addEventListener("click",lr),o("#hide-day-summary").addEventListener("click",dr),o("#meal-grid").addEventListener("click",Co),document.addEventListener("pointerdown",ko,!0),o("#meal-grid").addEventListener("input",gi),o("#meal-grid").addEventListener("change",gi),o("#meal-grid").addEventListener("submit",No),o("#close-food").addEventListener("click",ra),S("[data-close-food]").forEach(e=>e.addEventListener("click",ra)),S("[data-food-mode]").forEach(e=>e.addEventListener("click",()=>Wa(e.dataset.foodMode))),o("#food-search-input").addEventListener("input",Qr),o("#scan-barcode-food").addEventListener("click",()=>ia("food")),o("#scan-barcode-recipe").addEventListener("click",()=>ia("recipe")),o("#scan-barcode-editor").addEventListener("click",()=>ia("food-editor")),o("#scan-label-food").addEventListener("click",()=>na("food")),o("#scan-label-recipe").addEventListener("click",()=>na("recipe")),o("#scan-label-editor").addEventListener("click",()=>na("food-editor")),o("#rescan-food-editor").addEventListener("click",()=>Ht==="label"?na("food-editor"):ia("food-editor")),o("#close-barcode").addEventListener("click",()=>Tt(!0)),S("[data-close-barcode]").forEach(e=>e.addEventListener("click",()=>Tt(!0))),o("#barcode-manual-form").addEventListener("submit",Dr),o("#barcode-torch").addEventListener("click",pr),[o("#food-results"),o("#recent-food-results"),o("#frequent-food-results"),o("#recipe-results")].forEach(e=>{e.addEventListener("click",Jr),e.addEventListener("submit",Zr),e.addEventListener("input",eo),e.addEventListener("change",to)}),o("#quick-calorie-form").addEventListener("submit",ao),o("#new-custom-food").addEventListener("click",()=>ue({returnTarget:"food"})),o("#sidebar-new-food").addEventListener("click",()=>ue({returnTarget:"main"})),o("#sidebar-open-library").addEventListener("click",()=>si("main")),o("#new-recipe").addEventListener("click",()=>Rt({returnTarget:"food"})),o("#new-recipe-secondary").addEventListener("click",()=>Rt({returnTarget:"food"})),S("[data-open-library]").forEach(e=>e.addEventListener("click",()=>si("food"))),o("#close-library").addEventListener("click",en),S("[data-close-library]").forEach(e=>e.addEventListener("click",en)),o("#library-food-list").addEventListener("click",ua),o("#library-recipe-list").addEventListener("click",ua),o("#library-catalog-list").addEventListener("click",ua),o("#library-catalog-search-results").addEventListener("click",ua),o("#library-search-catalog").addEventListener("click",oo),o("#library-catalog-search-input").addEventListener("input",ro),o("#library-new-food").addEventListener("click",()=>ue({returnTarget:"library"})),o("#library-new-recipe").addEventListener("click",()=>Rt({returnTarget:"library"})),o("#library-import").addEventListener("click",()=>hn("library")),o("#library-export").addEventListener("click",Di),o("#close-food-editor").addEventListener("click",nn),S("[data-close-food-editor]").forEach(e=>e.addEventListener("click",nn)),o("#food-editor-form").addEventListener("submit",lo),o("#food-editor-form").elements.servingUnit.addEventListener("change",Ls),o("#food-editor-form").elements.servingUnitCustom.addEventListener("input",()=>Ee("food")),o("#add-food-equivalence").addEventListener("click",()=>ei("food")),o("#food-equivalence-list").addEventListener("input",sa),o("#food-equivalence-list").addEventListener("change",sa),o("#food-equivalence-list").addEventListener("click",ti),o("#close-recipe").addEventListener("click",on),S("[data-close-recipe]").forEach(e=>e.addEventListener("click",on)),o("#recipe-form").addEventListener("submit",xo),o("#recipe-form").elements.yield.addEventListener("input",Ve),o("#recipe-form").elements.servingAmount.addEventListener("input",Ve),o("#recipe-form").elements.yieldUnit.addEventListener("change",Fs),o("#recipe-form").elements.yieldUnitCustom.addEventListener("input",()=>{Ee("recipe"),Ve()}),o("#add-recipe-equivalence").addEventListener("click",()=>ei("recipe")),o("#recipe-equivalence-list").addEventListener("input",sa),o("#recipe-equivalence-list").addEventListener("change",sa),o("#recipe-equivalence-list").addEventListener("click",ti),o("#recipe-ingredient-search").addEventListener("input",bo),o("#recipe-ingredient-results").addEventListener("click",go),o("#recipe-ingredient-results").addEventListener("input",po),o("#recipe-ingredient-results").addEventListener("change",ho),o("#recipe-ingredient-list").addEventListener("click",vo),o("#recipe-ingredient-list").addEventListener("input",yo),o("#recipe-ingredient-list").addEventListener("change",wo),o("#create-missing-ingredient").addEventListener("click",()=>ue({returnTarget:"recipe",prefillName:o("#recipe-ingredient-search").value.trim()})),o("#day-projection-weeks").addEventListener("change",()=>Ta(z(),Et())),o("#daily-checkin-form").addEventListener("submit",$o),o("#skip-daily-weight").addEventListener("click",()=>un()),o("#previous-progress-chart").addEventListener("click",()=>Ci(-1)),o("#next-progress-chart").addEventListener("click",()=>Ci(1)),S("[data-progress-chart]").forEach(e=>e.addEventListener("click",()=>{tt=e.dataset.progressChart,vt()})),S("[data-chart-range]").forEach(e=>e.addEventListener("click",()=>{Mt=e.dataset.chartRange,S("[data-chart-range]").forEach(t=>t.classList.toggle("active",t===e)),W&&vt()})),window.visualViewport?.addEventListener("resize",nt),window.visualViewport?.addEventListener("scroll",nt),window.addEventListener("orientationchange",()=>window.setTimeout(nt,120)),document.addEventListener("focusin",Bi),window.addEventListener("resize",Rs(()=>{nt(),Ua(),Dt(),W&&ze==="progress"&&vt(),Ie==="chart"&&Lt(z())},100))}function Us(){return O("barcode-modal")?(Tt(!0),!0):O("food-editor-modal")?(nn(),!0):O("recipe-modal")?(on(),!0):O("library-modal")?(en(),!0):O("food-modal")?(ra(),!0):O("meal-picker-modal")?(aa(),!0):O("confirm-modal")?(bn(),!0):O("about-modal")?(wn(),!0):O("tips-modal")?(yn(),!0):O("daily-checkin-modal")?(un(),!0):O("settings-modal")?(et||fa(),!0):be?(cn(),!0):ze==="progress"?(Ft("today"),!0):!1}window.MASAHandleAndroidBack=Us;function Ps(e){const t=e.target;if(!(t instanceof HTMLInputElement)||t.type!=="number")return;const a=m(t.min,NaN);Number.isFinite(a)&&a>=0&&["e","E","+","-"].includes(e.key)&&e.preventDefault()}document.addEventListener("keydown",Ps);function Rs(e,t){let a;return(...n)=>{clearTimeout(a),a=setTimeout(()=>e(...n),t)}}async function qs(){if(!(!navigator.serviceWorker?.register||location.protocol==="file:"))try{const e=await navigator.serviceWorker.getRegistrations();if(await Promise.all(e.map(n=>{const i=new URL(n.scope).pathname,r=n.active?new URL(n.active.scriptURL).pathname:"";return i==="/"&&r.endsWith("/service-worker.js")?n.unregister():Promise.resolve(!1)})),location.protocol==="capacitor:"||location.hostname==="localhost")return;const t=new URL(document.baseURI).pathname,a=new URL("service-worker.js",document.baseURI).href;await navigator.serviceWorker.register(a,{scope:t})}catch{}}function Os(){document.title=document.title.replace(/\s*[·|-]\s*registros y progreso por números/gi," \xB7 registros y progreso").replace(/\s*[·|-]\s*objetivos por números/gi,""),S(".brand-name small, [data-brand-tagline]").forEach(e=>{/objetivos por números/i.test(e.textContent||"")&&e.remove()})}function js(e){d=ke(e||$t()),nt(),window.MASA_CLOUD.cacheState(d),Os(),Is(),pi(),S(".help-dot[data-tooltip]").forEach(t=>{t.title=t.dataset.tooltip}),Ss(),D(),Ft("today",!1),_n("record"),window.MASA_CLOUD.finishBoot(),ya=Ki(),qs()}async function _s(){const e=xa;try{const t=await window.MASA_CLOUD.loadUserState();if(xa!==e||window.MASA_CLOUD.hasPendingChanges()){console.info("[MASA][sync] Se conserv\xF3 el estado local porque hubo cambios mientras se cargaban los datos remotos.");return}let a=ke(t.state||$t());if(!t.hasData){const n=Gi();if(Vi(n)&&window.confirm("Encontramos datos de la versi\xF3n local de MASA en este dispositivo. \xBFQuer\xE9s importarlos a esta cuenta?")){a=n,d=ke(a),window.MASA_CLOUD.cacheState(d),D(),window.MASA_CLOUD.setSyncStatus("saving","Importando datos locales\u2026");try{await window.MASA_CLOUD.replaceState(d),Xi()}catch(r){console.error("[MASA][sync] No se pudieron importar los datos locales:",r),window.MASA_CLOUD.setSyncStatus("error","Importaci\xF3n pendiente")}return}}d=ke(a),window.MASA_CLOUD.cacheState(d),D()}catch(t){console.error("[MASA][sync] La aplicaci\xF3n qued\xF3 disponible, pero fall\xF3 la carga remota:",t),window.MASA_CLOUD.setSyncStatus("error","Error de sincronizaci\xF3n")}}async function Bs(){try{await window.MASA_CLOUD.requireSession();const e=window.MASA_CLOUD.readCachedState();js(e||$t()),_s().finally(()=>{As()||setTimeout(dn,180)})}catch(e){console.error("[MASA][startup] No se pudo iniciar MASA:",e),window.MASA_CLOUD?.showFatalError(e)}}Bs()})();
+  function activeFoodResultsSection() {
+    return hasActiveFoodSearch() ? $("#food-search-panel") : $(`#food-mode-${activeFoodMode}`);
+  }
+
+  function focusSelectedFoodAmount() {
+    requestAnimationFrame(() => {
+      const section = activeFoodResultsSection();
+      const form = section?.querySelector('.food-result-card.active .food-inline-add');
+      const input = form?.querySelector('input[name="amount"]');
+      if (isMobileLayout()) form?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      window.setTimeout(() => {
+        input?.focus({ preventScroll: true });
+        input?.select();
+      }, isMobileLayout() ? 260 : 0);
+    });
+  }
+
+  function renderCurrentFoodResults() {
+    if (hasActiveFoodSearch()) renderFoodResults();
+    else renderActiveFoodMode();
+  }
+
+  function selectFoodInline(id, kind) {
+    activeFoodSelection = { id, kind };
+    renderCurrentFoodResults();
+    focusSelectedFoodAmount();
+  }
+
+  function cancelFoodInline() {
+    activeFoodSelection = null;
+    renderCurrentFoodResults();
+  }
+
+  function updateFoodQuantityPreview(form) {
+    const item = findFood(form.dataset.foodId, form.dataset.foodKind);
+    if (!item) return;
+    const amount = toNumber(form.elements.amount.value, 0);
+    const unit = form.elements.unit?.value || form.dataset.currentUnit;
+    const preview = quantityPreview(item, amount, unit);
+    form.querySelector('[data-food-preview-calories]').textContent = `${formatNumber(Math.round(preview.calories))} kcal`;
+    form.querySelector('[data-food-preview-macros]').textContent = `P ${formatNumber(preview.protein,1)} · G ${formatNumber(preview.fat,1)} · C ${formatNumber(preview.carbs,1)}`;
+  }
+
+  function changeFoodQuantityUnit(form) {
+    const item = findFood(form.dataset.foodId, form.dataset.foodKind);
+    if (!item || !form.elements.unit) return;
+    form.dataset.currentUnit = form.elements.unit.value;
+    updateFoodQuantityPreview(form);
+    form.elements.amount.focus();
+  }
+
+  function showFoodAddedFeedback() {
+    const feedback = $("#food-add-feedback");
+    if (!feedback) return;
+    feedback.textContent = "";
+    feedback.hidden = true;
+  }
+
+  function prepareNextFoodEntry() {
+    activeFoodSelection = null;
+    $("#food-search-input").value = "";
+    updateFoodSearchDisplay();
+    focusOnOpen($("#food-search-input"));
+  }
+
+  function addLibraryFood(id, kind, amountValue, unitValue) {
+    const item = findFood(id, kind);
+    if (!item) return;
+
+    const amount = toNumber(amountValue, NaN);
+    const options = foodQuantityOptions(item);
+    const option = options.find(candidate => candidate.value === unitValue) || options[0];
+    if (!Number.isFinite(amount) || amount <= 0 || !option) return;
+
+    const preview = quantityPreview(item, amount, option.value);
+    const serving = `${formatQuantityAmount(amount)} ${quantityUnitText(option, amount)}`;
+    const sourceId = foodUsageKey(item);
+    const entry = normalizeDiaryEntry({
+      ...item,
+      id: createId(),
+      sourceId,
+      quantity: amount,
+      quantityUnit: option.value,
+      serving,
+      calories: preview.calories,
+      protein: preview.protein,
+      fat: preview.fat,
+      carbs: preview.carbs,
+      meal: activeMeal
+    });
+
+    if (!entry) return;
+
+    const usedAt = new Date().toISOString();
+    state.diary[selectedDiaryDate] = [...todayDiary(), entry];
+    state.foodUsage ||= {};
+    const previousUsage = state.foodUsage[sourceId] || {};
+    const previousMealUsage = previousUsage.byMeal?.[activeMeal] || {};
+    state.foodUsage[sourceId] = {
+      amount,
+      unit: option.value,
+      uses: Math.max(0, Math.round(toNumber(previousUsage.uses, 0))) + 1,
+      lastUsed: selectedDiaryDate,
+      lastUsedAt: usedAt,
+      byMeal: {
+        ...(previousUsage.byMeal || {}),
+        [activeMeal]: {
+          amount,
+          unit: option.value,
+          uses: Math.max(0, Math.round(toNumber(previousMealUsage.uses, 0))) + 1,
+          lastUsed: selectedDiaryDate,
+          lastUsedAt: usedAt
+        }
+      }
+    };
+
+    if (item.kind !== "external") {
+      item.uses = toNumber(item.uses,0) + 1;
+      item.lastUsed = selectedDiaryDate;
+      item.lastUsedAt = usedAt;
+    }
+
+    saveState(state);
+    render();
+    showFoodAddedFeedback(item.name, serving);
+    prepareNextFoodEntry();
+  }
+
+  function queueFoodSearch() {
+    clearTimeout(foodSearchTimer);
+    foodSearchTimer = setTimeout(() => {
+      activeFoodSelection = null;
+      updateFoodSearchDisplay();
+    }, 120);
+  }
+
+  function handleFoodResultClick(event) {
+    const editUserFood = event.target.closest("[data-edit-user-food]");
+    if (editUserFood) {
+      const options = { editId: editUserFood.dataset.editUserFood, returnTarget: "food" };
+      if (editUserFood.dataset.editUserKind === "recipe") openRecipeEditor(options);
+      else openFoodEditor(options);
+      return;
+    }
+    const editCatalog = event.target.closest("[data-edit-catalog-food]");
+    if (editCatalog) {
+      openFoodEditor({ catalogId: editCatalog.dataset.editCatalogFood, returnTarget: "food" });
+      return;
+    }
+    const hideCatalog = event.target.closest("[data-hide-catalog-food]");
+    if (hideCatalog) {
+      hideCatalogFood(hideCatalog.dataset.hideCatalogFood);
+      return;
+    }
+    if (event.target.closest("[data-cancel-food]")) {
+      cancelFoodInline();
+      return;
+    }
+    const button = event.target.closest("[data-select-food]");
+    if (!button) return;
+    selectFoodInline(button.dataset.selectFood, button.dataset.foodKind);
+  }
+
+  function handleFoodResultSubmit(event) {
+    const form = event.target.closest("[data-food-add-form]");
+    if (!form) return;
+    event.preventDefault();
+    addLibraryFood(
+      form.dataset.foodId,
+      form.dataset.foodKind,
+      form.elements.amount.value,
+      form.elements.unit?.value || form.dataset.currentUnit
+    );
+  }
+
+  function handleFoodResultInput(event) {
+    const form = event.target.closest("[data-food-add-form]");
+    if (!form || event.target.name !== "amount") return;
+    updateFoodQuantityPreview(form);
+  }
+
+  function handleFoodResultChange(event) {
+    const form = event.target.closest("[data-food-add-form]");
+    if (!form || event.target.name !== "unit") return;
+    changeFoodQuantityUnit(form);
+  }
+
+  function addQuickCalories(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const name = cleanInputText(form.elements.name.value);
+    const calories = boundedInputNumber(form.elements.calories.value, 1, INPUT_LIMITS.calories);
+    if (!name || !Number.isFinite(calories)) {
+      form.reportValidity();
+      return;
+    }
+    const item = normalizeDiaryEntry({
+      id: createId(),
+      name,
+      calories,
+      protein: 0, fat: 0, carbs: 0,
+      serving: "carga libre",
+      entryMode: "calories",
+      quantity: 0,
+      quantityUnit: "",
+      meal: activeMeal
+    });
+    if (!item) return;
+    state.diary[selectedDiaryDate] = [...todayDiary(), item];
+    saveState(state);
+    const addedName = item.name;
+    const addedCalories = Math.round(item.calories);
+    form.reset();
+    render();
+    showFoodAddedFeedback(addedName, `${formatNumber(addedCalories)} kcal`);
+    focusOnOpen(form.elements.name);
+  }
+
+  function openLibraryManager(returnTarget = "food") {
+    if (returnTarget instanceof Event) returnTarget = "food";
+    libraryReturnTarget = returnTarget || "food";
+    renderLibraryManager();
+    $("#library-modal").hidden = false;
+    document.body.classList.add("modal-open");
+  }
+
+  function closeLibraryManager() {
+    $("#library-modal").hidden = true;
+    updateModalBodyState();
+  }
+
+  function searchEntireCatalog(query, limit = 40) {
+    const queryInfo = createFoodQueryInfo(query);
+    if (!queryInfo.text) return [];
+    const matches = [];
+
+    for (const base of externalFoodCatalog) {
+      const item = effectiveCatalogFood(base, state.catalogOverrides?.[base.id]);
+      const entry = createFoodSearchEntry(item, foodSearchText(base));
+      const score = foodSearchScoreFromEntry(entry, queryInfo);
+      if (score > 0) matches.push({ item, score });
+    }
+
+    return matches
+      .sort((a, b) => b.score - a.score || String(a.item.name || "").localeCompare(String(b.item.name || ""), "es"))
+      .slice(0, limit)
+      .map(result => result.item);
+  }
+
+  function libraryCatalogSearchCard(item) {
+    const article = document.createElement("article");
+    const override = state.catalogOverrides?.[item.id];
+    const status = override?.hidden ? "Oculto" : override ? "Editado" : "Catálogo general";
+    article.className = `library-item library-catalog-search-item${override?.hidden ? " catalog-hidden" : ""}`;
+    article.innerHTML = `
+      <div><div class="library-item-title"><b>${escapeHTML(item.name)}</b>${override ? '<span class="food-origin-badge food-origin-edited">Editado</span>' : ""}</div><small>${escapeHTML(status)} · ${escapeHTML(item.serving)} · ${formatNumber(Math.round(item.calories))} kcal</small></div>
+      <div class="library-item-actions"><button class="text-action" data-edit-library="${escapeHTML(item.id)}" data-library-kind="external" type="button">Editar</button></div>`;
+    return article;
+  }
+
+  function renderLibraryCatalogSearchResults() {
+    const panel = $("#library-catalog-search-panel");
+    const input = $("#library-catalog-search-input");
+    const container = $("#library-catalog-search-results");
+    if (!panel || !input || !container || panel.hidden) return;
+    const query = input.value.trim();
+    container.innerHTML = "";
+    if (!query) {
+      container.innerHTML = '<p class="empty-message">Escribí un nombre para buscar en toda la base.</p>';
+      return;
+    }
+    if (externalFoodsStatus === "loading") {
+      container.innerHTML = '<p class="empty-message">Cargando catálogo de alimentos…</p>';
+      return;
+    }
+    const results = searchEntireCatalog(query);
+    if (!results.length) {
+      container.innerHTML = '<p class="empty-message">No se encontraron alimentos con ese nombre.</p>';
+      return;
+    }
+    results.forEach(item => container.appendChild(libraryCatalogSearchCard(item)));
+  }
+
+  function queueLibraryCatalogSearch() {
+    clearTimeout(libraryCatalogSearchTimer);
+    libraryCatalogSearchTimer = setTimeout(renderLibraryCatalogSearchResults, 120);
+  }
+
+  function toggleLibraryCatalogSearch() {
+    const panel = $("#library-catalog-search-panel");
+    const button = $("#library-search-catalog");
+    const input = $("#library-catalog-search-input");
+    const opening = panel.hidden;
+    panel.hidden = !opening;
+    button.setAttribute("aria-expanded", String(opening));
+    button.textContent = opening ? "Cerrar búsqueda" : "Buscar alimento de la base";
+    if (opening) {
+      renderLibraryCatalogSearchResults();
+      focusOnOpen(input);
+    }
+  }
+
+  function libraryItemCard(item, options = {}) {
+    const article = document.createElement("article");
+    article.className = "library-item";
+    const detail = item.kind === "recipe"
+      ? `${item.ingredients?.length || 0} ingredientes · ${item.serving}`
+      : item.serving;
+    if (options.catalog) {
+      const hidden = Boolean(options.override?.hidden);
+      article.classList.toggle("catalog-hidden", hidden);
+      article.innerHTML = `
+        <div><b>${escapeHTML(item.name)}</b><small>${hidden ? "Oculto de tu catálogo" : `${escapeHTML(detail)} · ${formatNumber(Math.round(item.calories))} kcal`}</small></div>
+        <div class="library-item-actions">
+          <button class="text-action" data-edit-library="${escapeHTML(item.id)}" data-library-kind="external" type="button">Editar</button>
+          <button class="text-action" data-restore-catalog="${escapeHTML(item.id)}" type="button">Restaurar original</button>
+        </div>`;
+      return article;
+    }
+    article.innerHTML = `
+      <div><b>${escapeHTML(item.name)}</b><small>${escapeHTML(detail)} · ${formatNumber(Math.round(item.calories))} kcal</small></div>
+      <div class="library-item-actions">
+        <button class="text-action" data-edit-library="${escapeHTML(item.id)}" data-library-kind="${escapeHTML(item.kind)}" type="button">Editar</button>
+        <button class="danger-text-action" data-delete-library="${escapeHTML(item.id)}" data-library-kind="${escapeHTML(item.kind)}" type="button">Borrar</button>
+      </div>`;
+    return article;
+  }
+
+  function renderLibraryManager() {
+    const foodList = $("#library-food-list");
+    const recipeList = $("#library-recipe-list");
+    const catalogList = $("#library-catalog-list");
+    foodList.innerHTML = "";
+    recipeList.innerHTML = "";
+    catalogList.innerHTML = "";
+    $("#library-food-count").textContent = state.foods.length;
+    $("#library-recipe-count").textContent = state.recipes.length;
+    const catalogEntries = Object.entries(state.catalogOverrides || {});
+    $("#library-catalog-count").textContent = catalogEntries.length;
+
+    if (!state.foods.length) foodList.innerHTML = '<p class="empty-message">No creaste alimentos propios.</p>';
+    else [...state.foods].sort((a,b) => a.name.localeCompare(b.name, "es")).forEach(item => foodList.appendChild(libraryItemCard(item)));
+
+    if (!state.recipes.length) recipeList.innerHTML = '<p class="empty-message">No creaste recetas.</p>';
+    else [...state.recipes].sort((a,b) => a.name.localeCompare(b.name, "es")).forEach(item => recipeList.appendChild(libraryItemCard(item)));
+
+    if (!catalogEntries.length) catalogList.innerHTML = '<p class="empty-message">Todavía no modificaste alimentos del catálogo general.</p>';
+    else catalogEntries
+      .map(([id, override]) => ({ item: catalogFoodForEditing(id), override }))
+      .filter(row => row.item)
+      .sort((a,b) => a.item.name.localeCompare(b.item.name, "es"))
+      .forEach(row => catalogList.appendChild(libraryItemCard(row.item, { catalog: true, override: row.override })));
+    renderLibraryCatalogSearchResults();
+  }
+
+  function handleLibraryClick(event) {
+    const restore = event.target.closest("[data-restore-catalog]");
+    if (restore) {
+      restoreCatalogFood(restore.dataset.restoreCatalog);
+      return;
+    }
+    const edit = event.target.closest("[data-edit-library]");
+    if (edit) {
+      const options = { editId: edit.dataset.editLibrary, returnTarget: "library" };
+      if (edit.dataset.libraryKind === "recipe") openRecipeEditor(options);
+      else if (edit.dataset.libraryKind === "external") openFoodEditor({ catalogId: edit.dataset.editLibrary, returnTarget: "library" });
+      else openFoodEditor(options);
+      return;
+    }
+
+    const remove = event.target.closest("[data-delete-library]");
+    if (!remove) return;
+    const id = remove.dataset.deleteLibrary;
+    const kind = remove.dataset.libraryKind;
+    const item = findFood(id, kind);
+    if (!item) return;
+    const recipeUseCount = kind === "food"
+      ? state.recipes.filter(recipe => recipe.ingredients?.some(ingredient => ingredient.foodId === id || ingredient.sourceId === id)).length
+      : 0;
+    const suffix = recipeUseCount ? `\n\nAparece en ${recipeUseCount} receta(s). Esas recetas conservarán los valores guardados del ingrediente.` : "";
+    if (!window.confirm(`¿Borrar “${item.name}” de tu biblioteca?${suffix}`)) return;
+
+    if (kind === "recipe") state.recipes = state.recipes.filter(recipe => recipe.id !== id);
+    else state.foods = state.foods.filter(food => food.id !== id);
+    delete state.foodUsage?.[foodUsageKey(item)];
+    saveState(state);
+    renderLibraryManager();
+    renderActiveFoodMode();
+  }
+
+  function hideCatalogFood(id) {
+    const base = externalFoodCatalogById.get(id);
+    if (!base) return;
+    state.catalogOverrides ||= {};
+    state.catalogOverrides[id] = normalizeCatalogOverride({ ...(state.catalogOverrides[id] || {}), id, hidden: true });
+    delete state.foodUsage?.[foodUsageKey(base)];
+    saveState(state);
+    rebuildExternalFoodCatalog();
+    activeFoodSelection = null;
+    renderCurrentFoodResults();
+    if (!$("#library-modal")?.hidden) renderLibraryManager();
+  }
+
+  function restoreCatalogFood(id) {
+    if (!state.catalogOverrides?.[id]) return;
+    delete state.catalogOverrides[id];
+    saveState(state);
+    rebuildExternalFoodCatalog();
+    renderLibraryManager();
+    renderCurrentFoodResults();
+    if (!$("#recipe-modal")?.hidden) renderRecipeIngredientResults();
+  }
+
+  function openFoodEditor(options = {}) {
+    if (options instanceof Event) options = {};
+    editingFoodId = options.editId || null;
+    editingCatalogFoodId = options.catalogId || null;
+    foodEditorPrefill = options.prefillFood ? clone(options.prefillFood) : null;
+    foodEditorReturnTarget = options.returnTarget || (modalIsOpen("library-modal") ? "library" : "food");
+    const form = $("#food-editor-form");
+    form.reset();
+    $("#food-editor-error").hidden = true;
+    const item = editingCatalogFoodId
+      ? catalogFoodForEditing(editingCatalogFoodId)
+      : editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
+    const displayItem = item || foodEditorPrefill;
+    foodEditorEquivalences = clone(displayItem?.equivalences || []);
+    foodEditorRescanMode = options.rescanMode === "label" ? "label" : "barcode";
+
+    $("#food-editor-title").textContent = options.title || (item ? "Editar alimento" : foodEditorPrefill ? "Revisar alimento escaneado" : "Nuevo alimento");
+    $("#food-editor-description").textContent = options.description || (editingCatalogFoodId
+      ? "Los cambios quedan solamente en tu cuenta."
+      : item ? "Los cambios también recalculan las recetas que usan este alimento."
+      : foodEditorPrefill ? "Revisá los datos antes de incorporarlo a tu biblioteca." : "Guardalo una vez y reutilizalo en registros y recetas.");
+    $("#save-food-editor").textContent = item ? "Guardar cambios" : "Guardar alimento";
+    const sourceNote = $("#food-editor-source-note");
+    sourceNote.hidden = !options.sourceNote;
+    sourceNote.textContent = options.sourceNote || "";
+    sourceNote.classList.toggle("warning", options.sourceNoteType === "warning");
+    sourceNote.classList.toggle("success", options.sourceNoteType === "success");
+    $("#rescan-food-editor").hidden = !options.allowRescan;
+    $("#close-food-editor").hidden = Boolean(options.allowRescan);
+    $(".food-editor-scan-row").hidden = Boolean(item || editingCatalogFoodId);
+
+    if (displayItem) {
+      const parsed = parseServingDefinition(displayItem.serving);
+      form.elements.name.value = displayItem.name || "";
+      form.elements.barcode.value = normalizeBarcode(displayItem.barcode);
+      form.elements.brand.value = displayItem.brand || "";
+      const editorCalories = toNumber(displayItem.calories, NaN);
+      form.elements.calories.value = Number.isFinite(editorCalories) ? roundEditorNumber(editorCalories, 0) : "";
+      form.elements.servingAmount.value = roundEditorNumber(displayItem.servingAmount || displayItem.metricQuantity || parsed.baseAmount, 2);
+      setEditableUnitFields(
+        form.elements.servingUnit,
+        form.elements.servingUnitCustom,
+        displayItem.servingUnit || parsed.unitKey,
+        displayItem.servingUnitCustom || parsed.customUnit
+      );
+      ["protein", "fat", "carbs"].forEach(key => {
+        const value = toNumber(displayItem[key], NaN);
+        form.elements[key].value = Number.isFinite(value) ? roundEditorNumber(value, 1) : "";
+      });
+    } else {
+      form.elements.servingAmount.value = 1;
+      setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, "unit");
+      if (options.prefillName) form.elements.name.value = options.prefillName;
+    }
+
+    renderEquivalenceEditor("food");
+    if (foodEditorReturnTarget === "library") $("#library-modal").hidden = true;
+    if (foodEditorReturnTarget === "recipe") $("#recipe-modal").hidden = true;
+    if (foodEditorReturnTarget === "food") $("#food-modal").hidden = true;
+    $("#food-editor-modal").hidden = false;
+    document.body.classList.add("modal-open");
+    focusOnOpen(form.elements.name);
+  }
+
+  function closeFoodEditor() {
+    $("#food-editor-modal").hidden = true;
+    const target = foodEditorReturnTarget;
+    foodEditorReturnTarget = "";
+    editingFoodId = null;
+    editingCatalogFoodId = null;
+    foodEditorPrefill = null;
+    foodEditorEquivalences = [];
+    foodEditorRescanMode = "barcode";
+    $("#rescan-food-editor").hidden = true;
+    $("#close-food-editor").hidden = false;
+    $("#food-editor-source-note").classList.remove("warning", "success");
+    if (target === "food") $("#food-modal").hidden = false;
+    if (target === "library") {
+      renderLibraryManager();
+      $("#library-modal").hidden = false;
+    }
+    if (target === "recipe") {
+      $("#recipe-modal").hidden = false;
+      renderRecipeIngredientResults();
+      renderRecipeIngredientList();
+    }
+    updateModalBodyState();
+  }
+
+  function recipeTotals(ingredients = recipeDraftIngredients) {
+    return ingredients.reduce((totals, ingredient) => ({
+      calories: totals.calories + toNumber(ingredient.calories, 0),
+      protein: totals.protein + toNumber(ingredient.protein, 0),
+      fat: totals.fat + toNumber(ingredient.fat, 0),
+      carbs: totals.carbs + toNumber(ingredient.carbs, 0)
+    }), { calories: 0, protein: 0, fat: 0, carbs: 0 });
+  }
+
+  function recalculateRecipe(recipe) {
+    if (!recipe?.ingredients?.length) return recipe;
+    const totals = recipeTotals(recipe.ingredients);
+    const yieldCount = Math.max(0.01, toNumber(recipe.recipeYield, 1) || 1);
+    const servingAmount = Math.max(0.01, toNumber(recipe.recipeServingAmount, parseServingDefinition(recipe.serving).baseAmount) || 1);
+    const factor = servingAmount / yieldCount;
+    recipe.calories = totals.calories * factor;
+    recipe.protein = totals.protein * factor;
+    recipe.fat = totals.fat * factor;
+    recipe.carbs = totals.carbs * factor;
+    return recipe;
+  }
+
+  function refreshRecipesUsingFood(food) {
+    const sourceId = foodUsageKey(food);
+    state.recipes.forEach(recipe => {
+      let changed = false;
+      recipe.ingredients = (recipe.ingredients || []).map(ingredient => {
+        if (ingredient.foodId !== food.id && ingredient.sourceId !== sourceId) return ingredient;
+        const options = foodQuantityOptions(food);
+        const option = options.find(candidate => candidate.value === ingredient.unit);
+        const fallbackFactor = Math.max(0, toNumber(ingredient.quantityFactor, 0));
+        const preview = option
+          ? quantityPreview(food, ingredient.amount, option.value)
+          : {
+              calories: food.calories * fallbackFactor,
+              protein: food.protein * fallbackFactor,
+              fat: food.fat * fallbackFactor,
+              carbs: food.carbs * fallbackFactor,
+              factor: fallbackFactor
+            };
+        changed = true;
+        return normalizeRecipeIngredient({
+          ...ingredient,
+          sourceId,
+          foodId: food.id,
+          kind: food.kind,
+          name: food.name,
+          unit: option?.value || ingredient.unit,
+          serving: option ? `${formatQuantityAmount(ingredient.amount)} ${quantityUnitText(option, ingredient.amount)}` : ingredient.serving,
+          quantityFactor: preview.factor,
+          calories: preview.calories,
+          protein: preview.protein,
+          fat: preview.fat,
+          carbs: preview.carbs
+        });
+      }).filter(Boolean);
+      if (changed) recalculateRecipe(recipe);
+    });
+  }
+
+  function saveCustomFood(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const previous = editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
+    const previousCatalog = editingCatalogFoodId ? catalogFoodForEditing(editingCatalogFoodId) : null;
+    const sourceData = previous || foodEditorPrefill || {};
+    const barcode = normalizeBarcode(form.elements.barcode.value);
+    const editorError = $("#food-editor-error");
+    editorError.hidden = true;
+    if (barcode && !validBarcode(barcode)) {
+      editorError.textContent = "El código de barras no es válido.";
+      editorError.hidden = false;
+      form.elements.barcode.focus();
+      return;
+    }
+    const duplicate = barcode && state.foods.find(food => food.id !== previous?.id && normalizeBarcode(food.barcode) === barcode);
+    if (duplicate) {
+      editorError.textContent = `Ese código ya pertenece a ${duplicate.name}.`;
+      editorError.hidden = false;
+      return;
+    }
+    const unitData = editableUnitFromForm(form.elements.servingUnit, form.elements.servingUnitCustom);
+    if (unitData.unit === "custom" && !unitData.customUnit) {
+      form.elements.servingUnitCustom.focus();
+      return;
+    }
+    const servingAmount = Math.max(0.01, roundEditorNumber(form.elements.servingAmount.value, 2) || 1);
+    const equivalences = validatedEquivalences("food", unitData.unit, unitData.customUnit, editorError);
+    if (!equivalences) return;
+    const calories = roundEditorNumber(form.elements.calories.value, 0);
+    const protein = roundEditorNumber(form.elements.protein.value, 1);
+    const fat = roundEditorNumber(form.elements.fat.value, 1);
+    const carbs = roundEditorNumber(form.elements.carbs.value, 1);
+    if (editingCatalogFoodId && previousCatalog) {
+      state.catalogOverrides ||= {};
+      state.catalogOverrides[editingCatalogFoodId] = normalizeCatalogOverride({
+        id: editingCatalogFoodId,
+        hidden: false,
+        name: form.elements.name.value,
+        calories,
+        serving: servingLabel(servingAmount, unitData.unit, unitData.customUnit),
+        servingAmount,
+        servingUnit: unitData.unit,
+        servingUnitCustom: unitData.customUnit,
+        equivalences,
+        protein,
+        fat,
+        carbs
+      });
+      rebuildExternalFoodCatalog();
+      const updated = catalogFoodForEditing(editingCatalogFoodId);
+      if (updated) refreshRecipesUsingFood(updated);
+      saveState(state);
+      const target = foodEditorReturnTarget;
+      $("#food-editor-modal").hidden = true;
+      editingCatalogFoodId = null;
+      editingFoodId = null;
+      foodEditorEquivalences = [];
+      foodEditorReturnTarget = "";
+      if (target === "library") {
+        renderLibraryManager();
+        $("#library-modal").hidden = false;
+      } else if (target === "recipe") {
+        $("#recipe-modal").hidden = false;
+        renderRecipeIngredientResults();
+        renderRecipeIngredientList();
+      } else if (modalIsOpen("food-modal")) {
+        updateFoodSearchDisplay();
+      } else render();
+      updateModalBodyState();
+      return;
+    }
+
+    const item = normalizeFood({
+      id: previous?.id || createId(),
+      kind: "food",
+      name: form.elements.name.value,
+      barcode,
+      brand: form.elements.brand.value,
+      source: sourceData.source || "",
+      sourceUrl: sourceData.sourceUrl || "",
+      sourceImportedAt: sourceData.sourceImportedAt || "",
+      imageUrl: sourceData.imageUrl || "",
+      calories,
+      serving: servingLabel(servingAmount, unitData.unit, unitData.customUnit),
+      servingAmount,
+      servingUnit: unitData.unit,
+      servingUnitCustom: unitData.customUnit,
+      equivalences,
+      protein,
+      fat,
+      carbs,
+      uses: previous?.uses || 0,
+      lastUsed: previous?.lastUsed || "",
+      lastUsedAt: previous?.lastUsedAt || ""
+    });
+    if (!item) return;
+
+    if (previous) state.foods = state.foods.map(food => food.id === previous.id ? item : food);
+    else state.foods.push(item);
+    refreshRecipesUsingFood(item);
+    saveState(state);
+
+    const target = foodEditorReturnTarget;
+    $("#food-editor-modal").hidden = true;
+    editingFoodId = null;
+    editingCatalogFoodId = null;
+    foodEditorPrefill = null;
+    foodEditorEquivalences = [];
+    foodEditorReturnTarget = "";
+
+    if (target === "recipe") {
+      const defaults = defaultFoodQuantity(item);
+      addRecipeDraftIngredient(item, defaults.amount, defaults.unit);
+      $("#recipe-modal").hidden = false;
+      $("#recipe-ingredient-search").value = "";
+      renderRecipeIngredientResults();
+      renderRecipeIngredientList();
+    } else if (target === "library") {
+      renderLibraryManager();
+      $("#library-modal").hidden = false;
+    } else if (target === "food" || modalIsOpen("food-modal")) {
+      $("#food-modal").hidden = false;
+      $("#food-search-input").value = item.name;
+      updateFoodSearchDisplay();
+      activeFoodSelection = { id: item.id, kind: "food" };
+      renderFoodResults();
+      focusSelectedFoodAmount();
+    } else {
+      render();
+    }
+    updateModalBodyState();
+  }
+
+  function openRecipeEditor(options = {}) {
+    if (options instanceof Event) options = {};
+    editingRecipeId = options.editId || null;
+    recipeEditorReturnTarget = options.returnTarget || (modalIsOpen("library-modal") ? "library" : "food");
+    const form = $("#recipe-form");
+    form.reset();
+    const recipe = editingRecipeId ? state.recipes.find(item => item.id === editingRecipeId) : null;
+    recipeDraftIngredients = recipe?.ingredients ? clone(recipe.ingredients) : [];
+    recipeEditorEquivalences = clone(recipe?.equivalences || []);
+    activeRecipeIngredientSelection = null;
+
+    $("#recipe-title").textContent = recipe ? "Editar receta" : "Crear receta por ingredientes";
+    $("#recipe-description").textContent = recipe
+      ? "Modificá ingredientes, cantidades o porciones; los valores se recalculan automáticamente."
+      : "Buscá cada ingrediente en la base, indicá su cantidad y agregalo a la receta.";
+    $("#save-recipe").textContent = recipe ? "Guardar cambios" : "Guardar receta";
+    const parsedServing = parseServingDefinition(recipe?.serving || "1 porción");
+    form.elements.name.value = recipe?.name || "";
+    form.elements.yield.value = recipe?.recipeYield || 1;
+    form.elements.servingAmount.value = recipe?.recipeServingAmount || recipe?.servingAmount || parsedServing.baseAmount || 1;
+    setEditableUnitFields(
+      form.elements.yieldUnit,
+      form.elements.yieldUnitCustom,
+      recipe?.recipeYieldUnit || recipe?.servingUnit || parsedServing.unitKey || "serving",
+      recipe?.recipeYieldUnitCustom || recipe?.servingUnitCustom || parsedServing.customUnit
+    );
+    form.elements.yieldUnit.dataset.currentUnit = form.elements.yieldUnit.value;
+    $("#recipe-ingredient-search").value = "";
+    $("#recipe-error").hidden = true;
+
+    if (recipeEditorReturnTarget === "library") $("#library-modal").hidden = true;
+    $("#recipe-modal").hidden = false;
+    document.body.classList.add("modal-open");
+    renderEquivalenceEditor("recipe");
+    renderRecipeIngredientResults();
+    renderRecipeIngredientList();
+    focusOnOpen(form.elements.name);
+  }
+
+  function closeRecipeEditor() {
+    $("#recipe-modal").hidden = true;
+    activeRecipeIngredientSelection = null;
+    recipeDraftIngredients = [];
+    recipeEditorEquivalences = [];
+    editingRecipeId = null;
+    const target = recipeEditorReturnTarget;
+    recipeEditorReturnTarget = "";
+    if (target === "library") {
+      renderLibraryManager();
+      $("#library-modal").hidden = false;
+    }
+    updateModalBodyState();
+  }
+
+  function recipeIngredientCandidates(query) {
+    const normalizedQuery = normalizeSearchText(query);
+    const local = state.foods.filter(item => !normalizedQuery || foodSearchScore(item, query) > 0);
+    let external = [];
+    if (normalizedQuery) external = searchExternalFoods(query, 30);
+    else {
+      const recentFoods = allUsedFoods().filter(item => item.kind !== "recipe").sort(compareRecentFoods);
+      external = [...recentFoods, ...externalFoods.slice(0, 12)];
+    }
+    return [...new Map([...local, ...external].filter(item => item.kind !== "recipe").map(item => [item.id, item])).values()]
+      .sort((a, b) => normalizedQuery
+        ? foodSearchScore(b, query) - foodSearchScore(a, query) || compareMealFoodPriority(a, b, activeMeal)
+        : compareRecentFoods(a, b))
+      .slice(0, 24);
+  }
+
+  function renderRecipeIngredientResults() {
+    const container = $("#recipe-ingredient-results");
+    const rawQuery = $("#recipe-ingredient-search")?.value || "";
+    const query = normalizeHeader(rawQuery);
+    const candidates = recipeIngredientCandidates(rawQuery);
+    container.innerHTML = "";
+    if (externalFoodsStatus === "loading") renderCatalogStatus(container);
+    candidates.forEach(item => container.appendChild(recipeIngredientResultButton(item)));
+
+    if (!candidates.length && externalFoodsStatus !== "loading") {
+      container.innerHTML = '<p class="empty-message">No encontramos ese ingrediente en la base.</p>';
+    }
+
+    const exactMatch = query && candidates.some(item => normalizeHeader(item.name) === query);
+    const createButton = $("#create-missing-ingredient");
+    createButton.hidden = !query || exactMatch;
+    createButton.textContent = query ? `Crear “${rawQuery.trim()}”` : "Crear alimento nuevo";
+  }
+
+  function recipeIngredientResultButton(item) {
+    const wrapper = document.createElement("div");
+    const selected = activeRecipeIngredientSelection?.id === item.id && activeRecipeIngredientSelection?.kind === item.kind;
+    wrapper.className = `food-result-card${selected ? " active" : ""}`;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "food-result";
+    button.dataset.selectRecipeIngredient = item.id;
+    button.dataset.foodKind = item.kind;
+    const originBadge = item.kind === "food"
+      ? `<span class="food-origin-badge food-origin-own">${item.source === "openfoodfacts" ? "Código" : item.source === "nutrition-label-ocr" ? "Rótulo" : "Propio"}</span>`
+      : item.kind === "external" && item.userOverride
+        ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
+        : "";
+    button.innerHTML = `<div><div class="food-result-name"><b>${escapeHTML(item.name)}</b>${originBadge}</div><small>${escapeHTML(item.serving)} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span>`;
+    wrapper.appendChild(button);
+    if (!selected) return wrapper;
+
+    const defaults = defaultFoodQuantity(item);
+    const options = foodQuantityOptions(item);
+    const preview = quantityPreview(item, defaults.amount, defaults.unit);
+    const controls = document.createElement("div");
+    controls.className = "food-inline-add recipe-inline-add";
+    controls.dataset.recipeIngredientAdd = "";
+    controls.dataset.foodId = item.id;
+    controls.dataset.foodKind = item.kind;
+    controls.dataset.currentUnit = defaults.unit;
+    controls.innerHTML = `
+      <label><span>Cantidad</span><input name="amount" type="number" min="0.01" step="any" inputmode="decimal" value="${escapeHTML(defaults.amount)}"></label>
+      <label><span>Unidad</span><select name="unit" ${options.length === 1 ? "disabled" : ""}>${options.map(option => `<option value="${escapeHTML(option.value)}" ${option.value === defaults.unit ? "selected" : ""}>${escapeHTML(option.plural)}</option>`).join("")}</select></label>
+      <div class="food-inline-preview"><b data-recipe-preview-calories>${formatNumber(Math.round(preview.calories))} kcal</b><small data-recipe-preview-macros>P ${formatNumber(preview.protein,1)} · G ${formatNumber(preview.fat,1)} · C ${formatNumber(preview.carbs,1)}</small></div>
+      <div class="food-inline-actions"><button class="text-action" data-cancel-recipe-ingredient type="button">Cancelar</button><button class="primary-action" data-add-recipe-ingredient type="button">Agregar</button></div>`;
+    wrapper.appendChild(controls);
+    return wrapper;
+  }
+
+  function updateRecipeIngredientPreview(controls) {
+    const item = findFood(controls.dataset.foodId, controls.dataset.foodKind);
+    if (!item) return;
+    const amount = toNumber(controls.querySelector('[name="amount"]').value, 0);
+    const unitSelect = controls.querySelector('[name="unit"]');
+    const unit = unitSelect?.value || controls.dataset.currentUnit;
+    const preview = quantityPreview(item, amount, unit);
+    controls.querySelector('[data-recipe-preview-calories]').textContent = `${formatNumber(Math.round(preview.calories))} kcal`;
+    controls.querySelector('[data-recipe-preview-macros]').textContent = `P ${formatNumber(preview.protein,1)} · G ${formatNumber(preview.fat,1)} · C ${formatNumber(preview.carbs,1)}`;
+  }
+
+  function changeRecipeIngredientUnit(controls) {
+    const item = findFood(controls.dataset.foodId, controls.dataset.foodKind);
+    const select = controls.querySelector('[name="unit"]');
+    if (!item || !select) return;
+    controls.dataset.currentUnit = select.value;
+    updateRecipeIngredientPreview(controls);
+  }
+
+  function addRecipeDraftIngredient(item, amountValue, unitValue) {
+    const amount = toNumber(amountValue, NaN);
+    const options = foodQuantityOptions(item);
+    const option = options.find(candidate => candidate.value === unitValue) || options[0];
+    if (!Number.isFinite(amount) || amount <= 0 || !option) return;
+    const preview = quantityPreview(item, amount, option.value);
+    const ingredient = normalizeRecipeIngredient({
+      id: createId(),
+      sourceId: foodUsageKey(item),
+      foodId: item.id,
+      kind: item.kind,
+      name: item.name,
+      amount,
+      unit: option.value,
+      serving: `${formatQuantityAmount(amount)} ${quantityUnitText(option, amount)}`,
+      quantityFactor: preview.factor,
+      calories: preview.calories,
+      protein: preview.protein,
+      fat: preview.fat,
+      carbs: preview.carbs
+    });
+    if (!ingredient) return;
+
+    const duplicate = recipeDraftIngredients.find(existing => existing.sourceId === ingredient.sourceId && existing.unit === ingredient.unit);
+    if (duplicate) {
+      duplicate.amount += ingredient.amount;
+      duplicate.calories += ingredient.calories;
+      duplicate.protein += ingredient.protein;
+      duplicate.fat += ingredient.fat;
+      duplicate.carbs += ingredient.carbs;
+      duplicate.quantityFactor = Math.max(0, toNumber(duplicate.quantityFactor, 0)) + preview.factor;
+      duplicate.serving = `${formatQuantityAmount(duplicate.amount)} ${quantityUnitText(option, duplicate.amount)}`;
+    } else {
+      recipeDraftIngredients.push(ingredient);
+    }
+    activeRecipeIngredientSelection = null;
+    $("#recipe-error").hidden = true;
+    renderRecipeIngredientList();
+  }
+
+  function handleRecipeIngredientSearchClick(event) {
+    if (event.target.closest("[data-cancel-recipe-ingredient]")) {
+      activeRecipeIngredientSelection = null;
+      renderRecipeIngredientResults();
+      return;
+    }
+    const add = event.target.closest("[data-add-recipe-ingredient]");
+    if (add) {
+      const controls = add.closest("[data-recipe-ingredient-add]");
+      const item = findFood(controls.dataset.foodId, controls.dataset.foodKind);
+      if (!item) return;
+      addRecipeDraftIngredient(
+        item,
+        controls.querySelector('[name="amount"]').value,
+        controls.querySelector('[name="unit"]')?.value || controls.dataset.currentUnit
+      );
+      $("#recipe-ingredient-search").value = "";
+      renderRecipeIngredientResults();
+      return;
+    }
+    const select = event.target.closest("[data-select-recipe-ingredient]");
+    if (!select) return;
+    activeRecipeIngredientSelection = { id: select.dataset.selectRecipeIngredient, kind: select.dataset.foodKind };
+    renderRecipeIngredientResults();
+    requestAnimationFrame(() => {
+      const input = $("#recipe-ingredient-results .food-result-card.active input[name='amount']");
+      input?.focus();
+      input?.select();
+    });
+  }
+
+  function handleRecipeIngredientSearchInput(event) {
+    const controls = event.target.closest("[data-recipe-ingredient-add]");
+    if (!controls || event.target.name !== "amount") return;
+    updateRecipeIngredientPreview(controls);
+  }
+
+  function handleRecipeIngredientSearchChange(event) {
+    const controls = event.target.closest("[data-recipe-ingredient-add]");
+    if (!controls || event.target.name !== "unit") return;
+    changeRecipeIngredientUnit(controls);
+  }
+
+  function queueRecipeIngredientSearch() {
+    clearTimeout(recipeSearchTimer);
+    recipeSearchTimer = setTimeout(() => {
+      activeRecipeIngredientSelection = null;
+      renderRecipeIngredientResults();
+    }, 120);
+  }
+
+  function draftIngredientFood(ingredient) {
+    return findFood(ingredient.foodId, ingredient.kind)
+      || findFood(ingredient.sourceId, ingredient.kind)
+      || null;
+  }
+
+  function renderRecipeIngredientList() {
+    const container = $("#recipe-ingredient-list");
+    container.innerHTML = "";
+    $("#recipe-ingredient-count").textContent = recipeDraftIngredients.length;
+    if (!recipeDraftIngredients.length) {
+      container.innerHTML = '<p class="empty-message">Buscá un alimento y agregalo con la cantidad usada en la receta.</p>';
+      renderRecipeTotals();
+      return;
+    }
+
+    recipeDraftIngredients.forEach((ingredient, index) => {
+      const food = draftIngredientFood(ingredient);
+      const options = food ? foodQuantityOptions(food) : [{ value: ingredient.unit, baseAmount: ingredient.amount, singular: ingredient.unit, plural: ingredient.unit }];
+      const row = document.createElement("article");
+      row.className = "recipe-ingredient-row";
+      row.dataset.recipeIngredientIndex = index;
+      row.dataset.currentUnit = ingredient.unit;
+      row.innerHTML = `
+        <div class="recipe-ingredient-name"><b>${escapeHTML(ingredient.name)}</b><small data-draft-nutrition>${formatNumber(Math.round(ingredient.calories))} kcal · P ${formatNumber(ingredient.protein,1)} · G ${formatNumber(ingredient.fat,1)} · C ${formatNumber(ingredient.carbs,1)}</small></div>
+        <label><span>Cantidad</span><input name="draftAmount" type="number" min="0.01" step="any" value="${escapeHTML(ingredient.amount)}"></label>
+        <label><span>Unidad</span><select name="draftUnit" ${options.length === 1 ? "disabled" : ""}>${options.map(option => `<option value="${escapeHTML(option.value)}" ${option.value === ingredient.unit ? "selected" : ""}>${escapeHTML(option.plural)}</option>`).join("")}</select></label>
+        <button class="danger-text-action" data-remove-recipe-ingredient="${index}" type="button">Quitar</button>`;
+      container.appendChild(row);
+    });
+    renderRecipeTotals();
+  }
+
+  function updateDraftIngredientRow(row, changeUnit = false) {
+    const index = Number(row.dataset.recipeIngredientIndex);
+    const ingredient = recipeDraftIngredients[index];
+    if (!ingredient) return;
+    const food = draftIngredientFood(ingredient);
+    const amountInput = row.querySelector('[name="draftAmount"]');
+    const unitSelect = row.querySelector('[name="draftUnit"]');
+
+    if (changeUnit && food && unitSelect) {
+      row.dataset.currentUnit = unitSelect.value;
+    }
+
+    const amount = Math.max(0.01, toNumber(amountInput.value, ingredient.amount));
+    const unit = unitSelect?.value || ingredient.unit;
+    if (food) {
+      const option = foodQuantityOptions(food).find(candidate => candidate.value === unit) || foodQuantityOptions(food)[0];
+      const preview = quantityPreview(food, amount, option.value);
+      Object.assign(ingredient, {
+        amount,
+        unit: option.value,
+        name: food.name,
+        serving: `${formatQuantityAmount(amount)} ${quantityUnitText(option, amount)}`,
+        quantityFactor: preview.factor,
+        calories: preview.calories,
+        protein: preview.protein,
+        fat: preview.fat,
+        carbs: preview.carbs
+      });
+    } else {
+      const factor = amount / Math.max(0.01, ingredient.amount);
+      ingredient.amount = amount;
+      ingredient.quantityFactor = Math.max(0, toNumber(ingredient.quantityFactor, 0)) * factor;
+      ingredient.calories *= factor;
+      ingredient.protein *= factor;
+      ingredient.fat *= factor;
+      ingredient.carbs *= factor;
+    }
+    row.querySelector('[data-draft-nutrition]').textContent = `${formatNumber(Math.round(ingredient.calories))} kcal · P ${formatNumber(ingredient.protein,1)} · G ${formatNumber(ingredient.fat,1)} · C ${formatNumber(ingredient.carbs,1)}`;
+    renderRecipeTotals();
+  }
+
+  function handleRecipeIngredientListClick(event) {
+    const remove = event.target.closest("[data-remove-recipe-ingredient]");
+    if (!remove) return;
+    recipeDraftIngredients.splice(Number(remove.dataset.removeRecipeIngredient), 1);
+    renderRecipeIngredientList();
+  }
+
+  function handleRecipeIngredientListInput(event) {
+    const row = event.target.closest("[data-recipe-ingredient-index]");
+    if (!row || event.target.name !== "draftAmount") return;
+    updateDraftIngredientRow(row, false);
+  }
+
+  function handleRecipeIngredientListChange(event) {
+    const row = event.target.closest("[data-recipe-ingredient-index]");
+    if (!row || event.target.name !== "draftUnit") return;
+    updateDraftIngredientRow(row, true);
+  }
+
+  function renderRecipeTotals() {
+    const form = $("#recipe-form");
+    const yieldCount = Math.max(0.01, toNumber(form?.elements.yield.value, 1) || 1);
+    const servingAmount = Math.max(0.01, toNumber(form?.elements.servingAmount.value, 1) || 1);
+    let totals = recipeTotals();
+    if (!recipeDraftIngredients.length && editingRecipeId) {
+      const legacy = state.recipes.find(recipe => recipe.id === editingRecipeId);
+      if (legacy) {
+        const legacyServingAmount = Math.max(0.01, toNumber(legacy.recipeServingAmount, parseServingDefinition(legacy.serving).baseAmount) || 1);
+        const completeFactor = yieldCount / legacyServingAmount;
+        totals = {
+          calories: legacy.calories * completeFactor,
+          protein: legacy.protein * completeFactor,
+          fat: legacy.fat * completeFactor,
+          carbs: legacy.carbs * completeFactor
+        };
+      }
+    }
+    const factor = servingAmount / yieldCount;
+    const serving = {
+      calories: totals.calories * factor,
+      protein: totals.protein * factor,
+      fat: totals.fat * factor,
+      carbs: totals.carbs * factor
+    };
+    const unitData = editableUnitFromForm(form.elements.yieldUnit, form.elements.yieldUnitCustom);
+    $("#recipe-total-calories").textContent = `${formatNumber(Math.round(totals.calories))} kcal`;
+    $("#recipe-total-macros").textContent = `P ${formatNumber(totals.protein,1)} · G ${formatNumber(totals.fat,1)} · C ${formatNumber(totals.carbs,1)}`;
+    $("#recipe-serving-label").textContent = `Por ${servingLabel(servingAmount, unitData.unit, unitData.customUnit)}`;
+    $("#recipe-serving-calories").textContent = `${formatNumber(Math.round(serving.calories))} kcal`;
+    $("#recipe-serving-macros").textContent = `P ${formatNumber(serving.protein,1)} · G ${formatNumber(serving.fat,1)} · C ${formatNumber(serving.carbs,1)}`;
+  }
+
+  function saveRecipe(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const previous = editingRecipeId ? state.recipes.find(recipe => recipe.id === editingRecipeId) : null;
+    const error = $("#recipe-error");
+    if (!recipeDraftIngredients.length && !previous) {
+      error.textContent = "Agregá al menos un ingrediente antes de guardar la receta.";
+      error.hidden = false;
+      return;
+    }
+
+    const yieldCount = Math.max(0.01, toNumber(form.elements.yield.value, 1) || 1);
+    const servingAmount = Math.max(0.01, toNumber(form.elements.servingAmount.value, 1) || 1);
+    const unitData = editableUnitFromForm(form.elements.yieldUnit, form.elements.yieldUnitCustom);
+    if (unitData.unit === "custom" && !unitData.customUnit) {
+      form.elements.yieldUnitCustom.focus();
+      return;
+    }
+    const equivalences = validatedEquivalences("recipe", unitData.unit, unitData.customUnit, error);
+    if (!equivalences) return;
+    const totals = recipeDraftIngredients.length ? recipeTotals() : null;
+    const factor = servingAmount / yieldCount;
+    const item = normalizeFood({
+      id: previous?.id || createId(),
+      kind: "recipe",
+      name: form.elements.name.value,
+      serving: servingLabel(servingAmount, unitData.unit, unitData.customUnit),
+      servingAmount,
+      servingUnit: unitData.unit,
+      servingUnitCustom: unitData.customUnit,
+      recipeYield: yieldCount,
+      recipeYieldUnit: unitData.unit,
+      recipeYieldUnitCustom: unitData.customUnit,
+      recipeServingAmount: servingAmount,
+      equivalences,
+      ingredients: clone(recipeDraftIngredients),
+      calories: totals ? totals.calories * factor : previous.calories,
+      protein: totals ? totals.protein * factor : previous.protein,
+      fat: totals ? totals.fat * factor : previous.fat,
+      carbs: totals ? totals.carbs * factor : previous.carbs,
+      uses: previous?.uses || 0,
+      lastUsed: previous?.lastUsed || "",
+      lastUsedAt: previous?.lastUsedAt || ""
+    });
+    if (!item) return;
+
+    if (previous) state.recipes = state.recipes.map(recipe => recipe.id === previous.id ? item : recipe);
+    else state.recipes.push(item);
+    saveState(state);
+
+    const target = recipeEditorReturnTarget;
+    $("#recipe-modal").hidden = true;
+    editingRecipeId = null;
+    recipeDraftIngredients = [];
+    recipeEditorEquivalences = [];
+    activeRecipeIngredientSelection = null;
+    recipeEditorReturnTarget = "";
+
+    if (target === "library") {
+      renderLibraryManager();
+      $("#library-modal").hidden = false;
+    } else if (modalIsOpen("food-modal")) {
+      switchFoodMode("recipe");
+      activeFoodSelection = { id: item.id, kind: "recipe" };
+      renderRecipeResults();
+      focusSelectedFoodAmount();
+    } else {
+      render();
+    }
+    updateModalBodyState();
+  }
+
+  function diaryEntrySource(entry) {
+    const sourceId = String(entry?.sourceId || "");
+    if (!sourceId) return normalizeFood(entry);
+    const current = state.foods.find(item => item.id === sourceId)
+      || state.recipes.find(item => item.id === sourceId)
+      || externalFoodsById.get(sourceId)
+      || externalFoodsById.get(`external:${sourceId}`)
+      || catalogFoodForEditing(sourceId)
+      || catalogFoodForEditing(`external:${sourceId}`);
+    const historical = normalizeFood(entry);
+    if (current && entry?.quantityUnit && !foodQuantityOptions(current).some(option => option.value === entry.quantityUnit)) {
+      return historical || current;
+    }
+    return current || historical;
+  }
+
+  function updateDiaryEditPreview(form) {
+    const entry = todayDiary().find(item => item.id === form.dataset.diaryEditForm);
+    if (!entry) return;
+    const label = form.querySelector("[data-diary-edit-preview]");
+    if (isCalorieOnlyEntry(entry)) {
+      const calories = boundedInputNumber(form.elements.calories?.value, 1, INPUT_LIMITS.calories, 0);
+      if (label) label.textContent = `${formatNumber(Math.round(calories))} kcal`;
+      return;
+    }
+    const source = diaryEntrySource(entry);
+    if (!source) return;
+    const unit = form.elements.unit?.value || entry.quantityUnit;
+    const preview = quantityPreview(source, toNumber(form.elements.amount.value, 0), unit);
+    if (label) label.textContent = `${formatNumber(Math.round(preview.calories))} kcal`;
+  }
+
+  function closeDiaryEntryEditor() {
+    if (!editingDiaryEntryId) return;
+    editingDiaryEntryId = null;
+    renderDiary(calculatePlan());
+  }
+
+  function handleDiaryEntryClick(event) {
+    const removeButton = event.target.closest("[data-remove-diary]");
+    if (removeButton) {
+      event.stopPropagation();
+      state.diary[selectedDiaryDate] = todayDiary().filter(item => item.id !== removeButton.dataset.removeDiary);
+      if (editingDiaryEntryId === removeButton.dataset.removeDiary) editingDiaryEntryId = null;
+      saveState(state);
+      render();
+      return;
+    }
+
+    const editCard = event.target.closest(".meal-item[data-edit-diary]");
+    if (editCard) {
+      editingDiaryEntryId = editCard.dataset.editDiary;
+      renderDiary(calculatePlan());
+      requestAnimationFrame(() => document.querySelector('[data-diary-edit-form] input[name="calories"], [data-diary-edit-form] input[name="amount"]')?.select());
+      return;
+    }
+
+    if (editingDiaryEntryId && !event.target.closest(".meal-item.editing")) closeDiaryEntryEditor();
+  }
+
+  function closeDiaryEditorFromOutside(event) {
+    if (!editingDiaryEntryId) return;
+    if (event.target.closest("#meal-grid")) return;
+    closeDiaryEntryEditor();
+  }
+
+  function handleDiaryEntryEditInput(event) {
+    const form = event.target.closest("[data-diary-edit-form]");
+    if (!form || !["amount", "unit", "calories"].includes(event.target.name)) return;
+    updateDiaryEditPreview(form);
+  }
+
+  function submitDiaryEntryEdit(event) {
+    const form = event.target.closest("[data-diary-edit-form]");
+    if (!form) return;
+    event.preventDefault();
+    const entries = todayDiary();
+    const index = entries.findIndex(item => item.id === form.dataset.diaryEditForm);
+    if (index < 0) return;
+    const entry = entries[index];
+    if (isCalorieOnlyEntry(entry)) {
+      const calories = boundedInputNumber(form.elements.calories?.value, 1, INPUT_LIMITS.calories);
+      if (!Number.isFinite(calories)) {
+        form.reportValidity();
+        return;
+      }
+      entries[index] = normalizeDiaryEntry({
+        ...entry,
+        entryMode: "calories",
+        quantity: 0,
+        quantityUnit: "",
+        serving: "carga libre",
+        calories,
+        protein: 0,
+        fat: 0,
+        carbs: 0
+      });
+    } else {
+      const source = diaryEntrySource(entry);
+      const amount = boundedInputNumber(form.elements.amount?.value, 0.01, INPUT_LIMITS.quantity);
+      const unit = form.elements.unit?.value || entry.quantityUnit;
+      if (!source || !Number.isFinite(amount)) {
+        form.reportValidity();
+        return;
+      }
+      const preview = quantityPreview(source, amount, unit);
+      const option = preview.option;
+      entries[index] = normalizeDiaryEntry({
+        ...entry,
+        entryMode: "quantity",
+        quantity: amount,
+        quantityUnit: option.value,
+        serving: `${formatQuantityAmount(amount)} ${quantityUnitText(option, amount)}`,
+        calories: preview.calories,
+        protein: preview.protein,
+        fat: preview.fat,
+        carbs: preview.carbs
+      });
+    }
+    state.diary[selectedDiaryDate] = entries;
+    editingDiaryEntryId = null;
+    saveState(state);
+    render();
+  }
+
+  function syncOperationalDay() {
+    const currentOperationalDay = operationalDayISO();
+    const followedDefaultDay = selectedDiaryDate === lastOperationalDay;
+
+    if (currentOperationalDay !== lastOperationalDay) {
+      lastOperationalDay = currentOperationalDay;
+      if (followedDefaultDay) selectedDiaryDate = currentOperationalDay;
+      weightEditorForced = false;
+      render();
+    }
+
+    maybeOpenDailyCheckin();
+  }
+
+  function scheduleOperationalDayRollover() {
+    if (operationalDayTimer) window.clearTimeout(operationalDayTimer);
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(DIARY_ROLLOVER_HOUR, 0, 1, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+
+    operationalDayTimer = window.setTimeout(() => {
+      syncOperationalDay();
+      scheduleOperationalDayRollover();
+    }, Math.min(next.getTime() - now.getTime(), 2_147_000_000));
+  }
+
+  function maybeOpenDailyCheckin() {
+    const now = new Date();
+    if (!dailyRolloverReached(now) || !state.configured) return;
+
+    const checkinDate = operationalDayISO(now);
+    if (state.lastCheckinDate === checkinDate) return;
+
+    const alreadyWeighed = state.weighIns.some(item => item.date === checkinDate);
+    if (alreadyWeighed) {
+      state.lastCheckinDate = checkinDate;
+      saveState(state);
+      return;
+    }
+
+    $("#daily-checkin-modal").hidden = false;
+    document.body.classList.add("modal-open");
+  }
+
+  function finishDailyCheckin(weight = null) {
+    const checkinDate = operationalDayISO();
+    if (Number.isFinite(weight) && weight > 0) {
+      state.weighIns = mergeWeighIns(state.weighIns, [{ date: checkinDate, weight }]);
+    }
+    state.lastCheckinDate = checkinDate;
+    saveState(state);
+    $("#daily-checkin-modal").hidden = true;
+    document.body.classList.remove("modal-open");
+    render();
+  }
+
+  function submitDailyCheckin(event) {
+    event.preventDefault();
+    const weight = toNumber(event.currentTarget.elements.weight.value, NaN);
+    if (!Number.isFinite(weight) || weight <= 0) {
+      event.currentTarget.elements.weight.focus();
+      return;
+    }
+    finishDailyCheckin(weight);
+  }
+
+  function syncNativeDatePickers() {
+    const form = $("#profile-form");
+    $$("[data-native-date]").forEach(picker => {
+      const name = picker.dataset.nativeDate;
+      const value = normalizeDate(form.elements[name]?.value);
+      picker.value = value || "";
+      picker.max = name === "birthDate" ? todayISO() : "";
+      picker.min = name === "goalDate" ? toISODate(addDays(parseDate(todayISO()),1)) : "";
+    });
+  }
+
+  function openCalendar(name) {
+    const picker = document.querySelector(`[data-native-date="${name}"]`);
+    if (!picker) return;
+    syncNativeDatePickers();
+    if (typeof picker.showPicker === "function") picker.showPicker();
+    else picker.click();
+  }
+
+  function applyNativeDate(event) {
+    const picker = event.target.closest("[data-native-date]");
+    if (!picker || !picker.value) return;
+    const field = $("#profile-form").elements[picker.dataset.nativeDate];
+    field.value = displayDate(picker.value);
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function render() {
+    const configured = state.configured && profileIsComplete(state.profile, state.weighIns);
+    $("#empty-state").hidden = configured;
+    $("#dashboard").hidden = !configured;
+    if (!configured) return;
+
+    const profile = state.profile;
+    const weighIns = sortedWeighIns();
+    const trends = rollingTrend(weighIns, profile.trendWindow);
+    const first = weighIns[0];
+    const latest = weighIns.at(-1);
+    const latestTrend = trends.at(-1)?.trend;
+    const plan = calculatePlan(profile, weighIns);
+    const adaptiveRateData = automaticAdjustmentData(profile, plan, weighIns);
+    const observedWeekly = Number.isFinite(adaptiveRateData.observedWeekly)
+      ? adaptiveRateData.observedWeekly
+      : expenditureRatePerWeek(weighIns, 60);
+    const person = profile.name ? profile.name.trim() : "";
+    const hasCalories = Number.isFinite(plan.targetCalories);
+    const hasMaintenance = Number.isFinite(plan.maintenance);
+
+    $("#daily-eyebrow").textContent = person ? `OBJETIVOS DIARIOS DE ${person.toUpperCase()}` : "OBJETIVOS DIARIOS";
+    $("#daily-title").textContent = person ? `${person}, este es tu plan diario.` : "Tu plan diario.";
+    $("#target-calories").textContent = hasCalories ? formatNumber(Math.round(plan.targetCalories)) : "—";
+    $("#maintenance-calories").textContent = hasMaintenance ? `${formatNumber(Math.round(plan.maintenance))} kcal` : "—";
+    $("#calorie-adjustment").textContent = Number.isFinite(plan.dailyAdjustment) ? `${plan.dailyAdjustment > 0 ? "+" : ""}${formatNumber(Math.round(plan.dailyAdjustment))} kcal` : "—";
+    $("#formula-name").textContent = plan.rmr.fallback ? "Mifflin (respaldo)" : (FORMULA_LABELS[plan.rmr.used] || "—");
+    $("#activity-name").textContent = ACTIVITY_LABELS[String(profile.activityFactor)] || formatNumber(profile.activityFactor, 2);
+
+    $("#protein-grams").textContent = Number.isFinite(plan.proteinG) ? `${formatNumber(Math.round(plan.proteinG))} g` : "—";
+    $("#fat-grams").textContent = Number.isFinite(plan.fatG) ? `${formatNumber(Math.round(plan.fatG))} g` : "—";
+    $("#carb-grams").textContent = Number.isFinite(plan.carbsG) ? `${formatNumber(Math.round(plan.carbsG))} g` : "—";
+    $("#protein-detail").textContent = profile.macroMode === "athletic"
+      ? `${formatNumber(plan.macroRule.proteinPerKg, 1)} g/kg · ${formatNumber(plan.proteinPct, 0)}%`
+      : `${formatNumber(plan.proteinPct, 0)}% de las calorías`;
+    $("#fat-detail").textContent = profile.macroMode === "athletic"
+      ? `${formatNumber(plan.macroRule.effectiveFatPerKg, 1)} g/kg · ${formatNumber(plan.fatPct, 0)}%`
+      : `${formatNumber(plan.fatPct, 0)}% de las calorías`;
+    $("#carb-detail").textContent = profile.macroMode === "athletic"
+      ? `calorías restantes · ${formatNumber(plan.carbsPct, 0)}%`
+      : `${formatNumber(plan.carbsPct, 0)}% de las calorías`;
+    $("#protein-bar").style.setProperty("--macro-width", `${clamp(plan.proteinPct || 0, 0, 100)}%`);
+    $("#fat-bar").style.setProperty("--macro-width", `${clamp(plan.fatPct || 0, 0, 100)}%`);
+    $("#carb-bar").style.setProperty("--macro-width", `${clamp(plan.carbsPct || 0, 0, 100)}%`);
+
+    const macroNote = $("#macro-balance-note");
+    macroNote.className = "inline-note";
+    macroNote.textContent = profile.macroMode === "custom"
+      ? `Distribución personalizada: ${formatNumber(plan.proteinPct,0)}% proteína, ${formatNumber(plan.fatPct,0)}% grasas y ${formatNumber(plan.carbsPct,0)}% carbohidratos.`
+      : profile.macroMode === "balanced"
+        ? "Modo balanceado: 20% proteína, 30% grasas y 50% carbohidratos."
+        : "Modo atlético: proteína y grasas según peso; carbohidratos con la energía restante.";
+
+    $("#current-weight").textContent = formatKg(latest?.weight);
+    $("#trend-weight").textContent = formatKg(latestTrend, 2);
+    $("#observed-rate").textContent = Number.isFinite(observedWeekly) ? `${observedWeekly > 0 ? "+" : ""}${formatNumber(observedWeekly, 2)} kg/sem` : "Faltan datos";
+    $("#current-body-fat").textContent = Number.isFinite(toNumber(profile.bodyFat, NaN)) ? `${formatNumber(profile.bodyFat,1)}%` : "Sin dato";
+    $("#weight-context").textContent = latest
+      ? `Último registro: ${formatDate(latest.date)}. La tendencia actual está en ${formatKg(latestTrend, 2)}.`
+      : "El peso diario puede moverse mucho. La línea de tendencia es la que importa.";
+    updateWeightEntryState();
+
+    renderDiary(plan);
+    renderRecordWeight();
+    renderPlanStrip(profile, plan);
+    renderRecalibration(profile, plan, weighIns);
+    renderCharts(profile, plan, weighIns, trends, observedWeekly);
+    renderHistory(trends);
+
+    $("#stat-change").textContent = first && latest ? formatSignedKg(latest.weight - first.weight) : "—";
+    $("#stat-bmi").textContent = formatNumber(plan.bmi, 1);
+    $("#stat-bmi-note").textContent = bmiCategory(plan.bmi);
+    $("#stat-body-fat").textContent = Number.isFinite(toNumber(profile.bodyFat, NaN)) ? `${formatNumber(profile.bodyFat,1)}%` : "Sin dato";
+    $("#stat-ffmi").textContent = formatNumber(plan.ffmi, 1);
+    $("#plan-start").textContent = formatDate(profile.planStartDate || first?.date);
+    $("#plan-start-weight").textContent = formatKg(toNumber(profile.planStartWeight, first?.weight));
+  }
+
+  function renderPlanStrip(profile, plan) {
+    const action = profile.goalType === "loss" ? "Bajar" : profile.goalType === "gain" ? "Subir" : "Mantener";
+    $("#plan-kicker").textContent = profile.name ? `PLAN DE ${profile.name.toUpperCase()}` : "PLAN ACTUAL";
+    $("#plan-title").textContent = profile.goalType === "maintain"
+      ? `Mantener la tendencia cerca de ${formatKg(plan.weight)}.`
+      : `${action} con un ritmo de ${formatNumber(plan.rate.selected, 2)}% semanal.`;
+    $("#plan-description").textContent = profile.goalDate && Number.isFinite(plan.rate.required)
+      ? `La fecha elegida requiere ${formatNumber(plan.rate.required, 2)}% semanal. La app calcula con ${formatNumber(plan.rate.selected, 2)}%.`
+      : "El objetivo define la dirección; la tendencia real indica cuándo conviene corregir la estimación.";
+    $("#target-weight").textContent = profile.goalType === "maintain" ? "Mantener" : formatKg(plan.targetWeight);
+    $("#target-date").textContent = profile.goalDate ? formatDate(profile.goalDate) : "Sin fecha fija";
+    $("#estimated-date").textContent = plan.estimatedDate ? formatDate(plan.estimatedDate) : "—";
+    $("#required-rate").textContent = `${formatNumber(plan.rate.selected, 2)} %/sem`;
+
+    const signal = $("#goal-status");
+    signal.className = "signal";
+    let guidance;
+    if (profile.goalType === "maintain") {
+      signal.textContent = "MANTENIMIENTO";
+      guidance = "En mantenimiento importa la banda de varias semanas, no que cada día repita exactamente el mismo peso.";
+    } else if (plan.rate.selected > plan.rate.bounds.suggestedMax) {
+      signal.textContent = "RITMO ALTO";
+      signal.classList.add("alert");
+      guidance = `El ritmo manual supera el máximo de referencia de ${formatNumber(plan.rate.bounds.suggestedMax, 2)}% semanal usado por la herramienta.`;
+    } else if (plan.rate.capped) {
+      signal.textContent = "FECHA EXIGENTE";
+      signal.classList.add("warn");
+      guidance = `La fecha exige ${formatNumber(plan.rate.required, 2)}% semanal. El cálculo se limita a ${formatNumber(plan.rate.bounds.suggestedMax, 2)}% y estima una llegada posterior.`;
+    } else if (plan.rate.selected < plan.rate.bounds.suggestedMin) {
+      signal.textContent = "RITMO SUAVE";
+      guidance = "El ritmo está por debajo del rango habitual. Puede ser más lento, pero también más fácil de sostener.";
+    } else {
+      signal.textContent = "RANGO HABITUAL";
+      guidance = `El ritmo está dentro de ${formatNumber(plan.rate.bounds.suggestedMin, 2)}–${formatNumber(plan.rate.bounds.suggestedMax, 2)}% semanal.`;
+    }
+    if (plan.rmr.fallback) guidance += " Cunningham no pudo usarse y se aplicó Mifflin–St Jeor.";
+    if (Math.abs(toNumber(profile.calibrationOffset, 0)) >= 1) guidance += ` La estimación incluye una calibración de ${profile.calibrationOffset > 0 ? "+" : ""}${formatNumber(profile.calibrationOffset, 0)} kcal basada en el progreso previo.`;
+    $("#goal-guidance").textContent = guidance;
+  }
+
+  function setInsightFact(index, label, value) {
+    $(`#insight-fact-label-${index}`).textContent = label;
+    const valueIds = ["expected-today", "expected-difference", "stat-change"];
+    $(`#${valueIds[index - 1]}`).textContent = value;
+  }
+
+  function renderWeightInsight(profile, plan, weighIns, trends, observedWeekly) {
+    $(".progress-model-data").hidden = false;
+    const latest = weighIns.at(-1);
+    const first = weighIns[0];
+    const latestTrend = trends.at(-1)?.trend;
+    const expectedToday = expectedAtDate(profile, plan, parseDate(latest?.date || todayISO()));
+    const difference = Number.isFinite(latestTrend) && Number.isFinite(expectedToday) ? latestTrend - expectedToday : null;
+    setInsightFact(1, "Esperado hoy", formatKg(expectedToday, 2));
+    setInsightFact(2, "Diferencia", formatSignedKg(difference));
+    setInsightFact(3, "Cambio total", first && latest ? formatSignedKg(latest.weight - first.weight) : "—");
+
+    let title = profile.name ? `${profile.name}, todavía faltan datos.` : "Todavía faltan datos.";
+    let text = "Con algunos pesajes más se puede separar una variación puntual de una dirección sostenida.";
+    if (Number.isFinite(observedWeekly) && weighIns.length >= 5) {
+      const desired = plan.signedWeeklyKg;
+      const correctDirection = profile.goalType === "maintain"
+        ? Math.abs(observedWeekly) < 0.15
+        : Math.sign(observedWeekly) === Math.sign(desired);
+      const ratio = Math.abs(desired) > 0.02 ? Math.abs(observedWeekly) / Math.abs(desired) : null;
+
+      if (profile.goalType === "maintain") {
+        if (Math.abs(observedWeekly) < 0.15) {
+          title = profile.name ? `Estable, ${profile.name}.` : "Tendencia estable.";
+          text = `El ritmo reciente es ${observedWeekly > 0 ? "+" : ""}${formatNumber(observedWeekly, 2)} kg por semana, suficientemente cerca de una banda de mantenimiento.`;
+        } else {
+          title = profile.name ? `${profile.name}, salís del mantenimiento.` : "Fuera del mantenimiento.";
+          text = `La tendencia reciente cambia ${observedWeekly > 0 ? "+" : ""}${formatNumber(observedWeekly, 2)} kg por semana. Conviene observar si se sostiene antes de corregir calorías.`;
+        }
+      } else if (!correctDirection) {
+        title = profile.name ? `${profile.name}, el rumbo se invirtió.` : "Rumbo contrario al objetivo.";
+        text = `El ritmo observado es ${observedWeekly > 0 ? "+" : ""}${formatNumber(observedWeekly, 2)} kg por semana. Unos días pueden engañar; varias semanas en la misma dirección justifican revisar adherencia o cálculo.`;
+      } else if (ratio < 0.65) {
+        title = profile.name ? `${profile.name}, vas más lento que el plan.` : "Más lento que el plan.";
+        text = `La tendencia marca ${formatNumber(Math.abs(observedWeekly), 2)} kg por semana frente a ${formatNumber(Math.abs(desired), 2)} kg previstos. Si la diferencia se mantiene, MASA puede recalibrar la estimación.`;
+      } else if (ratio > 1.4) {
+        title = profile.name ? `${profile.name}, vas más rápido que el plan.` : "Más rápido que el plan.";
+        text = `El ritmo observado es ${formatNumber(Math.abs(observedWeekly), 2)} kg por semana frente a ${formatNumber(Math.abs(desired), 2)} kg previstos. Revisá energía, rendimiento y sostenibilidad antes de buscar todavía más velocidad.`;
+      } else {
+        title = profile.name ? `Bien alineado, ${profile.name}.` : "Bien alineado con el plan.";
+        text = `El ritmo observado es ${formatNumber(Math.abs(observedWeekly), 2)} kg por semana y el previsto es ${formatNumber(Math.abs(desired), 2)} kg. La diferencia entra dentro del ruido esperable del peso diario.`;
+      }
+
+      if (Number.isFinite(difference) && Math.abs(difference) >= 0.5) {
+        text += ` Hoy la tendencia está ${formatNumber(Math.abs(difference), 2)} kg ${difference > 0 ? "por encima" : "por debajo"} de la proyección original.`;
+      }
+    }
+
+    $("#chart-insight-title").textContent = title;
+    $("#chart-insight").textContent = text;
+    $("#chart-insight-meta").textContent = weighIns.length
+      ? `${weighIns.length} pesajes entre ${formatDate(weighIns[0]?.date)} y ${formatDate(latest?.date)} · tendencia de ${state.profile.trendWindow} pesajes válidos`
+      : "Todavía no hay pesajes suficientes.";
+  }
+
+  function latestAutomaticReview() {
+    return [...(state.calibrationHistory || [])]
+      .filter(item => normalizeDate(item?.date))
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+      .at(-1) || null;
+  }
+  function automaticReviewTiming() {
+    const latestReview = latestAutomaticReview();
+    const lastReviewDate = normalizeDate(latestReview?.date);
+    const nextReviewDate = lastReviewDate
+      ? toISODate(addDays(parseDate(lastReviewDate), EXPENDITURE_CONFIG.reviewIntervalDays))
+      : "";
+    const reviewDue = !nextReviewDate || parseDate(todayISO()) >= parseDate(nextReviewDate);
+    return { latestReview, lastReviewDate, nextReviewDate, reviewDue };
+  }
+  function expenditureProgress(intakeDays = 0, spanDays = 0, weighInCount = 0) {
+    const intake = clamp(intakeDays / EXPENDITURE_CONFIG.minIntakeDays, 0, 1);
+    const span = clamp(spanDays / EXPENDITURE_CONFIG.minSpanDays, 0, 1);
+    const weigh = clamp(weighInCount / EXPENDITURE_CONFIG.minWeighIns, 0, 1);
+    return Math.round((intake + span + weigh) / 3 * 100);
+  }
+  function expenditureConfidence({ intakeDays, completedDays, weighInCount, spanDays }) {
+    const intakeDepth = clamp((intakeDays - EXPENDITURE_CONFIG.minIntakeDays) / 14, 0, 1);
+    const weighDepth = clamp((weighInCount - EXPENDITURE_CONFIG.minWeighIns) / 8, 0, 1);
+    const spanDepth = clamp((spanDays - EXPENDITURE_CONFIG.minSpanDays) / 17, 0, 1);
+    const completionRatio = clamp(completedDays / Math.max(1, intakeDays), 0, 1);
+    const score = clamp(0.25 + intakeDepth * 0.25 + weighDepth * 0.20 + spanDepth * 0.20 + completionRatio * 0.10, 0.25, 1);
+    const alpha = clamp(0.15 + score * 0.35, 0.20, 0.50);
+    const label = score >= 0.72 ? "Alta" : score >= 0.45 ? "Media" : "Baja";
+    return { score, alpha, label };
+  }
+  function automaticAdjustmentData(profile = state.profile, plan = calculatePlan(profile, state.weighIns), weighIns = state.weighIns) {
+    const timing = automaticReviewTiming();
+    const allLogged = Object.keys(state.diary || {}).sort().map(iso => {
+      const totals = diaryTotalsForDate(iso);
+      return {
+        iso,
+        date: parseDate(iso),
+        calories: totals.calories,
+        completed: Boolean(state.completedDays?.[iso]),
+        hasEntries: (state.diary[iso] || []).length > 0
+      };
+    }).filter(day => day.date && day.hasEntries && Number.isFinite(day.calories) && day.calories > 0);
+
+    const base = {
+      ready: false,
+      status: "learning",
+      intakeDays: 0,
+      completedDays: 0,
+      weighInCount: 0,
+      spanDays: 0,
+      progress: 0,
+      confidenceLabel: "Inicial",
+      confidenceScore: 0,
+      alpha: 0,
+      calendarDue: timing.reviewDue,
+      reviewDue: timing.reviewDue,
+      hasNewData: !timing.lastReviewDate,
+      newIntakeDays: 0,
+      newWeighIns: 0,
+      nextReviewDate: timing.nextReviewDate,
+      lastReviewDate: timing.lastReviewDate,
+      currentTarget: plan.targetCalories,
+      currentMaintenance: plan.maintenance
+    };
+
+    if (!allLogged.length) {
+      return { ...base, reason: "Todavía no hay ingestas registradas. El gasto adaptativo empieza a aprender cuando registrás comidas y pesajes." };
+    }
+
+    const latestDate = allLogged.at(-1).date;
+    const recentStart = addDays(latestDate, -(EXPENDITURE_CONFIG.windowDays - 1));
+    const recentLogged = allLogged.filter(day => day.date >= recentStart && day.date <= latestDate);
+    const recentCompleted = recentLogged.filter(day => day.completed);
+    const completedOnly = recentCompleted.length >= EXPENDITURE_CONFIG.minIntakeDays;
+    const used = completedOnly ? recentCompleted : recentLogged;
+    const firstDate = used[0]?.date;
+    const lastDate = used.at(-1)?.date;
+    const spanDays = firstDate && lastDate ? Math.round(daysBetween(firstDate, lastDate)) + 1 : 0;
+    const relatedWeighIns = firstDate && lastDate
+      ? [...weighIns].filter(item => {
+          const date = parseDate(item.date);
+          return date && date >= addDays(firstDate, -3) && date <= addDays(lastDate, 3);
+        }).sort((a, b) => a.date.localeCompare(b.date))
+      : [];
+    const newIntakeDays = timing.lastReviewDate
+      ? used.filter(day => day.iso > timing.lastReviewDate).length
+      : used.length;
+    const newWeighIns = timing.lastReviewDate
+      ? relatedWeighIns.filter(item => item.date > timing.lastReviewDate).length
+      : relatedWeighIns.length;
+    const hasNewData = !timing.lastReviewDate
+      || (newIntakeDays >= EXPENDITURE_CONFIG.minNewIntakeDays
+        && newWeighIns >= EXPENDITURE_CONFIG.minNewWeighIns);
+    const progress = expenditureProgress(used.length, spanDays, relatedWeighIns.length);
+    const common = {
+      ...base,
+      calendarDue: timing.reviewDue,
+      reviewDue: timing.reviewDue && hasNewData,
+      hasNewData,
+      newIntakeDays,
+      newWeighIns,
+      intakeDays: used.length,
+      completedDays: recentCompleted.length,
+      completedOnly,
+      weighInCount: relatedWeighIns.length,
+      spanDays,
+      progress,
+      firstDate,
+      lastDate
+    };
+
+    if (used.length < EXPENDITURE_CONFIG.minIntakeDays) {
+      return {
+        ...common,
+        reason: `Faltan ${EXPENDITURE_CONFIG.minIntakeDays - used.length} días de ingestas para la primera estimación.`
+      };
+    }
+    if (spanDays < EXPENDITURE_CONFIG.minSpanDays) {
+      return {
+        ...common,
+        reason: `Los registros cubren ${spanDays} días. Se necesitan ${EXPENDITURE_CONFIG.minSpanDays} para separar el ruido diario de la tendencia.`
+      };
+    }
+    if (relatedWeighIns.length < EXPENDITURE_CONFIG.minWeighIns) {
+      return {
+        ...common,
+        reason: `Hay ${relatedWeighIns.length} pesajes comparables en el período. Se necesitan ${EXPENDITURE_CONFIG.minWeighIns}.`
+      };
+    }
+
+    const trendedWeighIns = exponentialWeightTrend(relatedWeighIns);
+    const observedWeekly = regressionRatePerWeek(trendedWeighIns, 60, "trend");
+    if (!Number.isFinite(observedWeekly) || !Number.isFinite(plan.targetCalories) || !Number.isFinite(plan.dailyAdjustment) || !Number.isFinite(plan.maintenance)) {
+      return { ...common, reason: "No se pudo calcular una tendencia estable con los datos actuales." };
+    }
+
+    const averageCalories = used.reduce((sum, day) => sum + day.calories, 0) / used.length;
+    const observedMaintenance = averageCalories - observedWeekly * KG_KCAL / 7;
+    if (!Number.isFinite(observedMaintenance) || observedMaintenance < 1000 || observedMaintenance > 6000) {
+      return {
+        ...common,
+        reason: "Los datos producen un gasto fuera de un rango plausible. Revisá días incompletos, cantidades y pesajes."
+      };
+    }
+
+    const confidence = expenditureConfidence({
+      intakeDays: used.length,
+      completedDays: recentCompleted.length,
+      weighInCount: relatedWeighIns.length,
+      spanDays
+    });
+    const adaptiveMaintenance = plan.maintenance * (1 - confidence.alpha) + observedMaintenance * confidence.alpha;
+    const recommendedTarget = adaptiveMaintenance + plan.dailyAdjustment;
+    const rawChange = recommendedTarget - plan.targetCalories;
+    const limitedChange = clamp(Math.round(rawChange), -EXPENDITURE_CONFIG.maxAdjustment, EXPENDITURE_CONFIG.maxAdjustment);
+    const currentOffset = toNumber(profile.calibrationOffset, 0);
+    const newOffset = clamp(currentOffset + limitedChange, -900, 900);
+    const appliedChange = newOffset - currentOffset;
+    const meaningful = Math.abs(appliedChange) >= EXPENDITURE_CONFIG.minMeaningfulAdjustment;
+    const status = !timing.reviewDue
+      ? "waiting"
+      : !hasNewData
+        ? "waiting-data"
+        : meaningful ? "ready" : "stable";
+    const latestTrend = trendedWeighIns.at(-1)?.trend ?? relatedWeighIns.at(-1)?.weight;
+
+    return {
+      ...common,
+      ready: true,
+      status,
+      progress: 100,
+      averageCalories,
+      observedWeekly,
+      observedMaintenance,
+      adaptiveMaintenance,
+      currentMaintenance: plan.maintenance,
+      confidenceLabel: confidence.label,
+      confidenceScore: confidence.score,
+      alpha: confidence.alpha,
+      recommendedTarget,
+      rawChange,
+      appliedChange,
+      newOffset,
+      meaningful,
+      latest: relatedWeighIns.at(-1),
+      latestTrend,
+      limited: Math.abs(rawChange) > EXPENDITURE_CONFIG.maxAdjustment
+    };
+  }
+  function buildRecalibrationSuggestion(profile, plan, weighIns) {
+    const suggestion = automaticAdjustmentData(profile, plan, weighIns);
+    return suggestion.ready && suggestion.reviewDue && suggestion.meaningful ? suggestion : null;
+  }
+  function automaticAdjustmentSummary(suggestion) {
+    if (!suggestion?.ready) return suggestion?.reason || "Todavía no hay datos suficientes.";
+    const direction = suggestion.observedWeekly < -0.01 ? "bajando" : suggestion.observedWeekly > 0.01 ? "subiendo" : "estable";
+    const registeredDays = Math.max(suggestion.intakeDays || 0, suggestion.weighInCount || 0);
+    const sourceText = suggestion.completedOnly
+      ? `${registeredDays} días de registro`
+      : `${registeredDays} días de registro; cerrar los días completos aumenta la confianza`;
+    const modelText = `El gasto observado es ${formatNumber(Math.round(suggestion.observedMaintenance))} kcal y el gasto adaptativo usado por M.A.S.A. queda en ${formatNumber(Math.round(suggestion.adaptiveMaintenance))} kcal, con confianza ${suggestion.confidenceLabel.toLowerCase()}.`;
+    if (!suggestion.calendarDue) {
+      return `Con ${sourceText}, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} La próxima revisión corresponde el ${formatDate(suggestion.nextReviewDate)}.`;
+    }
+    if (!suggestion.hasNewData) {
+      const remaining = Math.max(
+        0,
+        EXPENDITURE_CONFIG.minNewIntakeDays - suggestion.newIntakeDays,
+        EXPENDITURE_CONFIG.minNewWeighIns - suggestion.newWeighIns
+      );
+      return `La fecha mínima de revisión ya llegó, pero M.A.S.A. espera datos nuevos para no recalcular con el mismo período. Faltan ${remaining} días de registro.`;
+    }
+    if (!suggestion.meaningful) {
+      return `Con ${sourceText}, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} El objetivo actual está suficientemente cerca y no necesita cambiar.`;
+    }
+    const nextTarget = suggestion.currentTarget + suggestion.appliedChange;
+    return `Con ${sourceText}, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} El objetivo pasaría de ${formatNumber(Math.round(suggestion.currentTarget))} a ${formatNumber(Math.round(nextTarget))} kcal por día (${suggestion.appliedChange > 0 ? "+" : ""}${formatNumber(suggestion.appliedChange)}).${suggestion.limited ? ` Por seguridad, cada revisión se limita a ${EXPENDITURE_CONFIG.maxAdjustment} kcal.` : ""}`;
+  }
+  function adaptiveReviewDisplay(suggestion) {
+    const registeredDays = Math.max(suggestion?.intakeDays || 0, suggestion?.weighInCount || 0);
+    if (!suggestion?.ready) {
+      const remaining = Math.max(
+        0,
+        EXPENDITURE_CONFIG.minIntakeDays - (suggestion?.intakeDays || 0),
+        EXPENDITURE_CONFIG.minSpanDays - (suggestion?.spanDays || 0),
+        EXPENDITURE_CONFIG.minWeighIns - (suggestion?.weighInCount || 0)
+      );
+      return {
+        registeredDays,
+        reviewText: remaining > 0 ? `Faltan ${remaining} días de registro` : "Validando la tendencia"
+      };
+    }
+    if (!suggestion.calendarDue) {
+      const next = parseDate(suggestion.nextReviewDate);
+      const remaining = next ? Math.max(0, Math.ceil(daysBetween(parseDate(todayISO()), next))) : 0;
+      return { registeredDays, reviewText: remaining ? `Faltan ${remaining} días para revisar` : "Revisión próxima" };
+    }
+    if (!suggestion.hasNewData) {
+      const remaining = Math.max(
+        0,
+        EXPENDITURE_CONFIG.minNewIntakeDays - (suggestion.newIntakeDays || 0),
+        EXPENDITURE_CONFIG.minNewWeighIns - (suggestion.newWeighIns || 0)
+      );
+      return { registeredDays, reviewText: remaining ? `Faltan ${remaining} días de registro` : "Esperando registros nuevos" };
+    }
+    return {
+      registeredDays,
+      reviewText: suggestion.meaningful ? "Conviene revisar el ajuste" : "Todavía está dentro del rango"
+    };
+  }
+
+  function renderAutomaticAdjustmentPreview(profile, plan, weighIns = state.weighIns) {
+    const suggestion = automaticAdjustmentData(profile, plan, weighIns);
+    const summary = $("#automatic-adjustment-summary");
+    const facts = $("#automatic-adjustment-facts");
+    const button = $("#run-auto-adjustment");
+    if (!summary || !facts || !button) return suggestion;
+    summary.textContent = automaticAdjustmentSummary(suggestion);
+    const display = adaptiveReviewDisplay(suggestion);
+    facts.innerHTML = `<div><span>Gasto adaptativo</span><b>${suggestion.ready ? `${formatNumber(Math.round(suggestion.adaptiveMaintenance))} kcal` : "Aprendiendo"}</b></div><div><span>Confianza</span><b>${suggestion.confidenceLabel}</b></div><div><span>Registro acumulado</span><b>${display.registeredDays} días</b></div><div><span>Revisión</span><b>${display.reviewText}</b></div>`;
+    const reviewReached = Boolean(suggestion.ready && suggestion.reviewDue);
+    const actionable = Boolean(reviewReached && suggestion.meaningful);
+    button.hidden = !reviewReached;
+    button.disabled = !actionable;
+    if (reviewReached) button.textContent = actionable ? "Revisar ajuste automático" : "Todavía está dentro del rango";
+    return suggestion;
+  }
+  function applyAutomaticAdjustment(suggestion, profile = state.profile) {
+    if (!suggestion?.ready || !suggestion.reviewDue || !suggestion.meaningful) return null;
+    const adjusted = true;
+    profile.calibrationOffset = suggestion.newOffset;
+    profile.planStartDate = suggestion.latest?.date || todayISO();
+    profile.planStartWeight = Number(toNumber(suggestion.latestTrend, suggestion.latest?.weight).toFixed(2));
+    state.calibrationHistory = [...(state.calibrationHistory || []), {
+      date: todayISO(),
+      intakeDays: suggestion.intakeDays,
+      completedDays: suggestion.completedDays,
+      weighInCount: suggestion.weighInCount,
+      spanDays: suggestion.spanDays,
+      averageCalories: Math.round(suggestion.averageCalories),
+      observedWeekly: Number(suggestion.observedWeekly.toFixed(3)),
+      observedMaintenance: Math.round(suggestion.observedMaintenance),
+      adaptiveMaintenance: Math.round(suggestion.adaptiveMaintenance),
+      confidence: Number(suggestion.confidenceScore.toFixed(3)),
+      alpha: Number(suggestion.alpha.toFixed(3)),
+      previousTarget: Math.round(suggestion.currentTarget),
+      targetChange: suggestion.appliedChange,
+      newOffset: suggestion.newOffset,
+      reviewOnly: false
+    }].slice(-30);
+    return { adjusted };
+  }
+  function runAutomaticAdjustment() {
+    const form = $("#profile-form");
+    const currentWeight = toNumber(form.elements.currentWeight.value, NaN);
+    const draft = profileFromForm();
+    const temporaryWeighIns = Number.isFinite(currentWeight)
+      ? mergeWeighIns(state.weighIns, [{ date: todayISO(), weight: currentWeight }])
+      : state.weighIns;
+    const plan = calculatePlan(draft, temporaryWeighIns, currentWeight);
+    const feedback = $("#automatic-adjustment-feedback");
+    const validationError = validateProfile(draft, currentWeight);
+    if (validationError) {
+      setFeedback(feedback, `Antes de revisar: ${validationError.message}`, true);
+      focusProfileField(validationError.field);
+      return;
+    }
+    const suggestion = automaticAdjustmentData(draft, plan, temporaryWeighIns);
+    if (!suggestion.ready) {
+      setFeedback(feedback, suggestion.reason, true);
+      return;
+    }
+    if (!suggestion.calendarDue) {
+      setFeedback(feedback, `La próxima revisión corresponde el ${formatDate(suggestion.nextReviewDate)}.`);
+      return;
+    }
+    if (!suggestion.hasNewData) {
+      const remaining = Math.max(
+        0,
+        EXPENDITURE_CONFIG.minNewIntakeDays - suggestion.newIntakeDays,
+        EXPENDITURE_CONFIG.minNewWeighIns - suggestion.newWeighIns
+      );
+      setFeedback(feedback, `La fecha mínima ya llegó, pero faltan ${remaining} días de registro para volver a revisar.`);
+      return;
+    }
+    if (!suggestion.meaningful) {
+      setFeedback(feedback, "Todavía está dentro del rango; no hace falta aplicar un ajuste.");
+      return;
+    }
+    const nextTarget = Math.round(suggestion.currentTarget + suggestion.appliedChange);
+    const registeredDays = Math.max(suggestion.intakeDays || 0, suggestion.weighInCount || 0);
+    const prompt = `M.A.S.A. propone llevar el objetivo diario a ${formatNumber(nextTarget)} kcal. La corrección es gradual y usa ${registeredDays} días de registro, con confianza ${suggestion.confidenceLabel.toLowerCase()}. ¿Aplicar el ajuste automático?`;
+    if (!window.confirm(prompt)) return;
+    state.weighIns = temporaryWeighIns;
+    state.profile = draft;
+    const result = applyAutomaticAdjustment(suggestion, state.profile);
+    if (!result) return;
+    state.configured = true;
+    saveState(state);
+    fillProfileForm();
+    updateProfilePreview();
+    setFeedback(feedback, `Ajuste automático aplicado. Nuevo objetivo aproximado: ${formatNumber(nextTarget)} kcal por día.`);
+    render();
+  }
+  function renderRecalibration(profile, plan, weighIns) {
+    const data = automaticAdjustmentData(profile, plan, weighIns);
+    recalibrationSuggestion = buildRecalibrationSuggestion(profile, plan, weighIns);
+    const panel = $("#recalibration-panel");
+    if (!panel) return;
+    panel.hidden = false;
+    panel.dataset.state = data.status;
+    const title = $("#recalibration-title");
+    const text = $("#recalibration-text");
+    const facts = $("#recalibration-facts");
+    const note = $("#recalibration-note");
+    const progress = $("#recalibration-progress-fill");
+    const button = $("#apply-recalibration");
+    $("#recalibration-kicker").textContent = data.status === "ready" ? "REAJUSTE DISPONIBLE" : "GASTO ADAPTATIVO";
+    if (!data.ready) {
+      title.textContent = "M.A.S.A. está aprendiendo de tus registros.";
+    } else if (!data.calendarDue) {
+      title.textContent = `Próxima revisión: ${formatDate(data.nextReviewDate)}.`;
+    } else if (!data.hasNewData) {
+      title.textContent = "La fecha llegó; faltan registros nuevos.";
+    } else if (data.meaningful) {
+      title.textContent = `${profile.name ? `${profile.name}, hay` : "Hay"} un reajuste listo para revisar.`;
+    } else {
+      title.textContent = "Revisión completa: el objetivo sigue bien calibrado.";
+    }
+    text.textContent = automaticAdjustmentSummary(data);
+    const display = adaptiveReviewDisplay(data);
+    facts.innerHTML = `<div><span>Gasto estimado</span><b>${data.ready ? `${formatNumber(Math.round(data.adaptiveMaintenance))} kcal` : `${formatNumber(Math.round(plan.maintenance))} kcal iniciales`}</b></div><div><span>Confianza</span><b>${data.confidenceLabel}</b></div><div><span>Registro acumulado</span><b>${display.registeredDays} días</b></div><div><span>Revisión</span><b>${display.reviewText}</b></div>`;
+    progress.style.width = `${data.progress}%`;
+    note.textContent = data.ready
+      ? `La corrección mezcla el gasto anterior con el observado usando β = ${formatNumber(data.alpha, 2)}. Las revisiones se separan por ${EXPENDITURE_CONFIG.reviewIntervalDays} días y requieren registros nuevos desde la revisión anterior.`
+      : "El cálculo necesita suficiente distancia entre fechas, días de ingesta y pesajes comparables; no reacciona a un peso aislado.";
+    const reviewReached = Boolean(data.ready && data.reviewDue);
+    const actionAvailable = Boolean(recalibrationSuggestion);
+    button.hidden = !reviewReached;
+    button.disabled = !actionAvailable;
+    if (reviewReached) button.textContent = actionAvailable ? "Revisar ajuste automático" : "Todavía está dentro del rango";
+  }
+  function applyRecalibration() {
+    if (!recalibrationSuggestion) return;
+    const nextTarget = Math.round(recalibrationSuggestion.currentTarget + recalibrationSuggestion.appliedChange);
+    if (!window.confirm(`El objetivo diario pasará a aproximadamente ${formatNumber(nextTarget)} kcal. ¿Aplicar el ajuste automático?`)) return;
+    const result = applyAutomaticAdjustment(recalibrationSuggestion, state.profile);
+    if (!result) return;
+    saveState(state);
+    render();
+  }
+
+  function chartDataDates(payload) {
+    return [
+      ...payload.weighIns.map(item => item.date),
+      ...Object.keys(state.diary || {})
+    ].map(parseDate).filter(Boolean);
+  }
+
+  function latestChartDate(payload) {
+    const dates = chartDataDates(payload);
+    return dates.length ? new Date(Math.max(...dates.map(date => date.getTime()))) : parseDate(todayISO());
+  }
+
+  function earliestChartDate(payload) {
+    const dates = chartDataDates(payload);
+    return dates.length ? new Date(Math.min(...dates.map(date => date.getTime()))) : null;
+  }
+
+  function chartBounds(payload, includeFuture = false) {
+    if (chartRange === "all") return { start: null, end: null };
+    const months = { "1m": 1, "3m": 3, "6m": 6 }[chartRange] || 3;
+    const latest = latestChartDate(payload);
+    const earliest = earliestChartDate(payload);
+    const requestedStart = addMonths(latest, -months);
+    return {
+      start: earliest && requestedStart < earliest ? earliest : requestedStart,
+      end: includeFuture ? addMonths(latest, months) : latest
+    };
+  }
+
+  function withinBounds(date, bounds) {
+    return date && (!bounds.start || date >= bounds.start) && (!bounds.end || date <= bounds.end);
+  }
+
+  function calorieDaysForBounds(bounds) {
+    return Object.keys(state.diary || {}).sort().map(iso => {
+      const date = parseDate(iso);
+      const totals = diaryTotalsForDate(iso);
+      return {
+        date,
+        iso,
+        calories: totals.calories,
+        hasEntries: (state.diary[iso] || []).length > 0,
+        completed: Boolean(state.completedDays?.[iso])
+      };
+    }).filter(day => day.hasEntries && withinBounds(day.date, bounds));
+  }
+
+  function buildCalorieAnalysis(plan, weighIns, days) {
+    const logged = (days || []).filter(day => day.hasEntries && Number.isFinite(day.calories));
+    const completed = logged.filter(day => day.completed);
+    const used = completed.length >= 3 ? completed : logged;
+    if (!used.length || !Number.isFinite(plan.targetCalories)) {
+      return { logged, used, completedOnly: false, average: null, difference: null, observedWeekly: null, spanDays: 0, remainingReviewDays: 21 };
+    }
+
+    const average = used.reduce((sum, day) => sum + day.calories, 0) / used.length;
+    const difference = average - plan.targetCalories;
+    const firstDate = used[0].date;
+    const lastDate = used.at(-1).date;
+    const spanDays = Math.max(1, Math.round(daysBetween(firstDate, lastDate)) + 1);
+    const relatedWeighIns = weighIns.filter(item => {
+      const date = parseDate(item.date);
+      return date >= addDays(firstDate, -4) && date <= addDays(lastDate, 4);
+    });
+    const observedWeekly = expenditureRatePerWeek(relatedWeighIns, 100);
+    const estimatedMaintenance = Number.isFinite(observedWeekly)
+      ? average - observedWeekly * KG_KCAL / 7
+      : null;
+    const recommendedTarget = Number.isFinite(estimatedMaintenance) && Number.isFinite(plan.dailyAdjustment)
+      ? estimatedMaintenance + plan.dailyAdjustment
+      : null;
+    const targetAdjustment = Number.isFinite(recommendedTarget)
+      ? recommendedTarget - plan.targetCalories
+      : null;
+
+    return {
+      logged,
+      used,
+      completedOnly: completed.length >= 3,
+      average,
+      difference,
+      observedWeekly,
+      estimatedMaintenance,
+      recommendedTarget,
+      targetAdjustment,
+      spanDays,
+      remainingReviewDays: Math.max(0, 21 - spanDays),
+      firstDate,
+      lastDate,
+      weighInCount: relatedWeighIns.length
+    };
+  }
+
+  function relationshipSamples(payload) {
+    const bounds = chartBounds(payload, false);
+    const trends = payload.trends.filter(item => withinBounds(parseDate(item.date), bounds));
+    const samples = [];
+    trends.forEach((current, index) => {
+      if (index === 0) return;
+      const currentDate = parseDate(current.date);
+      let prior = null;
+      for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+        const candidate = trends[cursor];
+        const elapsed = daysBetween(parseDate(candidate.date), currentDate);
+        if (elapsed >= 5) { prior = candidate; break; }
+      }
+      if (!prior) return;
+      const priorDate = parseDate(prior.date);
+      const elapsed = daysBetween(priorDate, currentDate);
+      if (elapsed > 16) return;
+      const diaryDays = calorieDaysForBounds({ start: addDays(priorDate, 1), end: currentDate });
+      if (diaryDays.length < 3 || !Number.isFinite(payload.plan.targetCalories)) return;
+      const averageCalories = diaryDays.reduce((sum, day) => sum + day.calories, 0) / diaryDays.length;
+      const weeklyWeightChange = (current.trend - prior.trend) * 7 / elapsed;
+      if (samples.length && daysBetween(samples.at(-1).date, currentDate) < 5) return;
+      samples.push({
+        date: currentDate,
+        calorieDifference: averageCalories - payload.plan.targetCalories,
+        weeklyWeightChange,
+        loggedDays: diaryDays.length
+      });
+    });
+    return samples;
+  }
+
+  function correlationCoefficient(points) {
+    if (points.length < 3) return null;
+    const meanX = points.reduce((sum, point) => sum + point.calorieDifference, 0) / points.length;
+    const meanY = points.reduce((sum, point) => sum + point.weeklyWeightChange, 0) / points.length;
+    const numerator = points.reduce((sum, point) => sum + (point.calorieDifference - meanX) * (point.weeklyWeightChange - meanY), 0);
+    const denomX = Math.sqrt(points.reduce((sum, point) => sum + (point.calorieDifference - meanX) ** 2, 0));
+    const denomY = Math.sqrt(points.reduce((sum, point) => sum + (point.weeklyWeightChange - meanY) ** 2, 0));
+    return denomX && denomY ? numerator / (denomX * denomY) : null;
+  }
+
+  function configureProgressChart(kind) {
+    const copy = {
+      weight: {
+        eyebrow: "PLAN VS REALIDAD",
+        title: "Tu peso real frente al camino previsto.",
+        description: "La línea sólida muestra la tendencia real. La punteada conserva el plan original.",
+        legend: ["Peso real", "Tendencia", "Plan", "Objetivo"],
+        classes: ["legend-real", "legend-trend", "legend-plan", "legend-goal"]
+      },
+      calories: {
+        eyebrow: "CONSUMO VS OBJETIVO",
+        title: "Las calorías que registrás frente al número del plan.",
+        description: "El promedio se calcula con días terminados cuando hay suficientes; de lo contrario usa todos los días con ingestas.",
+        legend: ["Consumidas", "Objetivo", "", ""],
+        classes: ["legend-trend", "legend-plan", "", ""]
+      },
+      weekly: {
+        eyebrow: "PROMEDIO SEMANAL",
+        title: "Una lectura más estable de tus calorías.",
+        description: "Cada barra muestra el promedio diario de una semana. La línea punteada es el objetivo diario.",
+        legend: ["Promedio semanal", "Objetivo", "", ""],
+        classes: ["legend-trend", "legend-plan", "", ""]
+      }
+    }[kind];
+    $("#progress-chart-eyebrow").textContent = copy.eyebrow;
+    $("#progress-chart-title").textContent = copy.title;
+    $("#progress-chart-description").textContent = copy.description;
+    copy.legend.forEach((label, index) => {
+      const element = $(`#progress-legend-${index + 1}`);
+      element.textContent = label;
+      element.hidden = !label;
+      element.className = copy.classes[index] || "";
+    });
+    $$('[data-progress-chart]').forEach(button => button.classList.toggle("active", button.dataset.progressChart === kind));
+  }
+
+  function renderCalorieInsight(payload) {
+    $(".progress-model-data").hidden = true;
+    const days = calorieDaysForBounds(chartBounds(payload, false));
+    const analysis = buildCalorieAnalysis(payload.plan, payload.weighIns, days);
+    if (!Number.isFinite(analysis.average)) {
+      setInsightFact(1, "Promedio", "—");
+      setInsightFact(2, "Diferencia", "—");
+      setInsightFact(3, "Ritmo de peso", "—");
+      $("#chart-insight-title").textContent = "Faltan días comparables.";
+      $("#chart-insight").textContent = "Registrá ingestas en varios días y algunos pesajes dentro del mismo período para comparar consumo, objetivo y cambio de peso.";
+      $("#chart-insight-meta").textContent = "La lectura mejora al terminar los días y registrar el peso con cierta regularidad.";
+      return;
+    }
+
+    const diff = analysis.difference;
+    const weightRate = analysis.observedWeekly;
+    setInsightFact(1, "Promedio", `${formatNumber(Math.round(analysis.average))} kcal`);
+    setInsightFact(2, "Diferencia", `${diff > 0 ? "+" : ""}${formatNumber(Math.round(diff))} kcal`);
+    setInsightFact(3, "Ritmo de peso", Number.isFinite(weightRate) ? `${weightRate > 0 ? "+" : ""}${formatNumber(weightRate, 2)} kg/sem` : "Faltan pesajes");
+
+    const intakePhrase = Math.abs(diff) < 50
+      ? "estás prácticamente en el objetivo"
+      : `consumís en promedio ${formatNumber(Math.abs(Math.round(diff)))} kcal ${diff > 0 ? "más" : "menos"} que el objetivo`;
+    const weightPhrase = !Number.isFinite(weightRate)
+      ? "todavía no hay suficientes pesajes del mismo período"
+      : Math.abs(weightRate) < 0.05
+        ? "el peso se mantiene prácticamente estable"
+        : `el peso ${weightRate < 0 ? "sigue bajando" : "sigue subiendo"} a ${formatNumber(Math.abs(weightRate), 2)} kg por semana`;
+
+    $("#chart-insight-title").textContent = `${intakePhrase.charAt(0).toUpperCase()}${intakePhrase.slice(1)}.`;
+    let text = `${intakePhrase}, y ${weightPhrase}.`;
+    if (Number.isFinite(analysis.targetAdjustment) && analysis.weighInCount >= 3) {
+      const roundedAdjustment = Math.round(analysis.targetAdjustment / 25) * 25;
+      if (Math.abs(roundedAdjustment) < 50) {
+        text += " El objetivo actual está razonablemente alineado con lo observado; no aparece un ajuste relevante por ahora.";
+      } else if (analysis.remainingReviewDays > 0) {
+        text += ` Si este patrón se mantiene unos ${analysis.remainingReviewDays} días más, tendría sentido revisar el objetivo en aproximadamente ${roundedAdjustment > 0 ? "+" : ""}${formatNumber(roundedAdjustment)} kcal por día.`;
+      } else {
+        text += ` El período ya alcanza tres semanas: el modelo sugiere revisar el objetivo en aproximadamente ${roundedAdjustment > 0 ? "+" : ""}${formatNumber(roundedAdjustment)} kcal por día, antes de aplicar cambios automáticamente.`;
+      }
+    } else {
+      const remaining = Math.max(1, analysis.remainingReviewDays);
+      text += ` Mantené registros durante aproximadamente ${remaining} días más junto con pesajes para estimar si el objetivo necesita una corrección.`;
+    }
+    $("#chart-insight").textContent = text;
+    $("#chart-insight-meta").textContent = `${analysis.used.length} días usados · ${analysis.completedOnly ? "solo días terminados" : "días con alguna ingesta"} · período de ${analysis.spanDays} días`;
+  }
+
+  function renderRelationshipInsight(payload) {
+    $(".progress-model-data").hidden = true;
+    const samples = relationshipSamples(payload);
+    const correlation = correlationCoefficient(samples);
+    if (!samples.length) {
+      setInsightFact(1, "Períodos", "0");
+      setInsightFact(2, "Desvío medio", "—");
+      setInsightFact(3, "Cambio medio", "—");
+      $("#chart-insight-title").textContent = "Todavía no se pueden cruzar los datos.";
+      $("#chart-insight").textContent = "Hacen falta varios períodos que contengan tanto ingestas como pesajes. La gráfica usa ventanas de aproximadamente una semana para reducir el ruido diario.";
+      $("#chart-insight-meta").textContent = "Como referencia, tres o cuatro semanas completas empiezan a producir una lectura útil.";
+      return;
+    }
+    const averageDifference = samples.reduce((sum, item) => sum + item.calorieDifference, 0) / samples.length;
+    const averageChange = samples.reduce((sum, item) => sum + item.weeklyWeightChange, 0) / samples.length;
+    setInsightFact(1, "Períodos", String(samples.length));
+    setInsightFact(2, "Desvío medio", `${averageDifference > 0 ? "+" : ""}${formatNumber(Math.round(averageDifference))} kcal`);
+    setInsightFact(3, "Cambio medio", `${averageChange > 0 ? "+" : ""}${formatNumber(averageChange, 2)} kg/sem`);
+
+    if (!Number.isFinite(correlation) || samples.length < 4) {
+      $("#chart-insight-title").textContent = "La relación empieza a aparecer.";
+      $("#chart-insight").textContent = "Ya existen períodos comparables, pero todavía son pocos para describir una relación estable entre el desvío calórico y la variación de peso.";
+    } else {
+      const strength = Math.abs(correlation) < 0.25 ? "débil" : Math.abs(correlation) < 0.55 ? "moderada" : "marcada";
+      const direction = correlation > 0
+        ? "los períodos con más calorías tienden a acompañarse de una variación de peso más alta"
+        : "los períodos con más calorías no se están reflejando todavía en una variación de peso más alta";
+      $("#chart-insight-title").textContent = `Relación ${strength} en tus datos.`;
+      $("#chart-insight").textContent = `En estos períodos, ${direction}. Es una asociación descriptiva y no demuestra causalidad: agua, horarios y días incompletos pueden mover mucho el resultado.`;
+    }
+    $("#chart-insight-meta").textContent = `${samples.length} períodos comparables · cada punto exige al menos 3 días con ingestas entre dos tendencias de peso`;
+  }
+
+  function renderActiveProgressChart() {
+    if (!chartPayload) return;
+    configureProgressChart(activeProgressChart);
+    const canvas = $("#progress-chart");
+    let hasData = false;
+    if (activeProgressChart === "calories") {
+      hasData = drawProgressCalorieChart(canvas, chartPayload);
+      renderCalorieInsight(chartPayload);
+    } else if (activeProgressChart === "weekly") {
+      hasData = drawWeeklyCalorieChart(canvas, chartPayload);
+      renderWeeklyCalorieInsight(chartPayload);
+    } else {
+      hasData = drawWeightChart(canvas, chartPayload);
+      renderWeightInsight(chartPayload.profile, chartPayload.plan, chartPayload.weighIns, chartPayload.trends, chartPayload.observedWeekly);
+    }
+    $("#progress-chart-empty").hidden = hasData;
+  }
+
+  function changeProgressChart(direction) {
+    const order = ["weight", "calories", "weekly"];
+    const index = order.indexOf(activeProgressChart);
+    activeProgressChart = order[(index + direction + order.length) % order.length];
+    renderActiveProgressChart();
+  }
+
+  function renderCharts(profile, plan, weighIns, trends, observedWeekly) {
+    const planProjection = [];
+    const planStart = parseDate(profile.planStartDate) || parseDate(weighIns[0]?.date);
+    const planStartWeight = toNumber(profile.planStartWeight, weighIns[0]?.weight);
+    if (planStart && Number.isFinite(planStartWeight)) {
+      const weeks = Math.min(104, Math.max(26, Math.ceil(plan.estimatedWeeks || 52)));
+      for (let week = 0; week <= weeks; week += 1) {
+        const date = addDays(planStart, week * 7);
+        const weight = projectWeight(profile, planStartWeight, planStart, plan.targetWeight, plan.rate.selected, date);
+        planProjection.push({ date: toISODate(date), weight });
+        if (Number.isFinite(plan.targetWeight) && Math.abs(weight - plan.targetWeight) < 0.03 && date > new Date()) break;
+      }
+    }
+    chartPayload = { profile, plan, weighIns, trends, planProjection, observedWeekly };
+    renderActiveProgressChart();
+  }
+
+  function visibleChartPoints(payload) {
+    const bounds = chartBounds(payload, true);
+    const within = item => withinBounds(parseDate(item.date), bounds);
+    return {
+      weighIns: payload.weighIns.filter(within),
+      trends: payload.trends.filter(within),
+      planProjection: payload.planProjection.filter(within),
+      start: bounds.start,
+      end: bounds.end
+    };
+  }
+
+  function prepareCanvas(canvas) {
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const ratio = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(rect.width * ratio);
+    canvas.height = Math.round(rect.height * ratio);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    return { ctx, width: rect.width, height: rect.height };
+  }
+
+  function drawWeightChart(canvas, payload) {
+    const prepared = prepareCanvas(canvas);
+    if (!prepared) return payload.weighIns.length >= 2;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    const visible = visibleChartPoints(payload);
+    const series = [
+      ...visible.weighIns.map(item => ({ date: parseDate(item.date), value: item.weight })),
+      ...visible.planProjection.map(item => ({ date: parseDate(item.date), value: item.weight }))
+    ].filter(item => item.date && Number.isFinite(item.value));
+    if (series.length < 2) return false;
+
+    const margin = { left: 48, right: 18, top: 22, bottom: 36 };
+    let minDate = Math.min(...series.map(item => item.date.getTime()));
+    let maxDate = Math.max(...series.map(item => item.date.getTime()));
+    if (visible.start) minDate = visible.start.getTime();
+    if (visible.end) maxDate = visible.end.getTime();
+    let minY = Math.min(...series.map(item => item.value));
+    let maxY = Math.max(...series.map(item => item.value));
+    if (Number.isFinite(payload.plan.targetWeight)) {
+      minY = Math.min(minY, payload.plan.targetWeight);
+      maxY = Math.max(maxY, payload.plan.targetWeight);
+    }
+    const padY = Math.max(0.7, (maxY - minY) * 0.14);
+    minY -= padY;
+    maxY += padY;
+    const x = date => margin.left + (date.getTime() - minDate) / Math.max(1, maxDate - minDate) * (width - margin.left - margin.right);
+    const y = value => margin.top + (maxY - value) / Math.max(0.1, maxY - minY) * (height - margin.top - margin.bottom);
+
+    ctx.font = "11px ui-monospace, monospace";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i <= 4; i += 1) {
+      const value = minY + (maxY - minY) * i / 4;
+      const py = y(value);
+      ctx.strokeStyle = "rgba(242,239,230,.12)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(margin.left, py); ctx.lineTo(width - margin.right, py); ctx.stroke();
+      ctx.fillStyle = "rgba(242,239,230,.55)";
+      ctx.fillText(formatNumber(value, 1), margin.left - 8, py);
+    }
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const horizontalTicks = width < 520 ? 3 : 5;
+    for (let i = 0; i <= horizontalTicks; i += 1) {
+      const timestamp = minDate + (maxDate - minDate) * i / horizontalTicks;
+      const date = new Date(timestamp);
+      ctx.fillStyle = "rgba(242,239,230,.48)";
+      ctx.fillText(new Intl.DateTimeFormat("es-UY", { month: "short", year: chartRange === "all" ? "2-digit" : undefined }).format(date), x(date), height - margin.bottom + 11);
+    }
+
+    if (Number.isFinite(payload.plan.targetWeight)) {
+      ctx.strokeStyle = "rgba(141,124,255,.82)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 5]);
+      ctx.beginPath(); ctx.moveTo(margin.left, y(payload.plan.targetWeight)); ctx.lineTo(width - margin.right, y(payload.plan.targetWeight)); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    drawLine(ctx, visible.weighIns.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "rgba(242,239,230,.38)", 1.4, false);
+    drawPoints(ctx, visible.weighIns.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "#f2efe6", 2.4);
+    drawLine(ctx, visible.trends.map(item => ({ date: parseDate(item.date), value: item.trend })), x, y, "#c8ff46", 3, false);
+    drawLine(ctx, visible.planProjection.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "#ff6b52", 2.3, true);
+    return true;
+  }
+
+  function drawProgressCalorieChart(canvas, payload) {
+    const bounds = chartBounds(payload, false);
+    const days = calorieDaysForBounds(bounds);
+    const prepared = prepareCanvas(canvas);
+    if (!prepared) return days.length > 0;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    if (!days.length || !Number.isFinite(payload.plan.targetCalories)) return false;
+    const target = payload.plan.targetCalories;
+    const maxValue = Math.max(target, ...days.map(day => day.calories), 500) * 1.12;
+    const margin = { left: 52, right: 18, top: 22, bottom: 40 };
+    const minDate = bounds.start?.getTime() ?? days[0].date.getTime();
+    const maxDate = bounds.end?.getTime() ?? days.at(-1).date.getTime();
+    const x = date => margin.left + (date.getTime() - minDate) / Math.max(DAY_MS, maxDate - minDate) * (width - margin.left - margin.right);
+    const y = value => margin.top + (maxValue - value) / maxValue * (height - margin.top - margin.bottom);
+    const available = width - margin.left - margin.right;
+    const barWidth = Math.max(3, Math.min(22, available / Math.max(days.length * 1.7, 12)));
+
+    ctx.font = "10px ui-monospace, monospace";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i <= 4; i += 1) {
+      const value = maxValue * i / 4;
+      const py = y(value);
+      ctx.strokeStyle = "rgba(242,239,230,.12)";
+      ctx.beginPath(); ctx.moveTo(margin.left, py); ctx.lineTo(width - margin.right, py); ctx.stroke();
+      ctx.fillStyle = "rgba(242,239,230,.52)";
+      ctx.fillText(formatNumber(value, 0), margin.left - 7, py);
+    }
+
+    ctx.save();
+    ctx.strokeStyle = "#ff6b52";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 5]);
+    ctx.beginPath(); ctx.moveTo(margin.left, y(target)); ctx.lineTo(width - margin.right, y(target)); ctx.stroke();
+    ctx.restore();
+
+    days.forEach(day => {
+      const px = x(day.date);
+      const top = y(day.calories);
+      ctx.fillStyle = day.completed ? "#c8ff46" : "#8d7cff";
+      ctx.fillRect(px - barWidth / 2, top, barWidth, y(0) - top);
+    });
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const horizontalTicks = width < 520 ? 3 : 5;
+    for (let i = 0; i <= horizontalTicks; i += 1) {
+      const date = new Date(minDate + (maxDate - minDate) * i / horizontalTicks);
+      ctx.fillStyle = "rgba(242,239,230,.48)";
+      ctx.fillText(new Intl.DateTimeFormat("es-UY", { month: "short", day: chartRange === "1m" ? "2-digit" : undefined }).format(date), x(date), height - margin.bottom + 10);
+    }
+    return true;
+  }
+
+  function mondayOfWeek(date) {
+    const result = new Date(date);
+    const day = result.getDay();
+    result.setHours(0, 0, 0, 0);
+    result.setDate(result.getDate() - ((day + 6) % 7));
+    return result;
+  }
+
+  function weeklyCalorieSamples(payload) {
+    const days = calorieDaysForBounds(chartBounds(payload, false));
+    const groups = new Map();
+    days.forEach(day => {
+      const weekDate = mondayOfWeek(day.date);
+      const key = toISODate(weekDate);
+      if (!groups.has(key)) groups.set(key, { date: weekDate, days: [] });
+      groups.get(key).days.push(day);
+    });
+    return [...groups.values()].sort((a, b) => a.date - b.date).map(group => {
+      const completed = group.days.filter(day => day.completed);
+      const used = completed.length >= 3 ? completed : group.days;
+      const average = used.reduce((sum, day) => sum + day.calories, 0) / Math.max(1, used.length);
+      return {
+        date: group.date,
+        average,
+        difference: Number.isFinite(payload.plan.targetCalories) ? average - payload.plan.targetCalories : null,
+        loggedDays: group.days.length,
+        usedDays: used.length,
+        completedOnly: completed.length >= 3
+      };
+    });
+  }
+
+  function renderWeeklyCalorieInsight(payload) {
+    $(".progress-model-data").hidden = true;
+    const samples = weeklyCalorieSamples(payload);
+    const latest = samples.at(-1);
+    if (!latest || !Number.isFinite(payload.plan.targetCalories)) {
+      setInsightFact(1, "Semanas", "0");
+      setInsightFact(2, "Promedio", "—");
+      setInsightFact(3, "Días usados", "—");
+      $("#chart-insight-title").textContent = "Todavía falta una semana con registros.";
+      $("#chart-insight").textContent = "Registrá comidas durante varios días. Esta vista agrupa los datos por semana para que un día aislado no domine la lectura.";
+      $("#chart-insight-meta").textContent = "La barra semanal aparece desde el primer día registrado y mejora al completar más días.";
+      return;
+    }
+    const diff = latest.difference;
+    const aligned = Math.abs(diff) <= Math.max(75, payload.plan.targetCalories * 0.05);
+    const weekLabel = new Intl.DateTimeFormat("es-UY", { day: "2-digit", month: "short" }).format(latest.date);
+    setInsightFact(1, "Semana desde", weekLabel);
+    setInsightFact(2, "Promedio", `${formatNumber(Math.round(latest.average))} kcal`);
+    setInsightFact(3, "Días usados", String(latest.usedDays));
+    $("#chart-insight-title").textContent = aligned
+      ? "La última semana está cerca del objetivo."
+      : `La última semana quedó ${formatNumber(Math.abs(Math.round(diff)))} kcal ${diff > 0 ? "por encima" : "por debajo"}.`;
+    $("#chart-insight").textContent = aligned
+      ? "El promedio semanal está dentro de un margen pequeño. Conviene mantener el registro antes de hacer cambios por uno o dos días puntuales."
+      : `El promedio diario de esa semana fue ${formatNumber(Math.round(latest.average))} kcal. Mirá si el patrón se repite durante otra semana antes de modificar el objetivo.`;
+    $("#chart-insight-meta").textContent = `${samples.length} semanas visibles · ${latest.completedOnly ? "usa días terminados" : "usa todos los días con ingestas"}`;
+  }
+
+  function drawWeeklyCalorieChart(canvas, payload) {
+    const samples = weeklyCalorieSamples(payload);
+    const prepared = prepareCanvas(canvas);
+    if (!prepared) return samples.length > 0;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    if (!samples.length || !Number.isFinite(payload.plan.targetCalories)) return false;
+    const target = payload.plan.targetCalories;
+    const maxValue = Math.max(target, ...samples.map(item => item.average), 500) * 1.12;
+    const margin = { left: 54, right: 18, top: 22, bottom: 48 };
+    const plotWidth = width - margin.left - margin.right;
+    const step = plotWidth / Math.max(1, samples.length);
+    const barWidth = Math.max(12, Math.min(48, step * .58));
+    const y = value => margin.top + (maxValue - value) / maxValue * (height - margin.top - margin.bottom);
+
+    ctx.font = "10px ui-monospace, monospace";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i <= 4; i += 1) {
+      const value = maxValue * i / 4;
+      const py = y(value);
+      ctx.strokeStyle = "rgba(242,239,230,.12)";
+      ctx.beginPath(); ctx.moveTo(margin.left, py); ctx.lineTo(width - margin.right, py); ctx.stroke();
+      ctx.fillStyle = "rgba(242,239,230,.52)";
+      ctx.fillText(formatNumber(value, 0), margin.left - 7, py);
+    }
+
+    ctx.save();
+    ctx.strokeStyle = "#ff6b52";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 5]);
+    ctx.beginPath(); ctx.moveTo(margin.left, y(target)); ctx.lineTo(width - margin.right, y(target)); ctx.stroke();
+    ctx.restore();
+
+    samples.forEach((sample, index) => {
+      const px = margin.left + step * (index + .5);
+      const top = y(sample.average);
+      const tolerance = Math.max(75, target * .05);
+      ctx.fillStyle = Math.abs(sample.average - target) <= tolerance ? "#c8ff46" : sample.average > target ? "#ff6b52" : "#8d7cff";
+      ctx.fillRect(px - barWidth / 2, top, barWidth, y(0) - top);
+      const labelStep = width < 520 ? Math.max(2, Math.ceil(samples.length / 5)) : Math.max(1, Math.ceil(samples.length / 10));
+      if ((width < 520 ? index % labelStep === 0 : samples.length <= 14 || index % labelStep === 0) || index === samples.length - 1) {
+        ctx.fillStyle = "rgba(242,239,230,.5)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(new Intl.DateTimeFormat("es-UY", { day: "2-digit", month: "short" }).format(sample.date), px, height - margin.bottom + 10);
+      }
+    });
+    return true;
+  }
+
+  function drawRelationshipChart(canvas, payload) {
+    const samples = relationshipSamples(payload);
+    const prepared = prepareCanvas(canvas);
+    if (!prepared) return samples.length > 0;
+    const { ctx, width, height } = prepared;
+    ctx.clearRect(0, 0, width, height);
+    if (!samples.length) return false;
+    const margin = { left: 58, right: 22, top: 24, bottom: 48 };
+    let minX = Math.min(0, ...samples.map(item => item.calorieDifference));
+    let maxX = Math.max(0, ...samples.map(item => item.calorieDifference));
+    let minY = Math.min(0, ...samples.map(item => item.weeklyWeightChange));
+    let maxY = Math.max(0, ...samples.map(item => item.weeklyWeightChange));
+    const padX = Math.max(100, (maxX - minX) * .15);
+    const padY = Math.max(.12, (maxY - minY) * .18);
+    minX -= padX; maxX += padX; minY -= padY; maxY += padY;
+    const x = value => margin.left + (value - minX) / Math.max(1, maxX - minX) * (width - margin.left - margin.right);
+    const y = value => margin.top + (maxY - value) / Math.max(.01, maxY - minY) * (height - margin.top - margin.bottom);
+
+    ctx.font = "10px ui-monospace, monospace";
+    for (let i = 0; i <= 4; i += 1) {
+      const xv = minX + (maxX - minX) * i / 4;
+      const yv = minY + (maxY - minY) * i / 4;
+      ctx.strokeStyle = "rgba(242,239,230,.1)";
+      ctx.beginPath(); ctx.moveTo(x(xv), margin.top); ctx.lineTo(x(xv), height - margin.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(margin.left, y(yv)); ctx.lineTo(width - margin.right, y(yv)); ctx.stroke();
+      ctx.fillStyle = "rgba(242,239,230,.5)";
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillText(`${xv > 0 ? "+" : ""}${formatNumber(xv, 0)}`, x(xv), height - margin.bottom + 9);
+      ctx.textAlign = "right"; ctx.textBaseline = "middle";
+      ctx.fillText(`${yv > 0 ? "+" : ""}${formatNumber(yv, 2)}`, margin.left - 8, y(yv));
+    }
+    ctx.strokeStyle = "rgba(255,107,82,.82)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x(0), margin.top); ctx.lineTo(x(0), height - margin.bottom); ctx.stroke();
+    ctx.strokeStyle = "rgba(141,124,255,.82)";
+    ctx.beginPath(); ctx.moveTo(margin.left, y(0)); ctx.lineTo(width - margin.right, y(0)); ctx.stroke();
+
+    samples.forEach(point => {
+      ctx.beginPath();
+      ctx.arc(x(point.calorieDifference), y(point.weeklyWeightChange), 5, 0, Math.PI * 2);
+      ctx.fillStyle = point.calorieDifference > 0 ? "#ff6b52" : "#c8ff46";
+      ctx.fill();
+      ctx.strokeStyle = "#10131a";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+    ctx.fillStyle = "rgba(242,239,230,.55)";
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillText("kcal/día frente al objetivo", margin.left + (width - margin.left - margin.right) / 2, height - 3);
+    return true;
+  }
+
+  function drawLine(ctx, points, x, y, color, width, dashed, dashPattern = [8, 7]) {
+    const valid = points.filter(point => point.date && Number.isFinite(point.value));
+    if (valid.length < 2) return;
+    ctx.save();
+    ctx.beginPath();
+    valid.forEach((point, index) => index ? ctx.lineTo(x(point.date), y(point.value)) : ctx.moveTo(x(point.date), y(point.value)));
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    if (dashed) ctx.setLineDash(dashPattern);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPoints(ctx, points, x, y, color, radius) {
+    ctx.fillStyle = color;
+    points.forEach(point => {
+      if (!point.date || !Number.isFinite(point.value)) return;
+      ctx.beginPath(); ctx.arc(x(point.date), y(point.value), radius, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+
+  function renderHistory(trends) {
+    const list = $("#history-list");
+    const select = $("#history-date-select");
+    list.innerHTML = "";
+    const rows = [...trends].reverse();
+    $("#history-empty").hidden = rows.length > 0;
+    $("#history-count").textContent = `${rows.length} ${rows.length === 1 ? "registro" : "registros"} · elegir por fecha`;
+    select.hidden = rows.length === 0;
+    select.innerHTML = "";
+    if (!rows.length) {
+      selectedHistoryId = null;
+      return;
+    }
+    if (!selectedHistoryId || !rows.some(item => item.id === selectedHistoryId)) selectedHistoryId = rows[0].id;
+    rows.forEach(item => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${formatDate(item.date)} · ${formatKg(item.weight)}`;
+      select.appendChild(option);
+    });
+    select.value = selectedHistoryId;
+    const item = rows.find(entry => entry.id === selectedHistoryId) || rows[0];
+    const row = document.createElement("article");
+    row.className = "history-row";
+    row.dataset.id = item.id;
+    row.innerHTML = `
+      <label><span>Fecha</span><input class="date-input" data-field="date" type="text" inputmode="numeric" maxlength="10" value="${displayDate(item.date)}" aria-label="Fecha del pesaje"></label>
+      <label><span>Peso</span><input data-field="weight" type="number" min="20" max="400" step="0.1" value="${item.weight}" aria-label="Peso en kg"></label>
+      <div class="history-trend"><span>Tendencia</span><b>${formatKg(item.trend, 2)}</b></div>
+      <button class="history-delete" type="button" data-delete-weight="${item.id}">Eliminar</button>`;
+    list.appendChild(row);
+  }
+
+  function updateSettingsScrollState() {
+    const sheet = document.querySelector(".settings-sheet");
+    if (!sheet) return;
+    sheet.classList.toggle("is-scrolled", sheet.scrollTop > 110);
+  }
+
+  function openSettings(required = false, tab = "profile") {
+    settingsRequired = required || !state.configured;
+    fillProfileForm();
+    $("#settings-modal").hidden = false;
+    $("#close-settings").hidden = settingsRequired;
+    $("#cancel-profile").hidden = settingsRequired;
+    document.body.classList.add("modal-open");
+    switchSettingsTab(tab);
+    updateProfilePreview();
+    requestAnimationFrame(updateSettingsScrollState);
+  }
+
+  function closeSettings() {
+    if (settingsRequired) return;
+    $("#settings-modal").hidden = true;
+    document.body.classList.remove("modal-open");
+  }
+
+  function switchSettingsTab(tab) {
+    const chosen = tab === "account" || tab === "weights" ? "account" : "profile";
+    $$('[data-settings-tab]').forEach(button => button.classList.toggle("active", button.dataset.settingsTab === chosen));
+    $("#settings-profile").hidden = chosen !== "profile";
+    $("#settings-account").hidden = chosen !== "account";
+    if (chosen === "account") window.MASA_CLOUD?.refreshAccountSecurity?.();
+  }
+
+  function fillProfileForm() {
+    fillingProfileForm = true;
+    const form = $("#profile-form");
+    const profile = state.profile;
+    const latest = latestWeighIn();
+    const accountName = $("#account-display-name");
+    if (accountName) accountName.value = profile.name || "";
+    form.elements.birthDate.value = displayDate(profile.birthDate);
+    form.elements.sex.value = profile.sex || "male";
+    form.elements.heightCm.value = profile.heightCm || "";
+    form.elements.currentWeight.value = latest?.weight || "";
+    form.elements.bodyFat.value = profile.bodyFat || "";
+    const formula = form.querySelector(`[name="formula"][value="${profile.formula}"]`) || form.querySelector('[name="formula"][value="mifflin"]');
+    formula.checked = true;
+    form.elements.activityFactor.value = String(profile.activityFactor || 1.35);
+    form.elements.goalType.value = profile.goalType || "loss";
+    form.elements.goalMetric.value = profile.goalMetric || "weight";
+    form.elements.goalWeight.value = profile.goalWeight || "";
+    form.elements.goalBodyFat.value = profile.goalBodyFat || "";
+    form.elements.goalDate.value = displayDate(profile.goalDate);
+    form.elements.rateMode.value = profile.rateMode || "auto";
+    form.elements.weeklyRatePct.value = profile.weeklyRatePct || 0.5;
+    form.elements.macroMode.value = profile.macroMode || "athletic";
+    const currentPlan = calculatePlan(profile, state.weighIns);
+    form.elements.proteinPct.value = profile.macroMode === "custom" ? Math.round(profile.proteinPct) : 20;
+    form.elements.fatPct.value = profile.macroMode === "custom" ? Math.round(profile.fatPct) : 30;
+    form.elements.carbPct.value = profile.macroMode === "custom" ? Math.round(profile.carbPct) : 50;
+    syncNativeDatePickers();
+    setTimeout(() => { fillingProfileForm = false; }, 0);
+  }
+
+  function profileFromForm() {
+    const form = $("#profile-form");
+    return normalizeProfile({
+      ...state.profile,
+      name: state.profile.name || "",
+      birthDate: normalizeDate(form.elements.birthDate.value),
+      sex: form.elements.sex.value,
+      heightCm: form.elements.heightCm.value,
+      bodyFat: form.elements.bodyFat.value,
+      formula: form.elements.formula.value,
+      activityFactor: form.elements.activityFactor.value,
+      goalType: form.elements.goalType.value,
+      goalMetric: form.elements.goalMetric.value,
+      goalWeight: form.elements.goalWeight.value,
+      goalBodyFat: form.elements.goalBodyFat.value,
+      goalDate: normalizeDate(form.elements.goalDate.value),
+      rateMode: form.elements.rateMode.value,
+      weeklyRatePct: form.elements.weeklyRatePct.value,
+      macroMode: form.elements.macroMode.value,
+      proteinPct: form.elements.proteinPct.value,
+      fatPct: form.elements.fatPct.value,
+      carbPct: form.elements.carbPct.value
+    }, state.weighIns);
+  }
+
+  function updateProfileControls() {
+    const form = $("#profile-form");
+    const bodyFat = toNumber(form.elements.bodyFat.value, NaN);
+    const cunningham = form.querySelector('[name="formula"][value="cunningham"]');
+    cunningham.disabled = !Number.isFinite(bodyFat);
+    $("#cunningham-choice").classList.toggle("disabled", cunningham.disabled);
+    if (cunningham.disabled && cunningham.checked) form.querySelector('[name="formula"][value="mifflin"]').checked = true;
+
+    const goalType = form.elements.goalType.value;
+    const goalMetric = form.elements.goalMetric.value;
+    const maintain = goalType === "maintain";
+    form.elements.goalMetric.disabled = maintain;
+    $("#goal-weight-field").hidden = maintain || goalMetric !== "weight";
+    $("#goal-bodyfat-field").hidden = maintain || goalMetric !== "bodyFat";
+    $("#manual-rate-field").hidden = maintain || form.elements.rateMode.value !== "manual";
+    form.elements.goalDate.disabled = maintain;
+    form.elements.rateMode.disabled = maintain;
+    $("#activity-explanation").textContent = `${ACTIVITY_EXPLANATIONS[form.elements.activityFactor.value] || ""} Elegilo por la rutina completa, no solamente por el entrenamiento.`;
+
+    const customMacros = form.elements.macroMode.value === "custom";
+    $("#custom-macro-fields").hidden = !customMacros;
+    $("#macro-sum-line").hidden = !customMacros;
+    const sum = ["proteinPct","fatPct","carbPct"].reduce((total, name) => total + toNumber(form.elements[name].value, 0), 0);
+    $("#macro-percent-sum").textContent = `${formatNumber(sum,0)}%`;
+    $("#macro-percent-sum").closest(".macro-sum-line").classList.toggle("invalid", customMacros && Math.abs(sum - 100) > 0.01);
+    const modeLabels = { balanced: "balanceado", athletic: "atlético", custom: "personalizado" };
+    $("#macro-mode-label").textContent = modeLabels[form.elements.macroMode.value] || "atlético";
+  }
+
+  function updateProfilePreview(event) {
+    const form = $("#profile-form");
+    if (!fillingProfileForm && event?.target?.matches('[name="proteinPct"],[name="fatPct"],[name="carbPct"]')) {
+      form.elements.macroMode.value = "custom";
+    }
+    updateProfileControls();
+    const draft = profileFromForm();
+    const currentWeight = toNumber(form.elements.currentWeight.value, NaN);
+    const temporaryWeighIns = Number.isFinite(currentWeight)
+      ? mergeWeighIns(state.weighIns, [{ date: todayISO(), weight: currentWeight }])
+      : state.weighIns;
+    const plan = calculatePlan(draft, temporaryWeighIns, currentWeight);
+    $("#preview-maintenance").textContent = Number.isFinite(plan.maintenance) ? `${formatNumber(Math.round(plan.maintenance))} kcal` : "—";
+    $("#preview-calories").textContent = Number.isFinite(plan.targetCalories) ? `${formatNumber(Math.round(plan.targetCalories))} kcal` : "—";
+    $("#preview-protein").textContent = Number.isFinite(plan.proteinG) ? `${formatNumber(Math.round(plan.proteinG))} g` : "—";
+    $("#preview-fat").textContent = Number.isFinite(plan.fatG) ? `${formatNumber(Math.round(plan.fatG))} g` : "—";
+    $("#preview-carbs").textContent = Number.isFinite(plan.carbsG) ? `${formatNumber(Math.round(plan.carbsG))} g` : "—";
+    $("#preview-date").textContent = plan.estimatedDate ? formatDate(plan.estimatedDate) : "—";
+    renderGoalExplanation(draft, plan);
+    renderMacroExplanation(draft, plan);
+    renderAutomaticAdjustmentPreview(draft, plan, temporaryWeighIns);
+  }
+
+  function renderGoalExplanation(profile, plan) {
+    const box = $("#goal-explanation");
+    box.className = "explanation-box";
+    if (profile.goalType === "maintain") {
+      box.textContent = "En mantenimiento no se aplica déficit ni superávit. La referencia es sostener una tendencia estable.";
+      return;
+    }
+    if (profile.goalMetric === "bodyFat" && !Number.isFinite(toNumber(profile.bodyFat, NaN))) {
+      box.textContent = "Para usar porcentaje de grasa como objetivo necesitás una estimación actual. Si no la conocés, elegí peso corporal.";
+      box.classList.add("alert");
+      return;
+    }
+    if (!profile.goalDate) {
+      box.textContent = "Definí una fecha objetivo. Si escribís solo día y mes, MASA usa el año actual.";
+      box.classList.add("alert");
+      return;
+    }
+    if (!Number.isFinite(plan.targetWeight)) {
+      box.textContent = "Falta un objetivo válido.";
+      box.classList.add("alert");
+      return;
+    }
+    if (plan.rate.capped) {
+      box.textContent = `La fecha elegida exige ${formatNumber(plan.rate.required, 2)}% semanal. En automático se usa el máximo de referencia de ${formatNumber(plan.rate.bounds.suggestedMax, 2)}%.`;
+      box.classList.add("warn");
+      return;
+    }
+    if (plan.rate.selected > plan.rate.bounds.suggestedMax) {
+      box.textContent = `El ritmo manual supera ${formatNumber(plan.rate.bounds.suggestedMax, 2)}% semanal. La cuenta se muestra, pero queda marcada como agresiva.`;
+      box.classList.add("alert");
+      return;
+    }
+    box.textContent = `Ritmo usado: ${formatNumber(plan.rate.selected, 2)}% semanal. La fecha objetivo y el ritmo se validan por separado.`;
+  }
+
+  function renderMacroExplanation(profile, plan) {
+    const box = $("#macro-explanation");
+    box.className = "explanation-box";
+    const sum = toNumber(profile.proteinPct, 0) + toNumber(profile.fatPct, 0) + toNumber(profile.carbPct, 0);
+    if (profile.macroMode === "balanced") {
+      box.textContent = "Balanceado: 20% de proteína, 30% de grasas y 50% de carbohidratos. Replica una distribución general por porcentajes.";
+      return;
+    }
+    if (profile.macroMode === "athletic") {
+      box.textContent = `Atlético: ${formatNumber(plan.macroRule.proteinPerKg, 1)} g/kg de proteína, ${formatNumber(plan.macroRule.effectiveFatPerKg, 1)} g/kg de grasas y carbohidratos con las calorías restantes.`;
+      return;
+    }
+    if (Math.abs(sum - 100) > 0.01) {
+      box.textContent = `Los tres porcentajes suman ${formatNumber(sum,0)}%. Deben sumar exactamente 100%.`;
+      box.classList.add("alert");
+      return;
+    }
+    box.textContent = `Personalizado: ${formatNumber(profile.proteinPct,0)}% proteína, ${formatNumber(profile.fatPct,0)}% grasas y ${formatNumber(profile.carbPct,0)}% carbohidratos.`;
+  }
+
+  function validateProfile(profile, currentWeight) {
+    const birth = parseDate(profile.birthDate);
+    const today = parseDate(todayISO());
+    if (!birth) return { message: "Ingresá una fecha de nacimiento válida en formato dd/mm/aaaa.", field: "birthDate" };
+    if (birth > today) return { message: "La fecha de nacimiento no puede ser posterior a hoy.", field: "birthDate" };
+    if (!Number.isFinite(toNumber(profile.heightCm, NaN))) return { message: "Ingresá tu altura.", field: "heightCm" };
+    if (!Number.isFinite(currentWeight) || currentWeight <= 0) return { message: "Ingresá tu peso actual.", field: "currentWeight" };
+    if (profile.formula === "cunningham" && !Number.isFinite(toNumber(profile.bodyFat, NaN))) return { message: "Cunningham necesita un porcentaje de grasa.", field: "bodyFat" };
+    if (profile.goalType !== "maintain") {
+      if (profile.goalMetric === "weight" && !Number.isFinite(toNumber(profile.goalWeight, NaN))) return { message: "Ingresá un peso objetivo.", field: "goalWeight" };
+      if (profile.goalMetric === "bodyFat" && !Number.isFinite(toNumber(profile.goalBodyFat, NaN))) return { message: "Ingresá el porcentaje de grasa objetivo.", field: "goalBodyFat" };
+      if (profile.goalMetric === "bodyFat" && !Number.isFinite(toNumber(profile.bodyFat, NaN))) return { message: "Para un objetivo de grasa necesitás indicar el porcentaje actual.", field: "bodyFat" };
+      if (!profile.goalDate) return { message: "Ingresá una fecha objetivo.", field: "goalDate" };
+      if (parseDate(profile.goalDate) <= today) return { message: "La fecha objetivo debe ser futura.", field: "goalDate" };
+    }
+    if (profile.macroMode === "custom") {
+      const values = [profile.proteinPct, profile.fatPct, profile.carbPct].map(value => toNumber(value, NaN));
+      if (!values.every(Number.isFinite)) return { message: "Completá los tres porcentajes de macros.", field: "proteinPct" };
+      if (Math.abs(values.reduce((a,b) => a+b, 0) - 100) > 0.01) return { message: "Los porcentajes de macros deben sumar 100%.", field: "proteinPct" };
+    }
+    return null;
+  }
+
+  function focusProfileField(name) {
+    switchSettingsTab("profile");
+    const field = $("#profile-form").elements[name];
+    if (!field) return;
+    field.classList.add("invalid-field");
+    field.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => field.focus(), 280);
+  }
+
+  function saveProfile(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const currentWeight = toNumber(form.elements.currentWeight.value, NaN);
+    const profile = profileFromForm();
+    $$("#profile-form .invalid-field").forEach(field => field.classList.remove("invalid-field"));
+    const error = validateProfile(profile, currentWeight);
+    if (error) {
+      setFeedback($("#profile-feedback"), error.message, true);
+      focusProfileField(error.field);
+      return;
+    }
+
+    state.weighIns = mergeWeighIns(state.weighIns, [{ date: todayISO(), weight: currentWeight }]);
+    const first = sortedWeighIns(state.weighIns)[0];
+    if (!profile.planStartDate) profile.planStartDate = first.date;
+    if (!Number.isFinite(toNumber(profile.planStartWeight, NaN))) profile.planStartWeight = first.weight;
+    state.profile = profile;
+    state.configured = true;
+    saveState(state);
+    settingsRequired = false;
+    $("#settings-modal").hidden = true;
+    document.body.classList.remove("modal-open");
+    setFeedback($("#profile-feedback"), "");
+    render();
+  }
+
+  function saveAccountIdentity(event) {
+    event.preventDefault();
+    const input = $("#account-display-name");
+    const name = String(input?.value || "").trim().slice(0, 60);
+    state.profile = normalizeProfile({ ...state.profile, name }, state.weighIns);
+    saveState(state);
+    if (input) input.value = name;
+    setFeedback($("#account-profile-feedback"), name ? "Nombre actualizado." : "Nombre eliminado.");
+    render();
+  }
+
+  function toggleAccountPassword() {
+    const button = $("#toggle-account-password");
+    const panel = $("#account-password-manager");
+    const expanded = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", String(!expanded));
+    button.querySelector("i").textContent = expanded ? "＋" : "−";
+    panel.hidden = expanded;
+    if (!expanded) window.MASA_CLOUD?.refreshAccountSecurity?.();
+  }
+
+  function addQuickWeight(event) {
+    event.preventDefault();
+    const weight = toNumber($("#quick-weight").value, NaN);
+    const date = selectedDiaryDate;
+    if (!Number.isFinite(weight) || weight <= 0 || !date) {
+      setFeedback($("#weight-feedback"), "Revisá el peso.", true);
+      return;
+    }
+    state.weighIns = mergeWeighIns(state.weighIns, [{ date, weight }]);
+    saveState(state);
+    weightEditorForced = false;
+    setFeedback($("#weight-feedback"), `Registrado: ${formatKg(weight)} · ${formatDate(date)}.`);
+    render();
+  }
+
+  function updateHistoryRow(event) {
+    const input = event.target.closest("input[data-field]");
+    if (!input) return;
+    const row = input.closest(".history-row");
+    const item = state.weighIns.find(entry => entry.id === row?.dataset.id);
+    if (!item) return;
+    const date = normalizeDate(row.querySelector('[data-field="date"]').value);
+    const weight = toNumber(row.querySelector('[data-field="weight"]').value, NaN);
+    if (!date || !Number.isFinite(weight) || weight <= 0) return;
+    state.weighIns = state.weighIns.filter(entry => entry.id !== item.id);
+    state.weighIns = mergeWeighIns(state.weighIns, [{ id: item.id, date, weight }]);
+    saveState(state);
+    render();
+  }
+
+  function deleteHistoryRow(event) {
+    const button = event.target.closest("[data-delete-weight]");
+    if (!button) return;
+    state.weighIns = state.weighIns.filter(item => item.id !== button.dataset.deleteWeight);
+    if (selectedHistoryId === button.dataset.deleteWeight) selectedHistoryId = null;
+    saveState(state);
+    render();
+    if (!state.configured) openSettings(true, "profile");
+  }
+
+  let xlsxLoader = null;
+
+  async function loadXLSX() {
+    if (globalThis.XLSX) return globalThis.XLSX;
+    if (!xlsxLoader) {
+      xlsxLoader = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+        script.async = true;
+        script.onload = () => globalThis.XLSX ? resolve(globalThis.XLSX) : reject(new Error("El módulo de Excel no quedó disponible."));
+        script.onerror = () => reject(new Error("No se pudo cargar el módulo de Excel. Revisá la conexión y volvé a intentarlo."));
+        document.head.appendChild(script);
+      }).catch(error => {
+        xlsxLoader = null;
+        throw error;
+      });
+    }
+    return xlsxLoader;
+  }
+
+  function spreadsheetDate(value) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return toISODate(value);
+    if (typeof value === "number" && globalThis.XLSX?.SSF?.parse_date_code) {
+      const parsed = globalThis.XLSX.SSF.parse_date_code(value);
+      if (parsed) return normalizeDate(`${parsed.d}/${parsed.m}/${parsed.y}`);
+    }
+    return normalizeDate(value);
+  }
+
+  async function spreadsheetRows(file, preferredNames = []) {
+    const XLSX = await loadXLSX();
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+    const sheetName = preferredNames.find(name => workbook.SheetNames.includes(name)) || workbook.SheetNames[0];
+    if (!sheetName) return [];
+    return XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: true });
+  }
+
+  function findColumn(row, aliases) {
+    const entries = Object.keys(row || {}).map(key => [key, normalizeHeader(key)]);
+    return entries.find(([, normalized]) => aliases.some(alias => normalized === alias || (alias.length >= 4 && normalized.includes(alias))))?.[0] || null;
+  }
+
+  function parseWeightRows(rows) {
+    if (!Array.isArray(rows) || !rows.length) return [];
+    const sample = rows.find(row => row && Object.keys(row).length) || {};
+    const dateKey = findColumn(sample, ["fecha", "date", "dia"]);
+    const weightKey = findColumn(sample, ["pesokg", "peso", "weight", "kg"]);
+    if (!dateKey || !weightKey) return [];
+    return rows.map(row => ({ date: spreadsheetDate(row[dateKey]), weight: toNumber(row[weightKey], NaN) }))
+      .filter(item => item.date && Number.isFinite(item.weight) && item.weight > 0);
+  }
+
+  function mealFromValue(value) {
+    const normalized = normalizeHeader(value);
+    if (["desayuno", "breakfast"].includes(normalized)) return "breakfast";
+    if (["almuerzo", "lunch"].includes(normalized)) return "lunch";
+    if (["merienda", "snack", "afternoonsnack"].includes(normalized)) return "snack";
+    if (["cena", "dinner"].includes(normalized)) return "dinner";
+    return "extras";
+  }
+
+  function spreadsheetBoolean(value) {
+    const normalized = normalizeHeader(value);
+    return value === true || value === 1 || ["si", "yes", "true", "terminado", "completo"].includes(normalized);
+  }
+
+  function parseIntakeRows(rows) {
+    if (!Array.isArray(rows) || !rows.length) return [];
+    const sample = rows.find(row => row && Object.keys(row).length) || {};
+    const keys = {
+      id: findColumn(sample, ["id"]),
+      date: findColumn(sample, ["fecha", "date", "dia"]),
+      meal: findColumn(sample, ["comida", "meal"]),
+      name: findColumn(sample, ["descripcion", "alimento", "nombre", "food"]),
+      serving: findColumn(sample, ["porcion", "serving"]),
+      calories: findColumn(sample, ["calorias", "calories", "kcal"]),
+      protein: findColumn(sample, ["proteinag", "proteina", "protein"]),
+      fat: findColumn(sample, ["grasasg", "grasa", "grasas", "fat"]),
+      carbs: findColumn(sample, ["carbohidratosg", "carbohidratos", "carbs"]),
+      completed: findColumn(sample, ["diaterminado", "terminado", "completed"])
+    };
+    if (!keys.date || !keys.name || !keys.calories) return [];
+    return rows.map(row => {
+      const entry = normalizeDiaryEntry({
+        id: String(keys.id ? row[keys.id] : "").trim() || createId(),
+        name: row[keys.name],
+        calories: row[keys.calories],
+        protein: keys.protein ? row[keys.protein] : 0,
+        fat: keys.fat ? row[keys.fat] : 0,
+        carbs: keys.carbs ? row[keys.carbs] : 0,
+        serving: keys.serving ? row[keys.serving] : "1 porción",
+        meal: mealFromValue(keys.meal ? row[keys.meal] : "")
+      });
+      return entry ? { date: spreadsheetDate(row[keys.date]), entry, completed: keys.completed ? spreadsheetBoolean(row[keys.completed]) : false } : null;
+    }).filter(item => item?.date);
+  }
+
+  function replaceDiaryEntry(date, entry) {
+    Object.keys(state.diary).forEach(key => {
+      state.diary[key] = (state.diary[key] || []).filter(item => item.id !== entry.id);
+      if (!state.diary[key].length) delete state.diary[key];
+    });
+    state.diary[date] = [...(state.diary[date] || []), entry];
+  }
+
+  async function exportIntakes() {
+    try {
+      const XLSX = await loadXLSX();
+      const rows = [];
+      Object.keys(state.diary).sort().forEach(date => {
+        (state.diary[date] || []).forEach(item => rows.push({
+          ID: item.id,
+          Fecha: parseDate(date),
+          Comida: mealLabel(item.meal),
+          "Descripción": item.name,
+          "Porción": item.serving || "1 porción",
+          "Calorías": toNumber(item.calories, 0),
+          "Proteína (g)": toNumber(item.protein, 0),
+          "Grasas (g)": toNumber(item.fat, 0),
+          "Carbohidratos (g)": toNumber(item.carbs, 0),
+          "Día terminado": state.completedDays?.[date] ? "Sí" : "No"
+        }));
+      });
+      const allDates = [...new Set([...Object.keys(state.diary), ...Object.keys(state.completedDays || {})])].sort();
+      const summary = allDates.map(date => {
+        const totals = diaryTotalsForDate(date);
+        return {
+          Fecha: parseDate(date),
+          Calorías: Math.round(totals.calories),
+          "Proteína (g)": Number(totals.protein.toFixed(1)),
+          "Grasas (g)": Number(totals.fat.toFixed(1)),
+          "Carbohidratos (g)": Number(totals.carbs.toFixed(1)),
+          "Día terminado": state.completedDays?.[date] ? "Sí" : "No"
+        };
+      });
+      const workbook = XLSX.utils.book_new();
+      const recordsSheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ ID: "", Fecha: "", Comida: "", "Descripción": "", "Porción": "", "Calorías": "", "Proteína (g)": "", "Grasas (g)": "", "Carbohidratos (g)": "", "Día terminado": "" }], { cellDates: true });
+      recordsSheet["!cols"] = [{wch:38},{wch:13},{wch:14},{wch:34},{wch:18},{wch:11},{wch:14},{wch:12},{wch:18},{wch:16}];
+      recordsSheet["!autofilter"] = { ref: recordsSheet["!ref"] };
+      const recordsRange = XLSX.utils.decode_range(recordsSheet["!ref"]);
+      for (let row = 1; row <= recordsRange.e.r; row += 1) {
+        const cell = recordsSheet[XLSX.utils.encode_cell({ r: row, c: 1 })];
+        if (cell) cell.z = "dd/mm/yyyy";
+      }
+      const summarySheet = XLSX.utils.json_to_sheet(summary.length ? summary : [{ Fecha: "", Calorías: "", "Proteína (g)": "", "Grasas (g)": "", "Carbohidratos (g)": "", "Día terminado": "" }], { cellDates: true });
+      summarySheet["!cols"] = [{wch:13},{wch:12},{wch:14},{wch:12},{wch:18},{wch:16}];
+      summarySheet["!autofilter"] = { ref: summarySheet["!ref"] };
+      const summaryRange = XLSX.utils.decode_range(summarySheet["!ref"]);
+      for (let row = 1; row <= summaryRange.e.r; row += 1) {
+        const cell = summarySheet[XLSX.utils.encode_cell({ r: row, c: 0 })];
+        if (cell) cell.z = "dd/mm/yyyy";
+      }
+      XLSX.utils.book_append_sheet(workbook, recordsSheet, "Registros");
+      XLSX.utils.book_append_sheet(workbook, summarySheet, "Resumen diario");
+      XLSX.writeFile(workbook, `consumo-masa-${todayISO()}.xlsx`, { compression: true });
+    } catch (error) {
+      window.alert(error.message || "No se pudo exportar el consumo.");
+    }
+  }
+
+  async function handleIntakeImport(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      let rows;
+      if (/\.(xlsx|xls)$/i.test(file.name)) rows = await spreadsheetRows(file, ["Registros"]);
+      else rows = parseDelimitedObjects(await file.text());
+      const imported = parseIntakeRows(rows);
+      if (!imported.length) throw new Error("No se encontraron filas válidas de ingestas.");
+      imported.forEach(({ date, entry, completed }) => {
+        replaceDiaryEntry(date, entry);
+        if (completed) state.completedDays[date] = true;
+      });
+      saveState(state);
+      setSelectedDiaryDate(imported.at(-1).date);
+      switchAppView("today");
+      window.alert(`Se importaron ${imported.length} ingestas.`);
+    } catch (error) {
+      window.alert(error.message || "No se pudo importar el consumo.");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function parseDelimitedObjects(text) {
+    const clean = String(text || "").replace(/^\uFEFF/, "").trim();
+    if (!clean) return [];
+    const lines = clean.split(/\r?\n/).filter(line => line.trim());
+    if (lines.length < 2) return [];
+    const delimiter = lines[0].includes("\t") ? "\t" : lines[0].includes(";") ? ";" : ",";
+    const headers = splitDelimited(lines[0], delimiter);
+    return lines.slice(1).map(line => {
+      const values = splitDelimited(line, delimiter);
+      return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
+    });
+  }
+
+  function openImport(mode) {
+    importMode = mode;
+    const input = $("#import-file");
+    input.value = "";
+    input.accept = mode === "library"
+      ? ".json,application/json"
+      : ".xlsx,.xls,.csv,.tsv,.txt,.json";
+    input.click();
+  }
+
+  async function handleImport(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      if (/\.(xlsx|xls)$/i.test(file.name)) {
+        if (importMode === "library") throw new Error("La biblioteca de recetas y alimentos se importa desde un archivo JSON exportado por MASA.");
+        const weights = parseWeightRows(await spreadsheetRows(file, ["Pesajes"]));
+        if (!weights.length) throw new Error("No se encontraron columnas de fecha y peso en la planilla.");
+        state.weighIns = mergeWeighIns(state.weighIns, weights);
+        if (!state.profile.planStartDate) {
+          const first = sortedWeighIns(state.weighIns)[0];
+          state.profile.planStartDate = first.date;
+          state.profile.planStartWeight = first.weight;
+        }
+        state.configured = profileIsComplete(state.profile, state.weighIns);
+        saveState(state);
+        render();
+        if (!state.configured) openSettings(true, "profile");
+        else switchSettingsTab("weights");
+        return;
+      }
+
+      const text = await file.text();
+      const isJson = file.name.toLowerCase().endsWith(".json") || text.trim().startsWith("{") || text.trim().startsWith("[");
+      if (isJson) {
+        const parsed = JSON.parse(text);
+        if (importMode === "library") {
+          const result = importLibraryData(parsed);
+          saveState(state);
+          render();
+          if (!$("#library-modal")?.hidden) renderLibraryManager();
+          window.alert(`Biblioteca importada: ${result.foods} alimento(s), ${result.recipes} receta(s) y ${result.catalog} cambio(s) del catálogo.`);
+          return;
+        }
+        const imported = normalizeState(parsed);
+        if (imported.weighIns.length) {
+          state.weighIns = mergeWeighIns(state.weighIns, imported.weighIns);
+          state.configured = profileIsComplete(state.profile, state.weighIns);
+          saveState(state);
+          render();
+          if (!state.configured) openSettings(true, "profile");
+          else switchSettingsTab("weights");
+          return;
+        }
+        throw new Error("No se encontraron pesajes válidos.");
+      }
+
+      const weights = parseWeightTable(text);
+      if (!weights.length) throw new Error("No se encontraron columnas de fecha y peso.");
+      state.weighIns = mergeWeighIns(state.weighIns, weights);
+      if (!state.profile.planStartDate) {
+        const first = sortedWeighIns(state.weighIns)[0];
+        state.profile.planStartDate = first.date;
+        state.profile.planStartWeight = first.weight;
+      }
+      state.configured = profileIsComplete(state.profile, state.weighIns);
+      saveState(state);
+      render();
+      if (!state.configured) openSettings(true, "profile");
+      else switchSettingsTab("weights");
+    } catch (error) {
+      window.alert(error.message || "No se pudo importar el archivo.");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function parseWeightTable(text) {
+    const clean = text.replace(/^\uFEFF/, "").trim();
+    if (!clean) return [];
+    const lines = clean.split(/\r?\n/).filter(line => line.trim());
+    if (lines.length < 2) return [];
+    const first = lines[0];
+    const delimiter = first.includes("\t") ? "\t" : first.includes(";") ? ";" : ",";
+    const headers = splitDelimited(first, delimiter).map(normalizeHeader);
+    let dateIndex = headers.findIndex(header => ["fecha", "date", "dia"].some(key => header.includes(key)));
+    let weightIndex = headers.findIndex(header => ["peso", "weight", "kg"].some(key => header.includes(key)));
+    if (dateIndex < 0 || weightIndex < 0) { dateIndex = 0; weightIndex = 1; }
+    return lines.slice(1).map(line => {
+      const parts = splitDelimited(line, delimiter);
+      return { date: normalizeDate(parts[dateIndex]), weight: toNumber(parts[weightIndex], NaN) };
+    }).filter(item => item.date && Number.isFinite(item.weight) && item.weight > 0);
+  }
+
+  function splitDelimited(line, delimiter) {
+    const values = [];
+    let current = "";
+    let quoted = false;
+    for (let i = 0; i < line.length; i += 1) {
+      const char = line[i];
+      if (char === '"') {
+        if (quoted && line[i + 1] === '"') { current += '"'; i += 1; }
+        else quoted = !quoted;
+      } else if (char === delimiter && !quoted) {
+        values.push(current.trim()); current = "";
+      } else current += char;
+    }
+    values.push(current.trim());
+    return values;
+  }
+
+  function normalizeHeader(value) {
+    return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  }
+
+  async function exportWeights() {
+    try {
+      const XLSX = await loadXLSX();
+      const rows = sortedWeighIns().map(item => ({
+        Fecha: parseDate(item.date),
+        "Peso (kg)": toNumber(item.weight, 0)
+      }));
+      const workbook = XLSX.utils.book_new();
+      const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ Fecha: "", "Peso (kg)": "" }], { cellDates: true });
+      sheet["!cols"] = [{ wch: 14 }, { wch: 14 }];
+      sheet["!autofilter"] = { ref: sheet["!ref"] };
+      const range = XLSX.utils.decode_range(sheet["!ref"]);
+      for (let row = 1; row <= range.e.r; row += 1) {
+        const dateCell = sheet[XLSX.utils.encode_cell({ r: row, c: 0 })];
+        if (dateCell) dateCell.z = "dd/mm/yyyy";
+        const weightCell = sheet[XLSX.utils.encode_cell({ r: row, c: 1 })];
+        if (weightCell) weightCell.z = "0.0";
+      }
+      XLSX.utils.book_append_sheet(workbook, sheet, "Pesajes");
+      XLSX.writeFile(workbook, `pesajes-masa-${todayISO()}.xlsx`, { compression: true });
+    } catch (error) {
+      window.alert(error.message || "No se pudieron exportar los pesajes.");
+    }
+  }
+
+  function libraryExportPayload() {
+    return {
+      format: "masa-library",
+      version: 19,
+      exportedAt: new Date().toISOString(),
+      foods: clone(state.foods || []),
+      recipes: clone(state.recipes || []),
+      catalogOverrides: clone(state.catalogOverrides || {})
+    };
+  }
+
+  function exportLibrary() {
+    const payload = libraryExportPayload();
+    downloadText(`biblioteca-masa-${todayISO()}.json`, JSON.stringify(payload, null, 2), "application/json");
+  }
+
+  function importedLibraryCollections(raw = {}) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new Error("El archivo no contiene una biblioteca válida de MASA.");
+    }
+    const foods = Array.isArray(raw.foods) ? raw.foods.map(normalizeFood).filter(Boolean) : [];
+    const recipes = Array.isArray(raw.recipes)
+      ? raw.recipes.map(item => normalizeFood({ ...item, kind: "recipe" })).filter(Boolean)
+      : [];
+    const catalogOverrides = {};
+    Object.entries(raw.catalogOverrides || {}).forEach(([id, value]) => {
+      const normalized = normalizeCatalogOverride(value, id);
+      if (normalized) catalogOverrides[id] = normalized;
+    });
+    if (!foods.length && !recipes.length && !Object.keys(catalogOverrides).length) {
+      throw new Error("El archivo no contiene alimentos, recetas ni cambios del catálogo para importar.");
+    }
+    return { foods, recipes, catalogOverrides };
+  }
+
+  function importLibraryData(raw) {
+    const incoming = importedLibraryCollections(raw);
+    const foods = [...state.foods];
+    const foodIdMap = new Map();
+
+    incoming.foods.forEach(food => {
+      const nameKey = normalizeHeader(food.name);
+      const indexById = foods.findIndex(item => item.id === food.id);
+      const indexByName = foods.findIndex(item => normalizeHeader(item.name) === nameKey);
+      const index = indexById >= 0 ? indexById : indexByName;
+      if (index >= 0) {
+        const preservedId = foods[index].id;
+        foodIdMap.set(food.id, preservedId);
+        foods[index] = normalizeFood({ ...food, id: preservedId, kind: "food" });
+      } else {
+        foodIdMap.set(food.id, food.id);
+        foods.push(food);
+      }
+    });
+
+    const remappedRecipes = incoming.recipes.map(recipe => normalizeFood({
+      ...recipe,
+      kind: "recipe",
+      ingredients: (recipe.ingredients || []).map(ingredient => {
+        if (ingredient.kind !== "food") return ingredient;
+        const originalId = ingredient.foodId || ingredient.sourceId;
+        const mappedId = foodIdMap.get(originalId) || originalId;
+        return { ...ingredient, foodId: mappedId, sourceId: mappedId };
+      })
+    })).filter(Boolean);
+
+    const recipes = [...state.recipes];
+    remappedRecipes.forEach(recipe => {
+      const nameKey = normalizeHeader(recipe.name);
+      const indexById = recipes.findIndex(item => item.id === recipe.id);
+      const indexByName = recipes.findIndex(item => normalizeHeader(item.name) === nameKey);
+      const index = indexById >= 0 ? indexById : indexByName;
+      if (index >= 0) {
+        const preservedId = recipes[index].id;
+        recipes[index] = normalizeFood({ ...recipe, id: preservedId, kind: "recipe" });
+      } else recipes.push(recipe);
+    });
+
+    state.foods = foods;
+    state.recipes = recipes.map(recalculateRecipe);
+    state.catalogOverrides = { ...(state.catalogOverrides || {}), ...(incoming.catalogOverrides || {}) };
+    rebuildExternalFoodCatalog();
+    return { foods: incoming.foods.length, recipes: incoming.recipes.length, catalog: Object.keys(incoming.catalogOverrides || {}).length };
+  }
+
+  function downloadText(filename, content, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function openConfirm() {
+    $("#confirm-modal").hidden = false;
+    document.body.classList.add("modal-open");
+  }
+
+  function closeConfirm() {
+    $("#confirm-modal").hidden = true;
+    updateModalBodyState();
+  }
+
+  async function resetAll() {
+    state = emptyState();
+    saveState(state);
+    try {
+      await window.MASA_CLOUD.flush();
+    } catch (error) {
+      window.alert(`Los datos se borraron en este dispositivo, pero no se pudo confirmar el borrado online: ${error.message}`);
+    }
+    closeConfirm();
+    $("#settings-modal").hidden = true;
+    document.body.classList.remove("modal-open");
+    render();
+  }
+
+  function setFeedback(element, text, error = false) {
+    element.textContent = text;
+    element.classList.toggle("error", error);
+  }
+
+  function formatDateTyping(event) {
+    const input = event.target.closest(".date-input");
+    if (!input) return;
+    const digits = input.value.replace(/\D/g, "").slice(0, 8);
+    input.value = digits.length <= 2 ? digits : digits.length <= 4 ? `${digits.slice(0,2)}/${digits.slice(2)}` : `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
+  }
+
+  function normalizeDateField(event) {
+    const input = event.target.closest(".date-input");
+    if (!input || !input.value.trim()) return;
+    const iso = normalizeDate(input.value);
+    if (iso) input.value = displayDate(iso);
+  }
+
+  function showHelpTooltip(button) {
+    const tooltip = $("#floating-tooltip");
+    if (!tooltip || !button?.dataset.tooltip) return;
+    tooltip.textContent = button.dataset.tooltip;
+    tooltip.hidden = false;
+    const rect = button.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const margin = 10;
+    let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+    left = clamp(left, margin, window.innerWidth - tooltipRect.width - margin);
+    let top = rect.top - tooltipRect.height - 10;
+    if (top < margin) top = rect.bottom + 10;
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.dataset.owner = button.id || button.getAttribute("aria-label") || "help";
+  }
+
+  function hideHelpTooltip() {
+    const tooltip = $("#floating-tooltip");
+    if (tooltip) tooltip.hidden = true;
+  }
+
+  function bindHelpTooltips() {
+    $$(".help-dot[data-tooltip]").forEach(button => {
+      button.addEventListener("mouseenter", () => showHelpTooltip(button));
+      button.addEventListener("focus", () => showHelpTooltip(button));
+      button.addEventListener("mouseleave", hideHelpTooltip);
+      button.addEventListener("blur", hideHelpTooltip);
+      button.addEventListener("click", event => {
+        event.stopPropagation();
+        const tooltip = $("#floating-tooltip");
+        if (!tooltip.hidden && tooltip.dataset.owner === (button.id || button.getAttribute("aria-label") || "help")) hideHelpTooltip();
+        else showHelpTooltip(button);
+      });
+    });
+    document.addEventListener("click", hideHelpTooltip);
+    window.addEventListener("scroll", hideHelpTooltip, { passive: true });
+  }
+
+  function handleFoodEditorUnitChange() {
+    const form = $("#food-editor-form");
+    setEditableUnitFields(form.elements.servingUnit, form.elements.servingUnitCustom, form.elements.servingUnit.value);
+    renderEquivalenceEditor("food");
+  }
+
+  function handleRecipeYieldUnitChange() {
+    const form = $("#recipe-form");
+    const select = form.elements.yieldUnit;
+    const previousUnit = select.dataset.currentUnit || "serving";
+    const previousDefault = defaultServingAmountForUnit(previousUnit);
+    const currentAmount = toNumber(form.elements.servingAmount.value, previousDefault);
+    setEditableUnitFields(select, form.elements.yieldUnitCustom, select.value);
+    const nextDefault = defaultServingAmountForUnit(select.value);
+    if (Math.abs(currentAmount - previousDefault) < 0.0001) form.elements.servingAmount.value = nextDefault;
+    select.dataset.currentUnit = select.value;
+    renderEquivalenceEditor("recipe");
+    renderRecipeTotals();
+  }
+
+  function openTipsModal() {
+    $("#tips-modal").hidden = false;
+    document.body.classList.add("modal-open");
+  }
+
+  function closeTipsModal() {
+    try { localStorage.setItem(TIPS_SEEN_KEY, "1"); } catch (_) {}
+    $("#tips-modal").hidden = true;
+    updateModalBodyState();
+    setTimeout(maybeOpenDailyCheckin, 120);
+  }
+
+  function maybeOpenTipsIntro() {
+    let seen = false;
+    try { seen = localStorage.getItem(TIPS_SEEN_KEY) === "1"; } catch (_) {}
+    if (seen) return false;
+    openTipsModal();
+    return true;
+  }
+
+  function openAboutModal() {
+    $("#about-modal").hidden = false;
+    document.body.classList.add("modal-open");
+  }
+
+  function closeAboutModal() {
+    $("#about-modal").hidden = true;
+    updateModalBodyState();
+  }
+
+  function bindEvents() {
+    $("#open-about").addEventListener("click", openAboutModal);
+    $("#accept-about").addEventListener("click", closeAboutModal);
+    $$('[data-close-about]').forEach(element => element.addEventListener("click", closeAboutModal));
+    $("#accept-tips").addEventListener("click", closeTipsModal);
+    $$('[data-close-tips]').forEach(element => element.addEventListener("click", closeTipsModal));
+    $("#begin-setup").addEventListener("click", () => openSettings(true, "profile"));
+    $("#open-profile").addEventListener("click", () => openSettings(false, "profile"));
+    $("#brand-home").addEventListener("click", () => switchAppView("today"));
+    $$('[data-app-view]').forEach(button => button.addEventListener("click", () => switchAppView(button.dataset.appView)));
+    $("#close-settings").addEventListener("click", closeSettings);
+    $("#cancel-profile").addEventListener("click", closeSettings);
+    $$('[data-close-settings]').forEach(element => element.addEventListener("click", closeSettings));
+    $$('[data-settings-tab]').forEach(button => button.addEventListener("click", () => switchSettingsTab(button.dataset.settingsTab)));
+    document.querySelector(".settings-sheet")?.addEventListener("scroll", updateSettingsScrollState, { passive: true });
+    $("#profile-form").addEventListener("submit", saveProfile);
+    $("#profile-form").addEventListener("input", updateProfilePreview);
+    $("#profile-form").addEventListener("change", updateProfilePreview);
+    document.addEventListener("input", formatDateTyping);
+    document.addEventListener("blur", normalizeDateField, true);
+    $$("[data-calendar-for]").forEach(button => button.addEventListener("click", () => openCalendar(button.dataset.calendarFor)));
+    $$("[data-native-date]").forEach(picker => picker.addEventListener("change", applyNativeDate));
+
+    $("#diary-prev-day").addEventListener("click", () => changeDiaryDay(-1));
+    $("#diary-next-day").addEventListener("click", () => changeDiaryDay(1));
+    $("#diary-today-button").addEventListener("click", () => setSelectedDiaryDate(operationalDayISO()));
+    $("#diary-date-button").addEventListener("click", openDiaryCalendar);
+    $("#diary-native-date").addEventListener("change", event => setSelectedDiaryDate(event.target.value));
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) syncOperationalDay();
+    });
+    window.addEventListener("focus", syncOperationalDay);
+
+    $("#quick-weight-form").addEventListener("submit", addQuickWeight);
+    $("#edit-today-weight").addEventListener("click", showWeightEditor);
+
+    $("#account-identity-form").addEventListener("submit", saveAccountIdentity);
+    $("#toggle-account-password").addEventListener("click", toggleAccountPassword);
+
+    $("#toggle-history-manager").addEventListener("click", () => {
+      const button = $("#toggle-history-manager");
+      const expanded = button.getAttribute("aria-expanded") === "true";
+      button.setAttribute("aria-expanded", String(!expanded));
+      button.querySelector("i").textContent = expanded ? "＋" : "−";
+      $("#history-manager").hidden = expanded;
+    });
+    $("#history-date-select").addEventListener("change", event => {
+      selectedHistoryId = event.currentTarget.value;
+      render();
+    });
+    $("#history-list").addEventListener("change", updateHistoryRow);
+    $("#history-list").addEventListener("click", deleteHistoryRow);
+    $("#import-library").addEventListener("click", () => openImport("library"));
+    $("#export-library").addEventListener("click", exportLibrary);
+    $("#import-history").addEventListener("click", () => openImport("history"));
+    $("#export-weights").addEventListener("click", exportWeights);
+    $("#import-file").addEventListener("change", handleImport);
+    $("#export-intakes").addEventListener("click", exportIntakes);
+    $("#import-intakes").addEventListener("click", () => { $("#intake-import-file").value = ""; $("#intake-import-file").click(); });
+    $("#intake-import-file").addEventListener("change", handleIntakeImport);
+
+    $("#start-over").addEventListener("click", openConfirm);
+    $("#cancel-confirm").addEventListener("click", () => { closeConfirm(); document.body.classList.add("modal-open"); });
+    $("#confirm-action").addEventListener("click", resetAll);
+    $("#apply-recalibration").addEventListener("click", applyRecalibration);
+    $("#run-auto-adjustment").addEventListener("click", runAutomaticAdjustment);
+
+    $$("[data-add-meal]").forEach(button => button.addEventListener("click", () => openFoodModal(button.dataset.addMeal)));
+    $("#global-add-intake").addEventListener("click", openMealPicker);
+    $("#close-meal-picker").addEventListener("click", closeMealPicker);
+    $$("[data-close-meal-picker]").forEach(element => element.addEventListener("click", closeMealPicker));
+    $$("[data-pick-meal]").forEach(button => button.addEventListener("click", () => pickMeal(button.dataset.pickMeal)));
+    $("#change-active-meal").addEventListener("click", () => { closeFoodModal(); openMealPicker(); });
+    $$("[data-diary-view]").forEach(button => button.addEventListener("click", () => switchDiaryView(button.dataset.diaryView)));
+    $$("[data-calorie-range]").forEach(button => button.addEventListener("click", () => {
+      calorieRange = isMobileLayout() ? 7 : toNumber(button.dataset.calorieRange, 14);
+      syncCalorieRangeButtons();
+      drawCalorieChart(calculatePlan());
+    }));
+    $("#finish-day").addEventListener("click", finishDay);
+    $("#hide-day-summary").addEventListener("click", hideDaySummary);
+    $("#meal-grid").addEventListener("click", handleDiaryEntryClick);
+    document.addEventListener("pointerdown", closeDiaryEditorFromOutside, true);
+    $("#meal-grid").addEventListener("input", handleDiaryEntryEditInput);
+    $("#meal-grid").addEventListener("change", handleDiaryEntryEditInput);
+    $("#meal-grid").addEventListener("submit", submitDiaryEntryEdit);
+    $("#close-food").addEventListener("click", closeFoodModal);
+    $$("[data-close-food]").forEach(element => element.addEventListener("click", closeFoodModal));
+    $$("[data-food-mode]").forEach(button => button.addEventListener("click", () => switchFoodMode(button.dataset.foodMode)));
+    $("#food-search-input").addEventListener("input", queueFoodSearch);
+    $("#scan-barcode-food").addEventListener("click", () => openBarcodeScanner("food"));
+    $("#scan-barcode-recipe").addEventListener("click", () => openBarcodeScanner("recipe"));
+    $("#scan-barcode-editor").addEventListener("click", () => openBarcodeScanner("food-editor"));
+    $("#scan-label-food").addEventListener("click", () => scanNutritionLabel("food"));
+    $("#scan-label-recipe").addEventListener("click", () => scanNutritionLabel("recipe"));
+    $("#scan-label-editor").addEventListener("click", () => scanNutritionLabel("food-editor"));
+    $("#rescan-food-editor").addEventListener("click", () => foodEditorRescanMode === "label" ? scanNutritionLabel("food-editor") : openBarcodeScanner("food-editor"));
+    $("#close-barcode").addEventListener("click", () => closeBarcodeScanner(true));
+    $$('[data-close-barcode]').forEach(element => element.addEventListener("click", () => closeBarcodeScanner(true)));
+    $("#barcode-manual-form").addEventListener("submit", submitManualBarcode);
+    $("#barcode-torch").addEventListener("click", toggleBarcodeTorch);
+    [$("#food-results"), $("#recent-food-results"), $("#frequent-food-results"), $("#recipe-results")].forEach(container => {
+      container.addEventListener("click", handleFoodResultClick);
+      container.addEventListener("submit", handleFoodResultSubmit);
+      container.addEventListener("input", handleFoodResultInput);
+      container.addEventListener("change", handleFoodResultChange);
+    });
+    $("#quick-calorie-form").addEventListener("submit", addQuickCalories);
+    $("#new-custom-food").addEventListener("click", () => openFoodEditor({ returnTarget: "food" }));
+    $("#sidebar-new-food").addEventListener("click", () => openFoodEditor({ returnTarget: "main" }));
+    $("#sidebar-open-library").addEventListener("click", () => openLibraryManager("main"));
+    $("#new-recipe").addEventListener("click", () => openRecipeEditor({ returnTarget: "food" }));
+    $("#new-recipe-secondary").addEventListener("click", () => openRecipeEditor({ returnTarget: "food" }));
+    $$('[data-open-library]').forEach(button => button.addEventListener("click", () => openLibraryManager("food")));
+    $("#close-library").addEventListener("click", closeLibraryManager);
+    $$('[data-close-library]').forEach(element => element.addEventListener("click", closeLibraryManager));
+    $("#library-food-list").addEventListener("click", handleLibraryClick);
+    $("#library-recipe-list").addEventListener("click", handleLibraryClick);
+    $("#library-catalog-list").addEventListener("click", handleLibraryClick);
+    $("#library-catalog-search-results").addEventListener("click", handleLibraryClick);
+    $("#library-search-catalog").addEventListener("click", toggleLibraryCatalogSearch);
+    $("#library-catalog-search-input").addEventListener("input", queueLibraryCatalogSearch);
+    $("#library-new-food").addEventListener("click", () => openFoodEditor({ returnTarget: "library" }));
+    $("#library-new-recipe").addEventListener("click", () => openRecipeEditor({ returnTarget: "library" }));
+    $("#library-import").addEventListener("click", () => openImport("library"));
+    $("#library-export").addEventListener("click", exportLibrary);
+    $("#close-food-editor").addEventListener("click", closeFoodEditor);
+    $$('[data-close-food-editor]').forEach(element => element.addEventListener("click", closeFoodEditor));
+    $("#food-editor-form").addEventListener("submit", saveCustomFood);
+    $("#food-editor-form").elements.servingUnit.addEventListener("change", handleFoodEditorUnitChange);
+    $("#food-editor-form").elements.servingUnitCustom.addEventListener("input", () => renderEquivalenceEditor("food"));
+    $("#add-food-equivalence").addEventListener("click", () => addEquivalence("food"));
+    $("#food-equivalence-list").addEventListener("input", updateEquivalenceDraft);
+    $("#food-equivalence-list").addEventListener("change", updateEquivalenceDraft);
+    $("#food-equivalence-list").addEventListener("click", removeEquivalence);
+    $("#close-recipe").addEventListener("click", closeRecipeEditor);
+    $$('[data-close-recipe]').forEach(element => element.addEventListener("click", closeRecipeEditor));
+    $("#recipe-form").addEventListener("submit", saveRecipe);
+    $("#recipe-form").elements.yield.addEventListener("input", renderRecipeTotals);
+    $("#recipe-form").elements.servingAmount.addEventListener("input", renderRecipeTotals);
+    $("#recipe-form").elements.yieldUnit.addEventListener("change", handleRecipeYieldUnitChange);
+    $("#recipe-form").elements.yieldUnitCustom.addEventListener("input", () => { renderEquivalenceEditor("recipe"); renderRecipeTotals(); });
+    $("#add-recipe-equivalence").addEventListener("click", () => addEquivalence("recipe"));
+    $("#recipe-equivalence-list").addEventListener("input", updateEquivalenceDraft);
+    $("#recipe-equivalence-list").addEventListener("change", updateEquivalenceDraft);
+    $("#recipe-equivalence-list").addEventListener("click", removeEquivalence);
+    $("#recipe-ingredient-search").addEventListener("input", queueRecipeIngredientSearch);
+    $("#recipe-ingredient-results").addEventListener("click", handleRecipeIngredientSearchClick);
+    $("#recipe-ingredient-results").addEventListener("input", handleRecipeIngredientSearchInput);
+    $("#recipe-ingredient-results").addEventListener("change", handleRecipeIngredientSearchChange);
+    $("#recipe-ingredient-list").addEventListener("click", handleRecipeIngredientListClick);
+    $("#recipe-ingredient-list").addEventListener("input", handleRecipeIngredientListInput);
+    $("#recipe-ingredient-list").addEventListener("change", handleRecipeIngredientListChange);
+    $("#create-missing-ingredient").addEventListener("click", () => openFoodEditor({
+      returnTarget: "recipe",
+      prefillName: $("#recipe-ingredient-search").value.trim()
+    }));
+    $("#day-projection-weeks").addEventListener("change", () => renderDayProjection(calculatePlan(), diaryTotals()));
+    $("#daily-checkin-form").addEventListener("submit", submitDailyCheckin);
+    $("#skip-daily-weight").addEventListener("click", () => finishDailyCheckin());
+
+    $("#previous-progress-chart").addEventListener("click", () => changeProgressChart(-1));
+    $("#next-progress-chart").addEventListener("click", () => changeProgressChart(1));
+    $$('[data-progress-chart]').forEach(button => button.addEventListener("click", () => {
+      activeProgressChart = button.dataset.progressChart;
+      renderActiveProgressChart();
+    }));
+    $$('[data-chart-range]').forEach(button => button.addEventListener("click", () => {
+      chartRange = button.dataset.chartRange;
+      $$('[data-chart-range]').forEach(item => item.classList.toggle("active", item === button));
+      if (chartPayload) renderActiveProgressChart();
+    }));
+    window.visualViewport?.addEventListener("resize", handleVisualViewportChange);
+    window.visualViewport?.addEventListener("scroll", handleVisualViewportChange);
+    window.addEventListener("orientationchange", () => window.setTimeout(handleVisualViewportChange, 120));
+    document.addEventListener("focusin", keepFocusedFieldVisible);
+    document.addEventListener("focusout", clearKeyboardFocusState);
+    window.addEventListener("resize", debounce(() => {
+      syncVisualViewport();
+      syncCalorieRangeButtons();
+      renderRecordWeight();
+      if (chartPayload && activeAppView === "progress") renderActiveProgressChart();
+      if (activeDiaryView === "chart") drawCalorieChart(calculatePlan());
+    }, 100));
+  }
+
+  function handleAndroidBack() {
+    if (modalIsOpen("barcode-modal")) { closeBarcodeScanner(true); return true; }
+    if (modalIsOpen("food-editor-modal")) { closeFoodEditor(); return true; }
+    if (modalIsOpen("recipe-modal")) { closeRecipeEditor(); return true; }
+    if (modalIsOpen("library-modal")) { closeLibraryManager(); return true; }
+    if (modalIsOpen("food-modal")) { closeFoodModal(); return true; }
+    if (modalIsOpen("meal-picker-modal")) { closeMealPicker(); return true; }
+    if (modalIsOpen("confirm-modal")) { closeConfirm(); return true; }
+    if (modalIsOpen("about-modal")) { closeAboutModal(); return true; }
+    if (modalIsOpen("tips-modal")) { closeTipsModal(); return true; }
+    if (modalIsOpen("daily-checkin-modal")) { finishDailyCheckin(); return true; }
+    if (modalIsOpen("settings-modal")) {
+      if (!settingsRequired) closeSettings();
+      return true;
+    }
+    if (editingDiaryEntryId) { closeDiaryEntryEditor(); return true; }
+    if (activeAppView === "progress") { switchAppView("today"); return true; }
+    return false;
+  }
+
+  window.MASAHandleAndroidBack = handleAndroidBack;
+
+  function guardNumericKey(event) {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || input.type !== "number") return;
+    const minimum = toNumber(input.min, NaN);
+    if (Number.isFinite(minimum) && minimum >= 0 && ["e", "E", "+", "-"].includes(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  document.addEventListener("keydown", guardNumericKey);
+
+  function debounce(fn, delay) {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
+
+  async function registerServiceWorker() {
+    if (!navigator.serviceWorker?.register || location.protocol === "file:") return;
+
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(registration => {
+        const scopePath = new URL(registration.scope).pathname;
+        const scriptPath = registration.active
+          ? new URL(registration.active.scriptURL).pathname
+          : "";
+        const isOldRootRegistration = scopePath === "/" && scriptPath.endsWith("/service-worker.js");
+        return isOldRootRegistration ? registration.unregister() : Promise.resolve(false);
+      }));
+
+      if (location.protocol === "capacitor:" || location.hostname === "localhost") return;
+      const basePath = new URL(document.baseURI).pathname;
+      const serviceWorkerUrl = new URL("service-worker.js", document.baseURI).href;
+      await navigator.serviceWorker.register(serviceWorkerUrl, { scope: basePath });
+    } catch (_) {}
+  }
+
+  function removeNumericGoalsBranding() {
+    document.title = document.title
+      .replace(/\s*[·|-]\s*registros y progreso por números/gi, " · registros y progreso")
+      .replace(/\s*[·|-]\s*objetivos por números/gi, "");
+
+    $$(".brand-name small, [data-brand-tagline]").forEach(element => {
+      if (/objetivos por números/i.test(element.textContent || "")) element.remove();
+    });
+  }
+
+  function renderInitialApplication(initialState) {
+    state = normalizeState(initialState || emptyState());
+    syncVisualViewport();
+    window.MASA_CLOUD.cacheState(state);
+    removeNumericGoalsBranding();
+    bindEvents();
+    scheduleOperationalDayRollover();
+    $$(".help-dot[data-tooltip]").forEach(button => { button.title = button.dataset.tooltip; });
+    bindHelpTooltips();
+    render();
+    switchAppView("today", false);
+    switchDiaryView("record");
+    window.MASA_CLOUD.finishBoot();
+    externalFoodsLoadPromise = loadExternalFoods();
+    registerServiceWorker();
+  }
+
+  async function refreshCloudStateAfterBoot() {
+    const revisionAtStart = stateRevision;
+    try {
+      const cloudResult = await window.MASA_CLOUD.loadUserState();
+      if (stateRevision !== revisionAtStart || window.MASA_CLOUD.hasPendingChanges()) {
+        console.info("[MASA][sync] Se conservó el estado local porque hubo cambios mientras se cargaban los datos remotos.");
+        return;
+      }
+
+      let refreshedState = normalizeState(cloudResult.state || emptyState());
+      if (!cloudResult.hasData) {
+        const legacyState = loadLegacyState();
+        if (hasMeaningfulState(legacyState)) {
+          const importLocal = window.confirm(
+            "Encontramos datos de la versión local de MASA en este dispositivo. ¿Querés importarlos a esta cuenta?"
+          );
+          if (importLocal) {
+            refreshedState = legacyState;
+            state = normalizeState(refreshedState);
+            window.MASA_CLOUD.cacheState(state);
+            render();
+            window.MASA_CLOUD.setSyncStatus("saving", "Importando datos locales…");
+            try {
+              await window.MASA_CLOUD.replaceState(state);
+              clearLegacyState();
+            } catch (error) {
+              console.error("[MASA][sync] No se pudieron importar los datos locales:", error);
+              window.MASA_CLOUD.setSyncStatus("error", "Importación pendiente");
+            }
+            return;
+          }
+        }
+      }
+
+      state = normalizeState(refreshedState);
+      window.MASA_CLOUD.cacheState(state);
+      render();
+    } catch (error) {
+      console.error("[MASA][sync] La aplicación quedó disponible, pero falló la carga remota:", error);
+      window.MASA_CLOUD.setSyncStatus("error", "Error de sincronización");
+    }
+  }
+
+  async function init() {
+    try {
+      await window.MASA_CLOUD.requireSession();
+      const cachedState = window.MASA_CLOUD.readCachedState();
+      renderInitialApplication(cachedState || emptyState());
+
+      refreshCloudStateAfterBoot().finally(() => {
+        const introOpened = maybeOpenTipsIntro();
+        if (!introOpened) setTimeout(maybeOpenDailyCheckin, 180);
+      });
+    } catch (error) {
+      console.error("[MASA][startup] No se pudo iniciar MASA:", error);
+      window.MASA_CLOUD?.showFatalError(error);
+    }
+  }
+
+  init();
+})();

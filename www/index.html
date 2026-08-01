@@ -10,12 +10,12 @@
 <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="assets/icon-192.png" rel="apple-touch-icon"/>
 <link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=31.0.2" rel="stylesheet"/>
+<link href="./css/styles.css?v=31.0.3" rel="stylesheet"/>
 <link href="./css/auth.css?v=30.6" rel="stylesheet"/>
 <script defer src="./vendor/masa-vendor.js?v=31.0"></script>
 <script defer="" src="./js/config.js?v=30.6"></script>
 <script defer="" src="./js/cloud.js?v=30.6"></script>
-<script defer="" src="./js/app.js?v=31.0.2"></script>
+<script defer="" src="./js/app.js?v=31.0.3"></script>
 </head>
 <body>
 
@@ -604,7 +604,7 @@
 <label class="food-search food-search-always"><span>Buscar alimentos o recetas</span><input id="food-search-input" placeholder="Ej.: arroz, huevo, café..." type="search" maxlength="120" autocomplete="off"/></label>
 <div class="food-scan-actions">
 <button class="primary-action food-scan-action" id="scan-barcode-food" type="button">Código</button>
-<button class="secondary-action food-scan-action" id="scan-label-food" type="button">Rótulo</button>
+<button class="secondary-action food-scan-action" data-native-only id="scan-label-food" type="button">Rótulo</button>
 </div>
 </div>
 <div class="food-library-actions food-global-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button></div>
@@ -665,7 +665,7 @@
 <form class="form-grid editor-grid" id="food-editor-form">
 <div class="food-editor-scan-row full-field">
 <button class="secondary-action" id="scan-barcode-editor" type="button"><span aria-hidden="true">▥</span> Código de barras</button>
-<button class="secondary-action" id="scan-label-editor" type="button"><span aria-hidden="true">▤</span> Rótulo nutricional</button>
+<button class="secondary-action" data-native-only id="scan-label-editor" type="button"><span aria-hidden="true">▤</span> Rótulo nutricional</button>
 </div>
 <label class="full-field"><span>Nombre</span><input name="name" required="" type="text" maxlength="120"/></label>
 <input name="barcode" type="hidden" minlength="8" maxlength="14" pattern="[0-9]{8,14}" inputmode="numeric"/>
@@ -739,7 +739,7 @@
 <div class="recipe-builder">
 <section class="recipe-search-panel">
 <label class="food-search"><span>Buscar ingrediente</span><input id="recipe-ingredient-search" placeholder="Ej.: harina, huevo, leche..." type="search" maxlength="120" autocomplete="off"/></label>
-<div class="recipe-search-actions"><button class="secondary-action" id="scan-barcode-recipe" type="button">Código de barras</button><button class="secondary-action" id="scan-label-recipe" type="button">Rótulo nutricional</button><button class="secondary-action" id="create-missing-ingredient" type="button">Crear alimento nuevo</button></div>
+<div class="recipe-search-actions"><button class="secondary-action" id="scan-barcode-recipe" type="button">Código de barras</button><button class="secondary-action" data-native-only id="scan-label-recipe" type="button">Rótulo nutricional</button><button class="secondary-action" id="create-missing-ingredient" type="button">Crear alimento nuevo</button></div>
 <p class="data-attribution recipe-data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a>.</p>
 <div class="food-results recipe-ingredient-results" id="recipe-ingredient-results"></div>
 </section>

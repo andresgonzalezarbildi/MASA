@@ -3795,3 +3795,100 @@ body.legal-page { min-height: 100vh; }
   .equivalence-row .danger-text-action { width: 100%; justify-self: stretch; }
   #recipe-modal .recipe-search-actions { grid-template-columns: 1fr; }
 }
+
+
+/* --- MASA v31.0.3: teclado adaptable y controles exclusivos de Android --- */
+html.web-runtime [data-native-only] { display: none !important; }
+html.web-runtime .food-scan-actions,
+html.web-runtime .food-editor-scan-row { grid-template-columns: 1fr; }
+html.web-runtime #food-modal .food-search-row { grid-template-columns: minmax(0, 1fr) 82px; }
+@media (min-width: 471px) and (max-width: 760px) {
+  html.web-runtime #recipe-modal .recipe-search-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* En la APK, el alto de cada modal sigue al viewport visible del WebView. */
+html.native-runtime .modal,
+html.native-runtime .confirm-modal {
+  top: var(--visual-viewport-top);
+  right: 0;
+  bottom: auto;
+  left: 0;
+  height: var(--visual-viewport-height);
+}
+html.native-runtime .settings-sheet {
+  height: var(--visual-viewport-height);
+  max-height: var(--visual-viewport-height);
+}
+html.native-runtime .centered-modal-sheet,
+html.native-runtime .about-sheet,
+html.native-runtime .food-sheet,
+html.native-runtime .confirm-card,
+html.native-runtime .barcode-sheet {
+  max-height: calc(var(--visual-viewport-height) - 10px);
+}
+html.native-runtime #food-modal .food-sheet,
+html.native-runtime #recipe-modal .recipe-sheet {
+  height: calc(var(--visual-viewport-height) - 8px);
+}
+
+/* Mientras hay un campo editable activo, todas las hojas pueden desplazarse
+   hasta el último control y reservan espacio alrededor del campo enfocado. */
+html.soft-keyboard-focus .settings-sheet,
+html.soft-keyboard-focus .centered-modal-sheet,
+html.soft-keyboard-focus .about-sheet,
+html.soft-keyboard-focus .food-sheet,
+html.soft-keyboard-focus .confirm-card,
+html.soft-keyboard-focus .barcode-sheet {
+  max-height: calc(var(--visual-viewport-height) - 8px) !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-block: 72px 150px;
+}
+html.soft-keyboard-focus #food-editor-modal .food-sheet,
+html.soft-keyboard-focus #recipe-modal .recipe-sheet,
+html.soft-keyboard-focus .settings-sheet,
+html.soft-keyboard-focus .centered-modal-sheet,
+html.soft-keyboard-focus .confirm-card {
+  overflow-y: auto !important;
+  overflow-x: hidden;
+}
+html.soft-keyboard-focus #food-editor-modal .food-sheet,
+html.soft-keyboard-focus #recipe-modal .recipe-sheet {
+  height: calc(var(--visual-viewport-height) - 8px) !important;
+}
+html.soft-keyboard-focus #food-editor-modal .profile-actions,
+html.soft-keyboard-focus #recipe-modal .recipe-save-actions,
+html.soft-keyboard-focus .settings-sticky-actions {
+  padding-bottom: calc(18px + var(--app-safe-bottom));
+}
+html.soft-keyboard-focus input,
+html.soft-keyboard-focus textarea,
+html.soft-keyboard-focus [contenteditable="true"] {
+  scroll-margin-block: 90px 150px;
+}
+
+@media (max-width: 800px) {
+  html:is(.web-runtime, .native-runtime) .modal,
+  html:is(.web-runtime, .native-runtime) .confirm-modal {
+    top: var(--visual-viewport-top);
+    right: 0;
+    bottom: auto;
+    left: 0;
+    height: var(--visual-viewport-height);
+  }
+  html:is(.web-runtime, .native-runtime) .settings-sheet {
+    height: var(--visual-viewport-height);
+    max-height: var(--visual-viewport-height);
+  }
+  html:is(.web-runtime, .native-runtime) .centered-modal-sheet,
+  html:is(.web-runtime, .native-runtime) .about-sheet,
+  html:is(.web-runtime, .native-runtime) .food-sheet,
+  html:is(.web-runtime, .native-runtime) .confirm-card,
+  html:is(.web-runtime, .native-runtime) .barcode-sheet {
+    max-height: calc(var(--visual-viewport-height) - 10px);
+  }
+  html:is(.web-runtime, .native-runtime) #food-modal .food-sheet,
+  html:is(.web-runtime, .native-runtime) #recipe-modal .recipe-sheet {
+    height: calc(var(--visual-viewport-height) - 8px);
+  }
+}
