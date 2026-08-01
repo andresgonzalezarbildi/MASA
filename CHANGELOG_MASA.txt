@@ -1,0 +1,35 @@
+v1.0.0-beta
+Primera versión funcional de M.A.S.A. Se implementó el funcionamiento básico de la aplicación, el almacenamiento local y la persistencia de los datos.
+
+v1.1.0-beta
+Se consolidó la versión web previa a la incorporación del lector de códigos de barras y a la generación de la aplicación Android.
+
+v25.3.0
+Se consolidó la base completa de la aplicación: registro de comidas y calorías, pesajes, progreso, alimentos, recetas, configuración, persistencia y versión web/PWA. También se incorporó la identidad visual utilizada como base para las versiones Android.
+
+v26.0.0
+Se adaptó M.A.S.A. para una distribución Android estable. Se mejoraron las áreas seguras, la navegación móvil, el manejo de la barra de estado y la interfaz de Ajustes. Registros pasó a ser la vista principal y Progreso quedó como sección de análisis. Se mejoró la autenticación, el manejo de sesiones inválidas y los mensajes de Supabase. Se reorganizó la gestión de pesajes y el editor de alimentos escaneados. Android pasó a utilizar el escáner nativo de Capacitor, se corrigió la ruta /masa/, se redujo el tamaño del catálogo local y se configuró una APK release minificada y firmada.
+
+v27.0.0
+Se incorporó el sistema de gasto energético adaptativo. La aplicación comenzó a estimar el gasto observado mediante la tendencia del peso y las calorías registradas, utilizando hasta 42 días de datos y revisiones periódicas. Se agregaron estados de aprendizaje, progreso y confianza, límites para los ajustes y la exigencia de datos nuevos entre revisiones. La sección Acerca de M.A.S.A. pasó a explicar las fórmulas y el modelo matemático utilizado.
+
+v28.0.0
+Se corrigió y estabilizó la autenticación tanto en la web como en Android. Se consolidó el proyecto nativo de Capacitor, la configuración de firma definitiva y la generación de la APK release. También se incorporaron las dependencias necesarias para el escáner de códigos de barras y Gson, junto con la configuración de compilación mediante Java 21.
+
+v29.0.0
+Se corrigieron errores visuales y de navegación en Android. Se implementaron áreas seguras reales para la barra superior e inferior del sistema, cabeceras persistentes y acciones que no quedan ocultas detrás de la navegación del teléfono. El botón Atrás de Android pasó a ser manejado por la aplicación, permitiendo cerrar modales o volver a la pantalla anterior antes de salir.
+
+v30.0.0
+Se incorporó el modo sin conexión. La aplicación permite registrar ingestas, calorías y pesajes aunque no haya internet, mantiene los cambios localmente y los sincroniza con Supabase cuando vuelve la conexión. También se ajustó la pantalla de carga de Android.
+
+v30.5.0
+Se corrigieron las páginas y rutas de Política de privacidad y Términos del servicio para la web y Android. Se mejoraron los flujos de autenticación con Google, confirmación de correo y recuperación de contraseña, utilizando enlaces públicos para la web y deep links para regresar correctamente a la aplicación Android.
+
+v30.6.0
+Se reorganizó la sección Cuenta y datos, se compactaron sus tarjetas y se mejoró la administración del correo, nombre y contraseña. Se corrigieron el teclado y los formularios en pantallas móviles mediante el viewport visible, evitando campos o botones inaccesibles. Se aclaró la interfaz del ajuste energético automático y sus estados. También se reforzó la seguridad: validación de tipos, longitudes y rangos, rechazo de valores negativos o inválidos, límites de sincronización, consultas parametrizadas, políticas RLS y restricciones adicionales en Supabase. Se habilitó la edición de registros cargados solamente como calorías.
+
+v31.0.2
+Se incorporó el lector de rotulados nutricionales en Android como alternativa al código de barras. Se creó un complemento nativo de Capacitor basado en Google ML Kit OCR, con procesamiento en distintas rotaciones y mejoras de contraste para extraer el texto del envase e intentar completar automáticamente calorías y macronutrientes.
+
+v31.0.3
+Se corrigió el funcionamiento del teclado dentro de modales y formularios Android, permitiendo desplazar el contenido hasta el último campo y recuperar la vista completa al cerrar el teclado. El lector de rotulados quedó disponible únicamente en Android y se ajustó su integración visual. También se incorporó el sistema de equivalencias al crear o editar alimentos y recetas, se incluyó el reconocimiento necesario dentro de la APK, se mejoró el procesamiento de fotografías y se corrigieron problemas de identificación de alimentos propios o editados.

@@ -3041,6 +3041,27 @@
     };
   }
 
+  function foodOriginBadge(item) {
+    if (!item) return "";
+    if (item.kind === "external") {
+      return item.userOverride
+        ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
+        : "";
+    }
+    if (item.kind === "recipe") {
+      return '<span class="food-origin-badge food-origin-own">Propio</span>';
+    }
+    if (item.kind === "food") {
+      const label = item.source === "openfoodfacts"
+        ? "Código"
+        : item.source === "nutrition-label-ocr"
+          ? "Rótulo"
+          : "Propio";
+      return `<span class="food-origin-badge food-origin-own">${label}</span>`;
+    }
+    return "";
+  }
+
   function foodResultButton(item, context = "") {
     const wrapper = document.createElement("div");
     const selected = activeFoodSelection?.id === item.id && activeFoodSelection?.kind === item.kind;
@@ -3061,11 +3082,7 @@
     if (context === "recent" && stats.lastUsed) usageDetail = ` · Último: ${formatDate(stats.lastUsed)}`;
     if (context === "frequent") usageDetail = ` · ${stats.uses} ${stats.uses === 1 ? "consumo" : "consumos"}`;
 
-    const originBadge = item.kind === "food"
-      ? `<span class="food-origin-badge food-origin-own">${item.source === "openfoodfacts" ? "Código" : item.source === "nutrition-label-ocr" ? "Rótulo" : "Propio"}</span>`
-      : item.kind === "external" && item.userOverride
-        ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
-        : "";
+    const originBadge = foodOriginBadge(item);
     // MASA_V29_MOBILE_ABOUT_SEARCH_EDIT_V2: alimentos propios y recetas también se editan desde los resultados.
     const editActions = item.kind === "external"
       ? `<div class="food-catalog-actions"><button class="text-action" data-edit-catalog-food="${escapeHTML(item.id)}" type="button">Editar alimento</button><button class="danger-text-action" data-hide-catalog-food="${escapeHTML(item.id)}" type="button">Ocultar</button></div>`
@@ -3429,8 +3446,9 @@
         </div>`;
       return article;
     }
+    const originBadge = foodOriginBadge(item);
     article.innerHTML = `
-      <div><b>${escapeHTML(item.name)}</b><small>${escapeHTML(detail)} · ${formatNumber(Math.round(item.calories))} kcal</small></div>
+      <div><div class="library-item-title"><b>${escapeHTML(item.name)}</b>${originBadge}</div><small>${escapeHTML(detail)} · ${formatNumber(Math.round(item.calories))} kcal</small></div>
       <div class="library-item-actions">
         <button class="text-action" data-edit-library="${escapeHTML(item.id)}" data-library-kind="${escapeHTML(item.kind)}" type="button">Editar</button>
         <button class="danger-text-action" data-delete-library="${escapeHTML(item.id)}" data-library-kind="${escapeHTML(item.kind)}" type="button">Borrar</button>
@@ -3904,11 +3922,7 @@
     button.className = "food-result";
     button.dataset.selectRecipeIngredient = item.id;
     button.dataset.foodKind = item.kind;
-    const originBadge = item.kind === "food"
-      ? `<span class="food-origin-badge food-origin-own">${item.source === "openfoodfacts" ? "Código" : item.source === "nutrition-label-ocr" ? "Rótulo" : "Propio"}</span>`
-      : item.kind === "external" && item.userOverride
-        ? '<span class="food-origin-badge food-origin-edited">Editado</span>'
-        : "";
+    const originBadge = foodOriginBadge(item);
     button.innerHTML = `<div><div class="food-result-name"><b>${escapeHTML(item.name)}</b>${originBadge}</div><small>${escapeHTML(item.serving)} · P ${formatNumber(item.protein,1)} · G ${formatNumber(item.fat,1)} · C ${formatNumber(item.carbs,1)}</small></div><span>${formatNumber(Math.round(item.calories))} kcal</span>`;
     wrapper.appendChild(button);
     if (!selected) return wrapper;

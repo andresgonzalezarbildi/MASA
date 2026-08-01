@@ -1,14 +1,14 @@
-const CACHE = "masa-v31.0.3";
+const CACHE = "masa-v31.0.4";
 const APP_SHELL = [
   "/masa/",
   "/masa/index.html",
   "/masa/privacy.html",
   "/masa/terms.html",
-  "/masa/css/styles.css?v=31.0.3",
+  "/masa/css/styles.css?v=31.0.4",
   "/masa/css/auth.css?v=30.6",
   "/masa/js/config.js?v=30.6",
   "/masa/js/cloud.js?v=30.6",
-  "/masa/js/app.js?v=31.0.3",
+  "/masa/js/app.js?v=31.0.4",
   "/masa/assets/favicon.svg",
   "/masa/manifest.webmanifest",
   "/masa/DATA-LICENSE.md",
