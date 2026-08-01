@@ -2344,6 +2344,10 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
 .meal-inline-edit-actions .primary-action {
   min-width: 76px;
 }
+.meal-inline-edit-actions .secondary-action {
+  white-space: normal;
+  line-height: 1.15;
+}
 
 /* El formulario de cantidad vuelve a tener una escala homogénea. */
 #food-modal .food-inline-add {
@@ -3891,4 +3895,161 @@ html.soft-keyboard-focus [contenteditable="true"] {
   html:is(.web-runtime, .native-runtime) #recipe-modal .recipe-sheet {
     height: calc(var(--visual-viewport-height) - 8px);
   }
+}
+
+/* --- MASA v31.0.6: documentos legales integrados, zoom controlado y navegación Android 2×2 --- */
+html {
+  max-width: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+#legal-modal { z-index: 6000; }
+.legal-modal-sheet {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  width: min(920px, calc(100% - 26px));
+  max-height: calc(var(--visual-viewport-height, 100dvh) - 18px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 10px 10px 0 var(--violet);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.legal-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px 16px;
+  border-bottom: 2px solid var(--ink);
+  background: rgba(242,239,230,.98);
+}
+.legal-modal-header .eyebrow { margin-bottom: 5px; }
+.legal-modal-header h2 { margin: 0; font-size: clamp(30px, 5vw, 48px); }
+.legal-modal-tabs {
+  position: sticky;
+  top: 105px;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper);
+}
+.legal-modal-tabs button {
+  min-height: 46px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 900;
+}
+.legal-modal-tabs button + button { border-left: 1px solid var(--ink); }
+.legal-modal-tabs button.active { background: var(--night); color: var(--acid); }
+.legal-modal-content { min-width: 0; padding: 22px 24px 30px; }
+.legal-modal-loading { margin: 24px 0; color: var(--muted); font-weight: 800; }
+.legal-modal-error { padding: 24px; border: 1px solid var(--ink); background: var(--paper-2); }
+.legal-modal-error b { font-family: var(--font-display); font-size: 28px; }
+.legal-modal-error p { margin: 8px 0 18px; color: var(--muted); }
+
+.legal-modal-content .legal-hero {
+  padding: clamp(22px, 5vw, 42px);
+  box-shadow: 7px 7px 0 var(--ink);
+}
+.legal-modal-content .legal-hero h1 {
+  margin-bottom: 12px;
+  font-size: clamp(39px, 8vw, 66px);
+}
+.legal-modal-content .legal-hero > p:not(.eyebrow) {
+  margin-bottom: 12px;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.legal-modal-content .legal-hero::after { font-size: clamp(80px, 18vw, 150px); }
+.legal-modal-content .legal-document { margin-top: 30px; }
+.legal-modal-content .legal-document article {
+  grid-template-columns: minmax(180px, .38fr) minmax(0, 1fr);
+  column-gap: 24px;
+  padding: 22px 0;
+}
+.legal-modal-content .legal-document h2 { font-size: clamp(23px, 3vw, 31px); }
+.legal-modal-content .legal-document p,
+.legal-modal-content .legal-document li { font-size: 14px; line-height: 1.6; }
+
+@media (max-width: 700px) {
+  .legal-modal-sheet {
+    width: calc(100% - 12px);
+    max-height: calc(var(--visual-viewport-height, 100dvh) - 8px);
+    box-shadow: 5px 5px 0 var(--violet);
+  }
+  .legal-modal-header { padding: 14px 12px 11px; }
+  .legal-modal-header h2 { font-size: clamp(27px, 9vw, 38px); }
+  .legal-modal-tabs { top: 86px; }
+  .legal-modal-tabs button { min-height: 48px; }
+  .legal-modal-content { padding: 14px 12px 24px; }
+  .legal-modal-content .legal-hero { padding: 22px 16px; box-shadow: 5px 5px 0 var(--ink); }
+  .legal-modal-content .legal-hero h1 { font-size: clamp(36px, 12vw, 50px); overflow-wrap: anywhere; }
+  .legal-modal-content .legal-document { margin-top: 24px; }
+  .legal-modal-content .legal-document article { display: block; padding: 20px 0; }
+  .legal-modal-content .legal-document h2 { margin-bottom: 11px; }
+}
+
+/* En la APK, los cuatro accesos principales pasan a una cuadrícula 2×2.
+   Cada uno conserva un área táctil amplia y una separación real. */
+@media (max-width: 590px) {
+  html.native-runtime .site-header {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 8px;
+    min-height: 0;
+    padding-top: max(8px, var(--app-safe-top));
+    padding-bottom: 9px;
+  }
+  html.native-runtime .site-header > .brand,
+  html.native-runtime .site-header .app-nav button,
+  html.native-runtime .site-header .settings-trigger {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    justify-content: center;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    box-shadow: 3px 3px 0 rgba(23,26,33,.18);
+  }
+  html.native-runtime .site-header > .brand { order: 1; gap: 8px; padding: 4px 8px; }
+  html.native-runtime .site-header .app-nav { display: contents; }
+  html.native-runtime .site-header .app-nav .primary-view { order: 2; }
+  html.native-runtime .site-header .app-nav .secondary-view { order: 3; }
+  html.native-runtime .site-header .header-actions { display: contents; }
+  html.native-runtime .site-header .settings-trigger { order: 4; }
+  html.native-runtime .site-header .brand-mark {
+    width: 42px;
+    height: 30px;
+    box-shadow: none;
+  }
+  html.native-runtime .site-header .brand-mark b { font-size: 18px; }
+  html.native-runtime .site-header .brand-mark i,
+  html.native-runtime .site-header .brand-mark strong { font-size: 8px; }
+  html.native-runtime .site-header .brand-name { display: block; }
+  html.native-runtime .site-header .brand-name b { font-size: 13px; letter-spacing: .1em; }
+  html.native-runtime .site-header .app-nav button {
+    padding: 0 10px;
+    font-size: 10px;
+  }
+  html.native-runtime .site-header .app-nav button.active {
+    background: var(--night);
+    color: var(--acid);
+    box-shadow: 3px 3px 0 var(--coral);
+  }
+  html.native-runtime .site-header .settings-trigger { box-shadow: 3px 3px 0 var(--violet); }
+  html.native-runtime .site-header .settings-trigger b { font-size: 10px; }
 }

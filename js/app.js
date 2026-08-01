@@ -27,6 +27,14 @@
   ).href;
   const OPEN_FOOD_FACTS_PRODUCT_URL = "https://world.openfoodfacts.org/api/v2/product";
   const OPEN_FOOD_FACTS_PROXY_URL = new URL("/api/open-food-facts/", window.location.origin).href;
+  const LEGAL_DOCUMENT_LABELS = Object.freeze({
+    privacy: "Política de privacidad",
+    terms: "Condiciones del servicio"
+  });
+  const legalDocumentCache = new Map();
+  let legalLoadRevision = 0;
+  let legalReturnFocus = null;
+  let legalHistoryEntryActive = false;
 
   let externalFoodCatalog = [];
   let externalFoodCatalogById = new Map();
@@ -48,6 +56,7 @@
   let foodEditorReturnTarget = "";
   let recipeEditorReturnTarget = "";
   let libraryReturnTarget = "";
+  let foodModalReturnTarget = "main";
   let foodEditorPrefill = null;
   let foodEditorEquivalences = [];
   let recipeEditorEquivalences = [];
@@ -169,6 +178,126 @@
     root.style.setProperty("--visual-viewport-height", `${height}px`);
     root.style.setProperty("--visual-viewport-top", `${offsetTop}px`);
     syncNativeOnlyControls(nativeRuntime);
+  }
+
+  function legalDocumentType(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return Object.hasOwn(LEGAL_DOCUMENT_LABELS, normalized) ? normalized : "";
+  }
+
+  function prepareLegalDocumentHtml(html, type) {
+    const parsed = new DOMParser().parseFromString(String(html || ""), "text/html");
+    const hero = parsed.querySelector(".legal-hero");
+    const documentSection = parsed.querySelector(".legal-document");
+    if (!hero || !documentSection) throw new Error(`El documento ${type} no tiene la estructura esperada.`);
+
+    const wrapper = document.createElement("div");
+    wrapper.append(document.importNode(hero, true), document.importNode(documentSection, true));
+    wrapper.querySelectorAll("a[href]").forEach(link => {
+      const href = String(link.getAttribute("href") || "");
+      if (/privacy\.html(?:$|[?#])/i.test(href)) link.dataset.legalDocument = "privacy";
+      if (/terms\.html(?:$|[?#])/i.test(href)) link.dataset.legalDocument = "terms";
+      link.removeAttribute("target");
+    });
+    return wrapper.innerHTML;
+  }
+
+  async function loadLegalDocument(type) {
+    if (legalDocumentCache.has(type)) return legalDocumentCache.get(type);
+    const response = await fetch(new URL(`${type}.html`, document.baseURI).href, { credentials: "same-origin" });
+    if (!response.ok) throw new Error(`No se pudo cargar ${LEGAL_DOCUMENT_LABELS[type]}.`);
+    const html = prepareLegalDocumentHtml(await response.text(), type);
+    legalDocumentCache.set(type, html);
+    return html;
+  }
+
+  function syncLegalModalType(type) {
+    const title = LEGAL_DOCUMENT_LABELS[type];
+    $("#legal-modal-title").textContent = title;
+    $$("#legal-modal [data-legal-document]").forEach(control => {
+      const active = control.dataset.legalDocument === type;
+      control.classList.toggle("active", active);
+      if (control.matches("button")) control.setAttribute("aria-pressed", String(active));
+    });
+  }
+
+  async function openLegalDocument(type, trigger = document.activeElement) {
+    type = legalDocumentType(type);
+    if (!type) return;
+    const modal = $("#legal-modal");
+    const content = $("#legal-modal-content");
+    if (!modal || !content) return;
+
+    const wasHidden = modal.hidden;
+    if (wasHidden && trigger instanceof HTMLElement) legalReturnFocus = trigger;
+    if (modalIsOpen("about-modal")) $("#about-modal").hidden = true;
+    if (!isNativeRuntime()) {
+      const historyState = { ...(history.state || {}), masaLegalDocument: type };
+      if (wasHidden && !legalHistoryEntryActive) {
+        history.pushState(historyState, "", window.location.href);
+        legalHistoryEntryActive = true;
+      } else if (legalHistoryEntryActive) {
+        history.replaceState(historyState, "", window.location.href);
+      }
+    }
+    modal.hidden = false;
+    modal.dataset.document = type;
+    document.body.classList.add("modal-open");
+    syncLegalModalType(type);
+    content.innerHTML = '<p class="legal-modal-loading">Cargando documento…</p>';
+    const revision = ++legalLoadRevision;
+
+    try {
+      const html = await loadLegalDocument(type);
+      if (revision !== legalLoadRevision || modal.hidden || modal.dataset.document !== type) return;
+      content.innerHTML = html;
+      const sheet = modal.querySelector(".legal-modal-sheet");
+      if (sheet) sheet.scrollTop = 0;
+    } catch (error) {
+      if (revision !== legalLoadRevision || modal.hidden) return;
+      console.error("[MASA][legal]", error);
+      content.innerHTML = '<div class="legal-modal-error"><b>No se pudo abrir el documento.</b><p>Revisá la conexión e intentá nuevamente.</p><button class="secondary-action" data-legal-retry type="button">Reintentar</button></div>';
+    }
+  }
+
+  function closeLegalDocument(fromHistory = false) {
+    const modal = $("#legal-modal");
+    if (!modal || modal.hidden) return;
+    if (!fromHistory && !isNativeRuntime() && legalHistoryEntryActive) {
+      history.back();
+      return;
+    }
+    legalLoadRevision += 1;
+    modal.hidden = true;
+    delete modal.dataset.document;
+    legalHistoryEntryActive = false;
+    updateModalBodyState();
+    const target = legalReturnFocus;
+    legalReturnFocus = null;
+    if (target?.isConnected && !isNativeRuntime()) requestAnimationFrame(() => target.focus());
+  }
+
+  function bindLegalNavigation() {
+    document.addEventListener("click", event => {
+      const retry = event.target.closest("[data-legal-retry]");
+      if (retry) {
+        event.preventDefault();
+        openLegalDocument($("#legal-modal")?.dataset.document || "privacy", retry);
+        return;
+      }
+      const control = event.target.closest("[data-legal-document]");
+      if (!control) return;
+      const type = legalDocumentType(control.dataset.legalDocument);
+      if (!type) return;
+      event.preventDefault();
+      openLegalDocument(type, control);
+    });
+    $("#close-legal")?.addEventListener("click", () => closeLegalDocument());
+    $$('[data-close-legal]').forEach(element => element.addEventListener("click", () => closeLegalDocument()));
+    window.addEventListener("popstate", () => {
+      if (modalIsOpen("legal-modal") && legalHistoryEntryActive) closeLegalDocument(true);
+      else legalHistoryEntryActive = false;
+    });
   }
 
   function focusOnOpen(element) {
@@ -1258,13 +1387,17 @@
             </form>`;
           } else {
             const source = diaryEntrySource(item);
+            const editableSource = editableDiaryEntrySource(item);
             const options = source ? foodQuantityOptions(source) : [parseServingDefinition(item.serving)];
             const selectedOption = options.find(option => option.value === item.quantityUnit) || options[0];
+            const sourceEditButton = editableSource
+              ? `<button class="secondary-action" data-edit-diary-source="${escapeHTML(item.id)}" type="button">Editar ${editableSource.kind === "recipe" ? "receta" : "alimento"} y unidades</button>`
+              : "";
             row.innerHTML = `<form class="meal-inline-edit" data-diary-edit-form="${escapeHTML(item.id)}">
               <div class="meal-inline-edit-title"><b>${escapeHTML(item.name)}</b><small data-diary-edit-preview>${formatNumber(Math.round(item.calories))} kcal</small></div>
               <label><span>Cantidad</span><input name="amount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(item.quantity || selectedOption.baseAmount)}" required></label>
               <label><span>Unidad</span><select name="unit" ${options.length === 1 ? "disabled" : ""}>${options.map(option => `<option value="${escapeHTML(option.value)}" ${option.value === selectedOption.value ? "selected" : ""}>${escapeHTML(option.plural)}</option>`).join("")}</select></label>
-              <div class="meal-inline-edit-actions"><button class="primary-action" type="submit">Guardar</button></div>
+              <div class="meal-inline-edit-actions">${sourceEditButton}<button class="primary-action" type="submit">Guardar</button></div>
             </form>`;
           }
         } else {
@@ -1463,7 +1596,7 @@
 
   function pickMeal(meal) {
     closeMealPicker();
-    openFoodModal(meal);
+    openFoodModal(meal, "meal-picker");
   }
 
   function showWeightEditor() {
@@ -2321,8 +2454,9 @@
     lookupBarcode(event.currentTarget.elements.barcode.value);
   }
 
-  function openFoodModal(meal) {
+  function openFoodModal(meal, returnTarget = "main") {
     activeMeal = meal;
+    foodModalReturnTarget = returnTarget === "meal-picker" ? "meal-picker" : "main";
     activeFoodMode = "recent";
     activeFoodSelection = null;
     $("#food-meal-label").textContent = `Agregar en ${mealLabel(meal)} · ${formatDate(selectedDiaryDate)}`;
@@ -2345,14 +2479,17 @@
   function updateModalBodyState() {
     const modalIds = [
       "food-modal", "food-editor-modal", "recipe-modal", "library-modal",
-      "settings-modal", "meal-picker-modal", "daily-checkin-modal", "confirm-modal", "tips-modal", "about-modal", "barcode-modal"
+      "settings-modal", "meal-picker-modal", "daily-checkin-modal", "confirm-modal", "tips-modal", "about-modal", "legal-modal", "barcode-modal"
     ];
     document.body.classList.toggle("modal-open", modalIds.some(modalIsOpen));
   }
 
-  function closeFoodModal() {
+  function closeFoodModal(restore = true) {
     activeFoodSelection = null;
     $("#food-modal").hidden = true;
+    const target = foodModalReturnTarget;
+    foodModalReturnTarget = "main";
+    if (restore && target === "meal-picker") $("#meal-picker-modal").hidden = false;
     updateModalBodyState();
   }
 
@@ -3627,6 +3764,7 @@
       renderRecipeIngredientResults();
       renderRecipeIngredientList();
     }
+    if (target === "diary") renderDiary(calculatePlan());
     updateModalBodyState();
   }
 
@@ -3875,6 +4013,7 @@
       renderLibraryManager();
       $("#library-modal").hidden = false;
     }
+    if (target === "diary") renderDiary(calculatePlan());
     updateModalBodyState();
   }
 
@@ -4269,6 +4408,32 @@
     return current || historical;
   }
 
+  function editableDiaryEntrySource(entry) {
+    const sourceId = String(entry?.sourceId || "").trim();
+    if (!sourceId) return null;
+    const food = state.foods.find(item => item.id === sourceId);
+    if (food) return { kind: "food", id: food.id };
+    const recipe = state.recipes.find(item => item.id === sourceId);
+    if (recipe) return { kind: "recipe", id: recipe.id };
+    const catalog = catalogFoodForEditing(sourceId) || catalogFoodForEditing(`external:${sourceId}`);
+    if (catalog) return { kind: "external", id: sourceId };
+    return null;
+  }
+
+  function openDiaryEntrySourceEditor(entryId) {
+    const entry = todayDiary().find(item => item.id === entryId);
+    const source = editableDiaryEntrySource(entry);
+    if (!source) return;
+    if (source.kind === "recipe") {
+      openRecipeEditor({ editId: source.id, returnTarget: "diary" });
+      return;
+    }
+    openFoodEditor({
+      returnTarget: "diary",
+      ...(source.kind === "food" ? { editId: source.id } : { catalogId: source.id })
+    });
+  }
+
   function updateDiaryEditPreview(form) {
     const entry = todayDiary().find(item => item.id === form.dataset.diaryEditForm);
     if (!entry) return;
@@ -4292,6 +4457,13 @@
   }
 
   function handleDiaryEntryClick(event) {
+    const sourceEditButton = event.target.closest("[data-edit-diary-source]");
+    if (sourceEditButton) {
+      event.stopPropagation();
+      openDiaryEntrySourceEditor(sourceEditButton.dataset.editDiarySource);
+      return;
+    }
+
     const removeButton = event.target.closest("[data-remove-diary]");
     if (removeButton) {
       event.stopPropagation();
@@ -6655,7 +6827,7 @@
     $("#close-meal-picker").addEventListener("click", closeMealPicker);
     $$("[data-close-meal-picker]").forEach(element => element.addEventListener("click", closeMealPicker));
     $$("[data-pick-meal]").forEach(button => button.addEventListener("click", () => pickMeal(button.dataset.pickMeal)));
-    $("#change-active-meal").addEventListener("click", () => { closeFoodModal(); openMealPicker(); });
+    $("#change-active-meal").addEventListener("click", () => { closeFoodModal(false); openMealPicker(); });
     $$("[data-diary-view]").forEach(button => button.addEventListener("click", () => switchDiaryView(button.dataset.diaryView)));
     $$("[data-calorie-range]").forEach(button => button.addEventListener("click", () => {
       calorieRange = isMobileLayout() ? 7 : toNumber(button.dataset.calorieRange, 14);
@@ -6769,7 +6941,31 @@
     }, 100));
   }
 
+  function keyboardIsProbablyOpen() {
+    if (!usesSoftKeyboardLayout() || !isKeyboardField(document.activeElement)) return false;
+    const viewport = window.visualViewport;
+    return Boolean(viewport && window.innerHeight - viewport.height > 120);
+  }
+
+  function closeUnknownVisibleDialog() {
+    const dialog = $$('[role="dialog"]').filter(element => !element.hidden && element.getClientRects().length).at(-1);
+    if (!dialog) return false;
+    const closeControl = dialog.querySelector([
+      ".close-button:not([hidden])",
+      "button[id^='close-']:not([hidden])",
+      "[data-close-food]", "[data-close-food-editor]", "[data-close-recipe]", "[data-close-library]",
+      "[data-close-settings]", "[data-close-meal-picker]", "[data-close-barcode]", "[data-close-about]", "[data-close-tips]", "[data-close-legal]"
+    ].join(","));
+    if (closeControl && !closeControl.disabled) closeControl.click();
+    return true;
+  }
+
   function handleAndroidBack() {
+    if (keyboardIsProbablyOpen()) {
+      document.activeElement?.blur?.();
+      return true;
+    }
+    if (modalIsOpen("legal-modal")) { closeLegalDocument(); return true; }
     if (modalIsOpen("barcode-modal")) { closeBarcodeScanner(true); return true; }
     if (modalIsOpen("food-editor-modal")) { closeFoodEditor(); return true; }
     if (modalIsOpen("recipe-modal")) { closeRecipeEditor(); return true; }
@@ -6784,6 +6980,7 @@
       if (!settingsRequired) closeSettings();
       return true;
     }
+    if (closeUnknownVisibleDialog()) return true;
     if (editingDiaryEntryId) { closeDiaryEntryEditor(); return true; }
     if (activeAppView === "progress") { switchAppView("today"); return true; }
     return false;
@@ -6917,5 +7114,7 @@
     }
   }
 
+  syncVisualViewport();
+  bindLegalNavigation();
   init();
 })();
