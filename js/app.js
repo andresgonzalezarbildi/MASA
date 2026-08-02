@@ -1131,15 +1131,25 @@
     return { suggestedMin: 0, suggestedMax: 0, defaultRate: 0 };
   }
 
-  function requiredRateForDate(profile, currentWeight, targetWeight) {
-    const deadline = parseDate(profile.goalDate);
-    const today = parseDate(todayISO());
-    if (!deadline || deadline <= today || !Number.isFinite(targetWeight) || currentWeight <= 0 || targetWeight <= 0 || profile.goalType === "maintain") return null;
-    const weeks = daysBetween(today, deadline) / 7;
+  function requiredRateBetweenDates(goalType, startWeight, targetWeight, startDate, targetDate) {
+    const start = parseDate(startDate);
+    const deadline = parseDate(targetDate);
+    if (!start || !deadline || deadline <= start || !Number.isFinite(startWeight) || !Number.isFinite(targetWeight) || startWeight <= 0 || targetWeight <= 0 || goalType === "maintain") return null;
+    const weeks = daysBetween(start, deadline) / 7;
     if (weeks <= 0) return null;
-    if (profile.goalType === "loss" && targetWeight < currentWeight) return (1 - (targetWeight / currentWeight) ** (1 / weeks)) * 100;
-    if (profile.goalType === "gain" && targetWeight > currentWeight) return ((targetWeight / currentWeight) ** (1 / weeks) - 1) * 100;
+    if (goalType === "loss" && targetWeight < startWeight) return (1 - (targetWeight / startWeight) ** (1 / weeks)) * 100;
+    if (goalType === "gain" && targetWeight > startWeight) return ((targetWeight / startWeight) ** (1 / weeks) - 1) * 100;
     return null;
+  }
+
+  function requiredRateForDate(profile, currentWeight, targetWeight) {
+    return requiredRateBetweenDates(
+      profile.goalType,
+      currentWeight,
+      targetWeight,
+      todayISO(),
+      profile.goalDate
+    );
   }
 
   function chooseRate(profile, currentWeight, targetWeight) {
@@ -1155,6 +1165,36 @@
       return { selected, required, bounds, capped: required > bounds.suggestedMax };
     }
     return { selected: bounds.defaultRate, required, bounds, capped: false };
+  }
+
+
+  function planHistoryForGoal(profile, targetWeight) {
+    const targetDate = normalizeDate(profile.goalDate);
+    return [...(state.calibrationHistory || [])]
+      .filter(item => item && item.reviewOnly !== true)
+      .filter(item => {
+        const itemGoalType = ["loss", "maintain", "gain"].includes(item.goalType)
+          ? item.goalType
+          : profile.goalType;
+        if (itemGoalType !== profile.goalType) return false;
+        const itemTargetDate = normalizeDate(item.targetDate || item.previousTargetDate);
+        if (itemTargetDate && targetDate && itemTargetDate !== targetDate) return false;
+        const itemTargetWeight = toNumber(item.targetWeight, toNumber(item.previousTargetWeight, NaN));
+        if (Number.isFinite(itemTargetWeight) && Number.isFinite(targetWeight) && Math.abs(itemTargetWeight - targetWeight) > 0.05) return false;
+        return true;
+      })
+      .sort((a, b) => String(a.planAnchorDate || a.date || "").localeCompare(String(b.planAnchorDate || b.date || "")));
+  }
+
+  function latestPlanRevision(profile, targetWeight) {
+    const latest = planHistoryForGoal(profile, targetWeight).at(-1) || null;
+    if (!latest) return null;
+    if (profile.rateMode === "manual") {
+      const configuredRate = toNumber(profile.weeklyRatePct, NaN);
+      const storedRate = toNumber(latest.planRatePct, NaN);
+      if (Number.isFinite(configuredRate) && Number.isFinite(storedRate) && Math.abs(configuredRate - storedRate) > 0.001) return null;
+    }
+    return latest;
   }
 
   function weeksToTarget(goalType, startWeight, targetWeight, ratePct) {
@@ -1183,7 +1223,20 @@
     if (!Number.isFinite(weight)) return emptyPlan(profile);
 
     const targetWeight = deriveTargetWeight(profile, weight);
-    const rate = chooseRate(profile, weight, targetWeight);
+    const baseRate = chooseRate(profile, weight, targetWeight);
+    const activeRevision = latestPlanRevision(profile, targetWeight);
+    const revisedRate = toNumber(activeRevision?.planRatePct, NaN);
+    const rate = Number.isFinite(revisedRate) && profile.goalType !== "maintain"
+      ? {
+          ...baseRate,
+          selected: clamp(revisedRate, 0.01, 2),
+          required: requiredRateForDate(profile, weight, targetWeight),
+          capped: revisedRate > baseRate.bounds.suggestedMax,
+          recalibrated: true,
+          deadlineRateLimited: Boolean(activeRevision.deadlineRateLimited),
+          revisionDate: normalizeDate(activeRevision.planAnchorDate || activeRevision.date)
+        }
+      : baseRate;
     const rmr = formulaRmr(profile, weight);
     const baseMaintenance = Number.isFinite(rmr.value) ? rmr.value * toNumber(profile.activityFactor, 1.35) : null;
     const maintenance = Number.isFinite(baseMaintenance) ? baseMaintenance + toNumber(profile.calibrationOffset, 0) : null;
@@ -1234,7 +1287,10 @@
       ? weight * (1 - bodyFat / 100) / heightM ** 2
       : null;
     const estimatedWeeks = weeksToTarget(profile.goalType, weight, targetWeight, rate.selected);
-    const estimatedDate = Number.isFinite(estimatedWeeks) ? addDays(parseDate(todayISO()), estimatedWeeks * 7) : null;
+    let estimatedDate = Number.isFinite(estimatedWeeks) ? addDays(parseDate(todayISO()), estimatedWeeks * 7) : null;
+    if (rate.recalibrated && profile.goalDate && !rate.deadlineRateLimited) {
+      estimatedDate = parseDate(profile.goalDate);
+    }
 
     return {
       weight,
@@ -1279,9 +1335,7 @@
   function planRevisionAnchors(profile, plan, weighIns = state.weighIns, trends = rollingTrend(weighIns, profile.trendWindow)) {
     const sorted = [...weighIns].sort((a, b) => a.date.localeCompare(b.date));
     const first = sorted[0];
-    const history = [...(state.calibrationHistory || [])]
-      .filter(item => item && item.reviewOnly !== true)
-      .sort((a, b) => String(a.planAnchorDate || a.date || "").localeCompare(String(b.planAnchorDate || b.date || "")));
+    const history = planHistoryForGoal(profile, plan.targetWeight);
     let initialDate = normalizeDate(profile.planStartDate) || first?.date || "";
     let initialWeight = toNumber(profile.planStartWeight, first?.weight);
     const earliestRevisionDate = normalizeDate(history[0]?.planAnchorDate || history[0]?.date);
@@ -1303,6 +1357,7 @@
       ratePct: initialRate,
       targetWeight: initialTarget,
       goalType: initialGoalType,
+      targetDate: normalizeDate(firstRevision?.previousTargetDate || profile.goalDate),
       source: "initial"
     }];
 
@@ -1318,6 +1373,7 @@
         ratePct: toNumber(item.planRatePct, plan.rate.selected),
         targetWeight: toNumber(item.targetWeight, plan.targetWeight),
         goalType: ["loss", "maintain", "gain"].includes(item.goalType) ? item.goalType : profile.goalType,
+        targetDate: normalizeDate(item.targetDate || profile.goalDate),
         source: item.source || "automatic",
         revisionDate: normalizeDate(item.date) || date
       });
@@ -4795,9 +4851,11 @@
     $("#plan-title").textContent = profile.goalType === "maintain"
       ? `Mantener la tendencia cerca de ${formatKg(plan.weight)}.`
       : `${action} con un ritmo de ${formatNumber(plan.rate.selected, 2)}% semanal.`;
-    $("#plan-description").textContent = profile.goalDate && Number.isFinite(plan.rate.required)
-      ? `La fecha elegida requiere ${formatNumber(plan.rate.required, 2)}% semanal. La app calcula con ${formatNumber(plan.rate.selected, 2)}%.`
-      : "El objetivo define la dirección; la tendencia real indica cuándo conviene corregir la estimación.";
+    $("#plan-description").textContent = plan.rate.recalibrated && profile.goalDate
+      ? `El último reajuste fijó un nuevo tramo de ${formatNumber(plan.rate.selected, 2)}% semanal para conservar la llegada del ${formatDate(profile.goalDate)}.`
+      : profile.goalDate && Number.isFinite(plan.rate.required)
+        ? `La fecha elegida requiere ${formatNumber(plan.rate.required, 2)}% semanal. La app calcula con ${formatNumber(plan.rate.selected, 2)}%.`
+        : "El objetivo define la dirección; la tendencia real indica cuándo conviene corregir la estimación.";
     $("#target-weight").textContent = profile.goalType === "maintain" ? "Mantener" : formatKg(plan.targetWeight);
     $("#target-date").textContent = profile.goalDate ? formatDate(profile.goalDate) : "Sin fecha fija";
     $("#estimated-date").textContent = plan.estimatedDate ? formatDate(plan.estimatedDate) : "—";
@@ -4812,7 +4870,9 @@
     } else if (plan.rate.selected > plan.rate.bounds.suggestedMax) {
       signal.textContent = "RITMO ALTO";
       signal.classList.add("alert");
-      guidance = `El ritmo manual supera el máximo de referencia de ${formatNumber(plan.rate.bounds.suggestedMax, 2)}% semanal usado por la herramienta.`;
+      guidance = plan.rate.recalibrated
+        ? `Para conservar la fecha objetivo, el último reajuste requiere un ritmo superior al máximo de referencia de ${formatNumber(plan.rate.bounds.suggestedMax, 2)}% semanal.`
+        : `El ritmo manual supera el máximo de referencia de ${formatNumber(plan.rate.bounds.suggestedMax, 2)}% semanal usado por la herramienta.`;
     } else if (plan.rate.capped) {
       signal.textContent = "FECHA EXIGENTE";
       signal.classList.add("warn");
@@ -5035,6 +5095,7 @@
       };
     }
 
+    const latestTrend = trendedWeighIns.at(-1)?.trend ?? relatedWeighIns.at(-1)?.weight;
     const confidence = expenditureConfidence({
       intakeDays: used.length,
       completedDays: recentCompleted.length,
@@ -5042,19 +5103,47 @@
       spanDays
     });
     const adaptiveMaintenance = plan.maintenance * (1 - confidence.alpha) + observedMaintenance * confidence.alpha;
-    const recommendedTarget = adaptiveMaintenance + plan.dailyAdjustment;
-    const rawChange = recommendedTarget - plan.targetCalories;
-    const limitedChange = clamp(Math.round(rawChange), -EXPENDITURE_CONFIG.maxAdjustment, EXPENDITURE_CONFIG.maxAdjustment);
+    const planAnchorDate = relatedWeighIns.at(-1)?.date || todayISO();
+    const targetDate = normalizeDate(profile.goalDate);
+    const requiredPlanRate = requiredRateBetweenDates(
+      profile.goalType,
+      latestTrend,
+      plan.targetWeight,
+      planAnchorDate,
+      targetDate
+    );
+    const previousPlanRate = toNumber(plan.rate.selected, 0);
+    const nextPlanRate = profile.goalType === "maintain"
+      ? 0
+      : Number.isFinite(requiredPlanRate)
+        ? clamp(requiredPlanRate, 0.01, 2)
+        : previousPlanRate;
+    const deadlineRateLimited = Number.isFinite(requiredPlanRate) && requiredPlanRate > 2;
+    const nextWeeklyKg = profile.goalType === "maintain" ? 0 : plan.weight * nextPlanRate / 100;
+    const signedNextWeeklyKg = profile.goalType === "loss" ? -nextWeeklyKg : profile.goalType === "gain" ? nextWeeklyKg : 0;
+    const nextDailyAdjustment = signedNextWeeklyKg * KG_KCAL / 7;
+    const maintenanceRawChange = adaptiveMaintenance - plan.maintenance;
+    const limitedMaintenanceChange = clamp(
+      Math.round(maintenanceRawChange),
+      -EXPENDITURE_CONFIG.maxAdjustment,
+      EXPENDITURE_CONFIG.maxAdjustment
+    );
     const currentOffset = toNumber(profile.calibrationOffset, 0);
-    const newOffset = clamp(currentOffset + limitedChange, -900, 900);
-    const appliedChange = newOffset - currentOffset;
-    const meaningful = Math.abs(appliedChange) >= EXPENDITURE_CONFIG.minMeaningfulAdjustment;
+    const newOffset = clamp(currentOffset + limitedMaintenanceChange, -900, 900);
+    const nextMaintenance = Number.isFinite(plan.baseMaintenance)
+      ? plan.baseMaintenance + newOffset
+      : adaptiveMaintenance;
+    const recommendedTarget = Math.max(1000, nextMaintenance + nextDailyAdjustment);
+    const rawChange = recommendedTarget - plan.targetCalories;
+    const appliedChange = Math.round(rawChange);
+    const rateChange = nextPlanRate - previousPlanRate;
+    const meaningful = Math.abs(appliedChange) >= EXPENDITURE_CONFIG.minMeaningfulAdjustment
+      || Math.abs(rateChange) >= 0.01;
     const status = !timing.reviewDue
       ? "waiting"
       : !hasNewData
         ? "waiting-data"
         : meaningful ? "ready" : "stable";
-    const latestTrend = trendedWeighIns.at(-1)?.trend ?? relatedWeighIns.at(-1)?.weight;
 
     return {
       ...common,
@@ -5076,16 +5165,35 @@
       meaningful,
       latest: relatedWeighIns.at(-1),
       latestTrend,
-      planRatePct: plan.rate.selected,
+      previousPlanRatePct: previousPlanRate,
+      planRatePct: nextPlanRate,
+      rateChangePct: rateChange,
+      requiredPlanRatePct: requiredPlanRate,
+      targetDate,
+      deadlineRateLimited,
+      nextDailyAdjustment,
+      maintenanceChange: limitedMaintenanceChange,
       planTargetWeight: plan.targetWeight,
       planGoalType: profile.goalType,
-      limited: Math.abs(rawChange) > EXPENDITURE_CONFIG.maxAdjustment
+      limited: Math.abs(maintenanceRawChange) > EXPENDITURE_CONFIG.maxAdjustment
     };
   }
   function buildRecalibrationSuggestion(profile, plan, weighIns) {
     const suggestion = automaticAdjustmentData(profile, plan, weighIns);
     return suggestion.ready && suggestion.reviewDue && suggestion.meaningful ? suggestion : null;
   }
+  function profileRateSummary(suggestion) {
+    if (!suggestion || !Number.isFinite(suggestion.planRatePct)) return "";
+    const dateText = suggestion.targetDate ? ` y conservar la fecha ${formatDate(suggestion.targetDate)}` : "";
+    const changeText = Number.isFinite(suggestion.previousPlanRatePct)
+      ? `de ${formatNumber(suggestion.previousPlanRatePct, 2)}% a ${formatNumber(suggestion.planRatePct, 2)}% semanal`
+      : `a ${formatNumber(suggestion.planRatePct, 2)}% semanal`;
+    if (suggestion.deadlineRateLimited) {
+      return `Para acercarse al objetivo${dateText}, el nuevo tramo usa el máximo técnico de 2,00% semanal; la fecha exige todavía más.`;
+    }
+    return `Para llegar al objetivo${dateText}, el nuevo tramo cambia ${changeText}.`;
+  }
+
   function automaticAdjustmentSummary(suggestion) {
     if (!suggestion?.ready) return suggestion?.reason || "Todavía no hay datos suficientes.";
     const direction = suggestion.observedWeekly < -0.01 ? "bajando" : suggestion.observedWeekly > 0.01 ? "subiendo" : "estable";
@@ -5108,8 +5216,9 @@
     if (!suggestion.meaningful) {
       return `Con ${sourceText}, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} El objetivo actual está suficientemente cerca y no necesita cambiar.`;
     }
-    const nextTarget = suggestion.currentTarget + suggestion.appliedChange;
-    return `Con ${sourceText}, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} El objetivo pasaría de ${formatNumber(Math.round(suggestion.currentTarget))} a ${formatNumber(Math.round(nextTarget))} kcal por día (${suggestion.appliedChange > 0 ? "+" : ""}${formatNumber(suggestion.appliedChange)}).${suggestion.limited ? ` Por seguridad, cada revisión se limita a ${EXPENDITURE_CONFIG.maxAdjustment} kcal.` : ""}`;
+    const nextTarget = suggestion.recommendedTarget;
+    const rateText = profileRateSummary(suggestion);
+    return `Con ${sourceText}, el peso viene ${direction} ${formatNumber(Math.abs(suggestion.observedWeekly), 2)} kg/semana. ${modelText} ${rateText} El objetivo pasaría de ${formatNumber(Math.round(suggestion.currentTarget))} a ${formatNumber(Math.round(nextTarget))} kcal por día (${suggestion.appliedChange > 0 ? "+" : ""}${formatNumber(suggestion.appliedChange)}).${suggestion.limited ? ` La corrección del gasto se limita a ${EXPENDITURE_CONFIG.maxAdjustment} kcal por revisión.` : ""}`;
   }
   function adaptiveReviewDisplay(suggestion) {
     const registeredDays = Math.max(suggestion?.intakeDays || 0, suggestion?.weighInCount || 0);
@@ -5166,15 +5275,20 @@
     const planAnchorDate = suggestion.latest?.date || todayISO();
     const planAnchorWeight = Number(toNumber(suggestion.latestTrend, suggestion.latest?.weight).toFixed(2));
     profile.calibrationOffset = suggestion.newOffset;
+    if (profile.rateMode === "manual" && Number.isFinite(suggestion.planRatePct)) {
+      profile.weeklyRatePct = suggestion.planRatePct;
+    }
     state.calibrationHistory = [...(state.calibrationHistory || []), {
       date: todayISO(),
       source: "automatic",
       planAnchorDate,
       planAnchorWeight,
-      previousPlanRatePct: suggestion.planRatePct,
+      previousPlanRatePct: suggestion.previousPlanRatePct,
       planRatePct: suggestion.planRatePct,
       previousTargetWeight: suggestion.planTargetWeight,
       targetWeight: suggestion.planTargetWeight,
+      previousTargetDate: normalizeDate(profile.goalDate),
+      targetDate: suggestion.targetDate || normalizeDate(profile.goalDate),
       previousGoalType: suggestion.planGoalType,
       goalType: suggestion.planGoalType,
       intakeDays: suggestion.intakeDays,
@@ -5188,7 +5302,11 @@
       confidence: Number(suggestion.confidenceScore.toFixed(3)),
       alpha: Number(suggestion.alpha.toFixed(3)),
       previousTarget: Math.round(suggestion.currentTarget),
+      newTarget: Math.round(suggestion.recommendedTarget),
       targetChange: suggestion.appliedChange,
+      rateChangePct: Number(toNumber(suggestion.rateChangePct, 0).toFixed(3)),
+      requiredPlanRatePct: Number(toNumber(suggestion.requiredPlanRatePct, suggestion.planRatePct).toFixed(3)),
+      deadlineRateLimited: Boolean(suggestion.deadlineRateLimited),
       newOffset: suggestion.newOffset,
       reviewOnly: false
     }].slice(-30);
@@ -5231,9 +5349,12 @@
       setFeedback(feedback, "Todavía está dentro del rango; no hace falta aplicar un ajuste.");
       return;
     }
-    const nextTarget = Math.round(suggestion.currentTarget + suggestion.appliedChange);
+    const nextTarget = Math.round(suggestion.recommendedTarget);
     const registeredDays = Math.max(suggestion.intakeDays || 0, suggestion.weighInCount || 0);
-    const prompt = `M.A.S.A. propone llevar el objetivo diario a ${formatNumber(nextTarget)} kcal. La corrección es gradual y usa ${registeredDays} días de registro, con confianza ${suggestion.confidenceLabel.toLowerCase()}. ¿Aplicar el ajuste automático?`;
+    const rateText = Number.isFinite(suggestion.planRatePct)
+      ? ` y abrir un nuevo tramo de ${formatNumber(suggestion.planRatePct, 2)}% semanal hasta el ${formatDate(suggestion.targetDate)}`
+      : "";
+    const prompt = `M.A.S.A. propone llevar el objetivo diario a ${formatNumber(nextTarget)} kcal${rateText}. Usa ${registeredDays} días de registro, con confianza ${suggestion.confidenceLabel.toLowerCase()}, y mantiene visible el plan anterior. ¿Aplicar el ajuste automático?`;
     if (!window.confirm(prompt)) return;
     state.weighIns = temporaryWeighIns;
     state.profile = draft;
@@ -5243,7 +5364,7 @@
     saveState(state);
     fillProfileForm();
     updateProfilePreview();
-    setFeedback(feedback, `Ajuste automático aplicado. Nuevo objetivo aproximado: ${formatNumber(nextTarget)} kcal por día.`);
+    setFeedback(feedback, `Ajuste aplicado: ${formatNumber(nextTarget)} kcal por día y nuevo tramo hasta ${formatDate(suggestion.targetDate)}.`);
     render();
   }
   function renderRecalibration(profile, plan, weighIns) {
@@ -5276,7 +5397,7 @@
     facts.innerHTML = `<div><span>Gasto estimado</span><b>${data.ready ? `${formatNumber(Math.round(data.adaptiveMaintenance))} kcal` : `${formatNumber(Math.round(plan.maintenance))} kcal iniciales`}</b></div><div><span>Confianza</span><b>${data.confidenceLabel}</b></div><div><span>Registro acumulado</span><b>${display.registeredDays} días</b></div><div><span>Revisión</span><b>${display.reviewText}</b></div>`;
     progress.style.width = `${data.progress}%`;
     note.textContent = data.ready
-      ? `La corrección mezcla el gasto anterior con el observado usando β = ${formatNumber(data.alpha, 2)}. Las revisiones se separan por ${EXPENDITURE_CONFIG.reviewIntervalDays} días y requieren registros nuevos desde la revisión anterior.`
+      ? `La corrección mezcla el gasto anterior con el observado usando β = ${formatNumber(data.alpha, 2)}. Al aplicarla, conserva los tramos anteriores y calcula una nueva pendiente hacia la misma fecha objetivo. Las revisiones se separan por ${EXPENDITURE_CONFIG.reviewIntervalDays} días.`
       : "El cálculo necesita suficiente distancia entre fechas, días de ingesta y pesajes comparables; no reacciona a un peso aislado.";
     const reviewReached = Boolean(data.ready && data.reviewDue);
     const actionAvailable = Boolean(recalibrationSuggestion);
@@ -5286,8 +5407,11 @@
   }
   function applyRecalibration() {
     if (!recalibrationSuggestion) return;
-    const nextTarget = Math.round(recalibrationSuggestion.currentTarget + recalibrationSuggestion.appliedChange);
-    if (!window.confirm(`El objetivo diario pasará a aproximadamente ${formatNumber(nextTarget)} kcal. ¿Aplicar el ajuste automático?`)) return;
+    const nextTarget = Math.round(recalibrationSuggestion.recommendedTarget);
+    const rateText = Number.isFinite(recalibrationSuggestion.planRatePct)
+      ? ` y el nuevo tramo usará ${formatNumber(recalibrationSuggestion.planRatePct, 2)}% semanal hasta el ${formatDate(recalibrationSuggestion.targetDate)}`
+      : "";
+    if (!window.confirm(`El objetivo diario pasará a aproximadamente ${formatNumber(nextTarget)} kcal${rateText}. El tramo anterior seguirá visible. ¿Aplicar el ajuste automático?`)) return;
     const result = applyAutomaticAdjustment(recalibrationSuggestion, state.profile);
     if (!result) return;
     saveState(state);
@@ -5575,8 +5699,13 @@
     const anchors = planRevisionAnchors(profile, plan, weighIns, trends);
     if (!anchors.length) return [];
     const latestDataDate = parseDate(weighIns.at(-1)?.date || todayISO()) || parseDate(todayISO());
+    const lastAnchorDate = parseDate(anchors.at(-1)?.date);
+    const fixedTargetDate = parseDate(anchors.at(-1)?.targetDate || profile.goalDate);
     const futureWeeks = Math.min(104, Math.max(26, Math.ceil(plan.estimatedWeeks || 52)));
-    const finalEnd = addDays(latestDataDate, futureWeeks * 7);
+    const fallbackEnd = addDays(latestDataDate, futureWeeks * 7);
+    const finalEnd = fixedTargetDate && lastAnchorDate && fixedTargetDate > lastAnchorDate
+      ? fixedTargetDate
+      : fallbackEnd;
 
     return anchors.map((anchor, index) => {
       const startDate = parseDate(anchor.date);
@@ -6213,6 +6342,15 @@
     if (!Number.isFinite(plan.targetWeight)) {
       box.textContent = "Falta un objetivo válido.";
       box.classList.add("alert");
+      return;
+    }
+    if (plan.rate.recalibrated) {
+      if (plan.rate.deadlineRateLimited) {
+        box.textContent = "La fecha objetivo exigiría más de 2,00% semanal. El reajuste usa ese máximo técnico, por lo que no puede garantizar la llegada en fecha.";
+        box.classList.add("alert");
+      } else {
+        box.textContent = `Ritmo reajustado: ${formatNumber(plan.rate.selected, 2)}% semanal para conservar la fecha objetivo del ${formatDate(profile.goalDate)}.`;
+      }
       return;
     }
     if (plan.rate.capped) {
