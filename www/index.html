@@ -1,828 +1,1459 @@
 <!DOCTYPE html>
 
 <html lang="es">
+
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" name="viewport"/><base href="./"/>
-<meta content="#10131a" name="theme-color"/>
-<meta content="Calorías, macros, objetivos y seguimiento de peso con fórmulas transparentes y calibración por tendencia real." name="description"/>
-<title>MASA · registros y progreso</title>
-<link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
-<link href="assets/icon-192.png" rel="apple-touch-icon"/>
-<link href="manifest.webmanifest" rel="manifest"/>
-<link href="./css/styles.css?v=31.0.11" rel="stylesheet"/>
-<link href="./css/auth.css?v=30.6" rel="stylesheet"/>
-<script defer src="./vendor/masa-vendor.js?v=31.0"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        name="viewport" />
+    <base href="./"/>
+    <meta content="#10131a" name="theme-color" />
+    <meta
+        content="Calorías, macros, objetivos y seguimiento de peso con fórmulas transparentes y calibración por tendencia real."
+        name="description" />
+    <title>MASA · registros y progreso</title>
+    <link href="assets/favicon.svg" rel="icon" type="image/svg+xml" />
+    <link href="assets/icon-192.png" rel="apple-touch-icon" />
+    <link href="manifest.webmanifest" rel="manifest" />
+    <link href="./css/styles.css?v=31.0.11" rel="stylesheet" />
+    <link href="./css/auth.css?v=30.6" rel="stylesheet" />
+    <script defer src="./vendor/masa-vendor.js?v=31.0"></script>
 <script defer="" src="./js/config.js?v=30.6"></script>
-<script defer="" src="./js/cloud.js?v=31.0.8"></script>
-<script defer="" src="./js/app.js?v=31.0.12"></script>
+    <script defer="" src="./js/cloud.js?v=31.0.8"></script>
+    <script defer="" src="./js/app.js?v=31.0.12"></script>
 </head>
+
 <body>
 
-<section class="auth-gate" id="auth-gate">
-<article class="auth-card">
-<div class="auth-brand">
-<span aria-hidden="true" class="brand-mark"><b>P</b><i>=</i><strong>m·g</strong></span>
-<div><p class="eyebrow">M.A.S.A.</p><h1>Registrá. Entendé. Avanzá.</h1></div>
-</div>
-<p class="auth-intro">Registrá comidas y pesajes para entender tu progreso. Iniciá sesión para continuar.</p>
-<div id="auth-loading" hidden="">
-<div aria-hidden="true" class="auth-spinner"></div>
-<b id="auth-loading-text">Abriendo M.A.S.A.…</b>
-</div>
-<div id="auth-forms">
-<nav aria-label="Acceso a la cuenta" class="auth-tabs">
-<button class="active" id="auth-mode-login" type="button">Iniciar sesión</button>
-<button id="auth-mode-signup" type="button">Crear cuenta</button>
-</nav>
-<form class="auth-form" id="auth-login-form">
-<button class="auth-google" data-auth-google type="button">
-<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21.6 12.23c0-.71-.06-1.4-.18-2.06H12v3.9h5.38a4.6 4.6 0 0 1-2 3.02v2.53h3.24c1.9-1.75 2.98-4.33 2.98-7.39Z" fill="#4285F4"/><path d="M12 22c2.7 0 4.97-.9 6.62-2.38l-3.24-2.53c-.9.6-2.05.96-3.38.96-2.6 0-4.8-1.76-5.6-4.12H3.05v2.6A10 10 0 0 0 12 22Z" fill="#34A853"/><path d="M6.4 13.93A6.02 6.02 0 0 1 6.08 12c0-.67.12-1.32.32-1.93v-2.6H3.05A10 10 0 0 0 2 12c0 1.61.39 3.13 1.05 4.53l3.35-2.6Z" fill="#FBBC05"/><path d="M12 5.95c1.47 0 2.8.5 3.84 1.5l2.88-2.88A9.65 9.65 0 0 0 12 2a10 10 0 0 0-8.95 5.47l3.35 2.6c.8-2.36 3-4.12 5.6-4.12Z" fill="#EA4335"/></svg>
-<span>Continuar con Google</span>
-</button>
-<div class="auth-divider"><span>o usar correo</span></div>
-<label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email" name="email" required="" spellcheck="false" type="email" maxlength="254"/></label>
-<label><span>Contraseña</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="password" required="" type="password" maxlength="128"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
-<button class="primary-action" type="submit">Entrar</button>
-<button class="text-action auth-forgot" id="forgot-password" type="button">Olvidé mi contraseña</button>
-</form>
-<form class="auth-form" hidden="" id="auth-signup-form">
-<button class="auth-google" data-auth-google type="button">
-<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21.6 12.23c0-.71-.06-1.4-.18-2.06H12v3.9h5.38a4.6 4.6 0 0 1-2 3.02v2.53h3.24c1.9-1.75 2.98-4.33 2.98-7.39Z" fill="#4285F4"/><path d="M12 22c2.7 0 4.97-.9 6.62-2.38l-3.24-2.53c-.9.6-2.05.96-3.38.96-2.6 0-4.8-1.76-5.6-4.12H3.05v2.6A10 10 0 0 0 12 22Z" fill="#34A853"/><path d="M6.4 13.93A6.02 6.02 0 0 1 6.08 12c0-.67.12-1.32.32-1.93v-2.6H3.05A10 10 0 0 0 2 12c0 1.61.39 3.13 1.05 4.53l3.35-2.6Z" fill="#FBBC05"/><path d="M12 5.95c1.47 0 2.8.5 3.84 1.5l2.88-2.88A9.65 9.65 0 0 0 12 2a10 10 0 0 0-8.95 5.47l3.35 2.6c.8-2.36 3-4.12 5.6-4.12Z" fill="#EA4335"/></svg>
-<span>Registrarme con Google</span>
-</button>
-<div class="auth-divider"><span>o crearla con correo</span></div>
-<label><span>Nombre <small>opcional</small></span><input autocomplete="name" maxlength="60" name="name" type="text"/></label>
-<label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email" name="email" required="" spellcheck="false" type="email" maxlength="254"/></label>
-<label><span>Contraseña</span><div class="password-field"><input autocomplete="new-password" name="password" required="" type="password" maxlength="128" minlength="10"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
-<button class="primary-action" type="submit">Crear cuenta</button>
-</form>
-<form class="auth-form" hidden="" id="auth-recovery-form">
-<label><span>Nueva contraseña</span><div class="password-field"><input autocomplete="new-password" name="password" required="" type="password" maxlength="128" minlength="10"/><button aria-label="Mostrar contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
-<button class="primary-action" type="submit">Guardar contraseña</button>
-</form>
-<p aria-live="polite" class="auth-message" id="auth-message"></p>
-</div>
-<small class="auth-note">Los alimentos generales se comparten. Tus datos y alimentos agregados son privados.</small>
-<nav class="auth-legal-links" aria-label="Información legal"><a data-legal-document="privacy" href="./privacy.html">Privacidad</a><span>·</span><a data-legal-document="terms" href="./terms.html">Condiciones</a></nav>
-</article>
-</section>
-<div aria-hidden="true" class="ambient ambient-a"></div>
-<div aria-hidden="true" class="ambient ambient-b"></div>
-<div aria-hidden="true" class="grid-noise"></div>
-<header class="site-header">
-<button aria-label="Ir al inicio" class="brand" id="brand-home" type="button">
-<span aria-hidden="true" class="brand-mark"><b>P</b><i>=</i><strong>m·g</strong></span>
-<span class="brand-name"><b>MASA</b></span>
-</button>
-<nav aria-label="Secciones principales" class="app-nav">
-<button class="active primary-view" data-app-view="today" type="button"><strong>Registros</strong><small>Principal</small></button>
-<button class="secondary-view" data-app-view="progress" type="button"><strong>Progreso</strong><small>Análisis</small></button>
-</nav><div class="header-actions">
-<div class="account-area" hidden="" id="account-area"><span class="sync-status" data-status="loading" id="sync-status">Cargando…</span><span class="account-email" id="account-email"></span></div>
-<button aria-label="Abrir ajustes" class="settings-trigger" id="open-profile" type="button">
-<span aria-hidden="true">⚙</span><b>Ajustes</b>
-</button>
-</div>
-</header>
-<main class="page-shell">
-<section class="welcome-stage" hidden="" id="empty-state">
-<div aria-hidden="true" class="welcome-code">OBJETIVO = DATOS + TIEMPO</div>
-<p class="eyebrow">PRIMER INGRESO</p>
-<h1>Empezá configurando tus datos.</h1>
-<p class="welcome-copy">La herramienta necesita altura, edad, peso y objetivo para calcular una referencia inicial. Después, tus cambios quedan vinculados a tu cuenta.</p>
-<div class="welcome-actions">
-<button class="primary-action" id="begin-setup" type="button">Configurar M.A.S.A.</button>
-</div>
-</section>
-<section hidden="" id="dashboard"><section class="app-view" id="today-view"><section class="diary-section" id="daily-diary">
-<div class="diary-heading">
-<div>
-<p class="eyebrow">REGISTRO DIARIO</p>
-<h2>Registro de comidas</h2>
-<div class="diary-date-nav" id="diary-date-nav">
-<button aria-label="Ver día anterior" class="diary-day-step" id="diary-prev-day" type="button">‹</button>
-<button aria-label="Elegir fecha del registro" class="diary-date-button" id="diary-date-button" type="button">
-<span id="diary-date-label">—</span>
-<small id="diary-date-status">Hoy</small>
-</button>
-<button aria-label="Ver día siguiente" class="diary-day-step" id="diary-next-day" type="button">›</button>
-<button class="diary-today-button" id="diary-today-button" type="button">Hoy</button>
-<input aria-hidden="true" class="native-diary-date" id="diary-native-date" tabindex="-1" type="date"/>
-</div></div>
-<div class="diary-heading-actions">
-<div aria-label="Cambiar vista del registro" class="diary-view-switch">
-<button class="active" data-diary-view="record" type="button">Registro</button>
-<button data-diary-view="chart" type="button">Comparación</button>
-</div>
-<button class="add-intake-button" id="global-add-intake" type="button"><span>＋</span> Agregar ingesta</button>
-</div>
-</div>
-<div class="diary-view" id="diary-record-view">
-<div class="diary-workspace">
-<div class="meal-ledger" id="meal-grid"><article class="record-weight-card" id="record-weight-card">
-<div class="record-weight-copy">
-<p class="eyebrow">PESO DEL DÍA</p>
-<h3 id="record-weight-title">Registrar peso</h3>
-<p id="weight-context">El peso diario puede moverse mucho. La tendencia es la que importa.</p>
-</div>
-<div class="record-weight-entry">
-<div class="today-weight-recorded" hidden="" id="today-weight-recorded">
-<div><span>Peso registrado</span><strong id="today-weight-value">—</strong></div>
-<div class="recorded-weight-actions"><button id="edit-today-weight" type="button">Editar</button></div>
-</div>
-<form id="quick-weight-form">
-<label class="weight-entry"><input id="quick-weight" name="weight" placeholder="73,8" required="" step="0.1" type="number" min="20" max="400" inputmode="decimal"/><span>kg</span></label>
-<button class="weight-submit" type="submit">Guardar peso</button>
-</form>
-<p class="feedback" id="weight-feedback" role="status"></p>
-</div>
-</article>
-<article class="meal-card" data-meal="breakfast">
-<div class="meal-card-head"><div><span>01</span><h3>Desayuno</h3></div><div><b data-meal-total="breakfast">0 kcal</b><button aria-label="Agregar al desayuno" data-add-meal="breakfast" type="button">＋</button></div></div>
-<div class="meal-items" data-meal-items="breakfast"></div>
-</article>
-<article class="meal-card" data-meal="lunch">
-<div class="meal-card-head"><div><span>02</span><h3>Almuerzo</h3></div><div><b data-meal-total="lunch">0 kcal</b><button aria-label="Agregar al almuerzo" data-add-meal="lunch" type="button">＋</button></div></div>
-<div class="meal-items" data-meal-items="lunch"></div>
-</article>
-<article class="meal-card" data-meal="snack">
-<div class="meal-card-head"><div><span>03</span><h3>Merienda</h3></div><div><b data-meal-total="snack">0 kcal</b><button aria-label="Agregar a la merienda" data-add-meal="snack" type="button">＋</button></div></div>
-<div class="meal-items" data-meal-items="snack"></div>
-</article>
-<article class="meal-card" data-meal="dinner">
-<div class="meal-card-head"><div><span>04</span><h3>Cena</h3></div><div><b data-meal-total="dinner">0 kcal</b><button aria-label="Agregar a la cena" data-add-meal="dinner" type="button">＋</button></div></div>
-<div class="meal-items" data-meal-items="dinner"></div>
-</article>
-<article class="meal-card compact-meal" data-meal="extras">
-<div class="meal-card-head"><div><span>05</span><h3>Snacks</h3></div><div><b data-meal-total="extras">0 kcal</b><button aria-label="Agregar snack" data-add-meal="extras" type="button">＋</button></div></div>
-<div class="meal-items" data-meal-items="extras"></div>
-</article>
-</div>
-<div class="records-sidebar"><aside class="diary-summary">
-<div class="diary-total">
-<span>Calorías consumidas</span>
-<strong id="diary-calories">0</strong>
-<small id="diary-remaining">— kcal disponibles</small>
-</div>
-<div aria-label="Progreso diario de calorías y macros" class="diary-progress">
-<div><span>Calorías</span><b id="diary-calorie-progress">0 / —</b><i><em id="diary-calorie-bar"></em></i></div>
-<div><span>Proteína</span><b id="diary-protein-progress">0 / — g</b><i><em id="diary-protein-bar"></em></i></div>
-<div><span>Grasas</span><b id="diary-fat-progress">0 / — g</b><i><em id="diary-fat-bar"></em></i></div>
-<div><span>Carbohidratos</span><b id="diary-carb-progress">0 / — g</b><i><em id="diary-carb-bar"></em></i></div>
-</div>
-<button class="finish-day-button" id="finish-day" type="button">Terminar día</button>
-</aside>
-<div class="diary-quick-tools" aria-label="Accesos rápidos de biblioteca">
-<button class="secondary-action" id="sidebar-new-food" type="button">Nuevo alimento</button>
-<button class="secondary-action" id="sidebar-open-library" type="button">Editar recetas y alimentos</button>
-</div>
-</div></div>
-</div>
-<div class="diary-view" hidden="" id="diary-chart-view">
-<div class="calorie-chart-toolbar">
-<div><p class="eyebrow">BALANCE DIARIO</p><h3>Lo consumido frente al objetivo.</h3></div>
-<div aria-label="Rango de la gráfica de calorías" class="calorie-range">
-<button data-calorie-range="7" type="button">7 días</button>
-<button class="active" data-calorie-range="14" type="button">14 días</button>
-<button data-calorie-range="30" type="button">30 días</button>
-</div>
-</div>
-<div class="calorie-chart-wrap"><canvas aria-label="Calorías consumidas y objetivo por día" id="calorie-chart"></canvas><p class="chart-empty" hidden="" id="calorie-chart-empty">Registrá comidas en distintos días para comparar el balance.</p></div>
-<div class="calorie-chart-key"><span><i></i>Consumidas</span><span><i></i>Objetivo</span><span id="calorie-chart-summary">—</span></div>
-</div>
-<div class="day-reading" hidden="" id="day-reading">
-<div>
-<p class="eyebrow inverted">SI TODOS LOS DÍAS FUERAN COMO HOY</p>
-<h3 id="day-projection-title">Completá el día para ver una proyección.</h3>
-<p id="day-projection-text">La cuenta compara las calorías registradas con tu mantenimiento estimado. Es orientativa y no reemplaza la tendencia de pesajes.</p>
-</div>
-<div class="day-reading-controls"><label><span>Proyectar a</span><select id="day-projection-weeks"><option value="4">4 semanas</option><option selected="" value="6">6 semanas</option><option value="8">8 semanas</option><option value="12">12 semanas</option></select></label><button id="hide-day-summary" type="button">Ocultar cierre</button></div>
-</div>
-</section></section>
-<section class="app-view" hidden="" id="progress-view"><section class="progress-plan-overview"><article class="daily-panel progress-daily-panel">
-<div class="section-topline">
-<div>
-<p class="eyebrow" id="daily-eyebrow">OBJETIVOS DIARIOS</p>
-<h1 id="daily-title">Tus números de hoy.</h1>
-</div>
-<button aria-label="Información sobre objetivos diarios" class="help-dot light" data-tooltip="Son estimaciones iniciales. La parte más útil aparece al comparar varias semanas de pesajes con la proyección y recalibrar cuando corresponde." type="button">?</button>
-</div>
-<div class="calorie-core">
-<span>CALORÍAS</span>
-<strong id="target-calories">—</strong>
-<small>kcal por día</small>
-</div>
-<div aria-label="Objetivos diarios de macronutrientes" class="macro-board">
-<article class="macro-card protein-card">
-<div><span>Proteína</span><button aria-label="Información sobre proteína" class="help-dot dark" data-tooltip="En automático se calcula según tu peso y objetivo. En personalizado podés escribir directamente los gramos diarios." type="button">?</button></div>
-<strong id="protein-grams">—</strong>
-<small id="protein-detail">—</small>
-<i id="protein-bar"></i>
-</article>
-<article class="macro-card fat-card">
-<div><span>Grasas</span><button aria-label="Información sobre grasas" class="help-dot dark" data-tooltip="En automático se usa una proporción moderada de las calorías. En personalizado podés fijar los gramos diarios." type="button">?</button></div>
-<strong id="fat-grams">—</strong>
-<small id="fat-detail">—</small>
-<i id="fat-bar"></i>
-</article>
-<article class="macro-card carb-card">
-<div><span>Carbohidratos</span><button aria-label="Información sobre carbohidratos" class="help-dot dark" data-tooltip="En automático completan las calorías restantes. En personalizado podés definirlos junto con proteína y grasas." type="button">?</button></div>
-<strong id="carb-grams">—</strong>
-<small id="carb-detail">—</small>
-<i id="carb-bar"></i>
-</article>
-</div>
-<div class="daily-meta">
-<div><span>Mantenimiento estimado</span><b id="maintenance-calories">—</b></div>
-<div><span>Ajuste del objetivo</span><b id="calorie-adjustment">—</b></div>
-<div><span>Fórmula</span><b id="formula-name">—</b></div>
-<div><span>Actividad</span><b id="activity-name">—</b></div>
-</div><div aria-label="Resumen de peso actual" class="progress-weight-strip">
-<div><span>Último peso</span><b id="current-weight">—</b></div>
-<div><span>Tendencia</span><b id="trend-weight">—</b></div>
-<div><span>Ritmo reciente</span><b id="observed-rate">—</b></div>
-<div><span>Grasa actual</span><b id="current-body-fat">—</b></div>
-</div>
-<p class="inline-note" id="macro-balance-note"></p>
-<section class="objective-plan-summary">
-<div class="plan-copy">
-<p class="eyebrow" id="plan-kicker">PLAN ACTUAL</p>
-<h2 id="plan-title">—</h2>
-<p id="plan-description">—</p>
-</div>
-<div class="plan-facts">
-<div><span>Objetivo</span><b id="target-weight">—</b></div>
-<div><span>Fecha pedida</span><b id="target-date">—</b></div>
-<div><span>Fecha estimada para el objetivo</span><b id="estimated-date">—</b></div>
-<div><span>Ritmo usado</span><b id="required-rate">—</b></div>
-</div>
-<span class="signal" id="goal-status">—</span>
-<p class="guidance" id="goal-guidance"></p>
-</section></article></section><section class="recalibration-panel" data-state="learning" id="recalibration-panel">
-<div aria-hidden="true" class="recalibration-symbol">Δ</div>
-<div class="recalibration-content">
-<p class="eyebrow" id="recalibration-kicker">GASTO ADAPTATIVO</p>
-<h2 id="recalibration-title">M.A.S.A. está aprendiendo de tus registros.</h2>
-<p id="recalibration-text">—</p>
-<div class="recalibration-facts" id="recalibration-facts"></div>
-<div aria-label="Progreso del modelo adaptativo" class="recalibration-progress"><i id="recalibration-progress-fill"></i></div>
-<small id="recalibration-note">El cálculo usa el consumo realmente registrado y la tendencia observada del peso.</small>
-</div>
-<button class="primary-action" hidden id="apply-recalibration" type="button">Revisar ajuste automático</button>
-</section><section class="progress-section">
-<article class="chart-module">
-<div class="chart-title-row progress-chart-title-row">
-<div class="progress-chart-heading">
-<button aria-label="Ver gráfica anterior" class="progress-chart-arrow" id="previous-progress-chart" type="button">‹</button>
-<div>
-<p class="eyebrow inverted" id="progress-chart-eyebrow">PLAN VS REALIDAD</p>
-<h2 id="progress-chart-title">Tu peso real frente al camino previsto.</h2>
-</div>
-<button aria-label="Ver gráfica siguiente" class="progress-chart-arrow" id="next-progress-chart" type="button">›</button>
-</div>
-<p id="progress-chart-description">La línea sólida muestra tu tendencia. La línea punteada es el plan.</p>
-</div><div class="chart-toolbar">
-<div class="chart-legend"><span class="legend-real" id="progress-legend-1">Peso real</span><span class="legend-trend" id="progress-legend-2">Tendencia</span><span class="legend-plan" id="progress-legend-3">Plan</span><span class="legend-goal" id="progress-legend-4">Objetivo</span></div>
-<div aria-label="Rango visible de la gráfica" class="chart-range">
-<button data-chart-range="1m" type="button">1 mes</button>
-<button class="active" data-chart-range="3m" type="button">3 meses</button>
-<button data-chart-range="6m" type="button">6 meses</button>
-<button data-chart-range="all" type="button">Todo</button>
-</div>
-</div>
-<div class="chart-canvas-wrap"><canvas aria-label="Gráfica de progreso" id="progress-chart"></canvas><p class="chart-empty" hidden="" id="progress-chart-empty">Todavía faltan datos para construir esta gráfica.</p></div><div aria-label="Elegir gráfica" class="progress-chart-index">
-<button aria-label="Peso frente al plan" class="active" data-progress-chart="weight" type="button">1</button>
-<button aria-label="Calorías consumidas" data-progress-chart="calories" type="button">2</button>
-<button aria-label="Promedio semanal de calorías" data-progress-chart="weekly" type="button">3</button>
-</div>
-</article>
-<aside class="insight-panel">
-<p class="eyebrow inverted">LECTURA PERSONALIZADA</p>
-<h2 id="chart-insight-title">La dirección importa más que un día aislado.</h2>
-<p id="chart-insight">—</p>
-<div class="insight-facts">
-<div><span id="insight-fact-label-1">Esperado hoy</span><b id="expected-today">—</b></div>
-<div><span id="insight-fact-label-2">Diferencia</span><b id="expected-difference">—</b></div>
-<div><span id="insight-fact-label-3">Cambio total</span><b id="stat-change">—</b></div>
-</div>
-<small id="chart-insight-meta">—</small>
-<section aria-label="Datos del modelo" class="progress-model-data">
-<div class="progress-model-heading">
-<p class="eyebrow inverted">DATOS DEL MODELO</p>
-<p>Referencias auxiliares para interpretar el plan.</p>
-</div>
-<div class="model-data-grid compact">
-<div><span>IMC orientativo</span><b id="stat-bmi">—</b><small id="stat-bmi-note">—</small></div>
-<div class="body-fat-reading"><span>Grasa corporal actual</span><b id="stat-body-fat">—</b><small id="stat-body-fat-note">dato manual; no se estima solo</small></div>
-<div><span>FFMI</span><b id="stat-ffmi">—</b><small>requiere un % de grasa razonable</small></div>
-<div><span>Inicio del plan</span><b id="plan-start">—</b><small id="plan-start-weight">—</small></div>
-</div>
-</section>
-</aside>
-</section>
-<section class="data-quality-panel" id="data-quality-tips">
-<div class="data-quality-heading">
-<p class="eyebrow">DATOS ÚTILES, RESULTADOS ÚTILES</p>
-<h2>La estimación mejora cuando registrás lo que realmente pasó.</h2>
-<p>M.A.S.A. puede ajustar sus cálculos, pero no puede corregir datos incompletos o cantidades aproximadas sistemáticamente.</p>
-</div>
-<div class="data-quality-grid">
-<article><span>01</span><div><b>Pesá la comida cuando puedas</b><p>Registrá la cantidad que efectivamente consumiste, no la porción que pensabas servirte.</p></div></article>
-<article><span>02</span><div><b>Pesate en condiciones parecidas</b><p>Usá horarios y condiciones similares. Un pesaje aislado importa menos que la tendencia.</p></div></article>
-<article><span>03</span><div><b>Cerrá días razonablemente completos</b><p>Omitir comidas hace que el consumo parezca menor y puede llevar a un reajuste equivocado.</p></div></article>
-<article><span>04</span><div><b>Datos incorrectos producen resultados incorrectos</b><p>La herramienta calcula con lo que recibe: cuanto más fiel sea el registro, más útil será la estimación.</p></div></article>
-</div>
-</section>
-</section></section>
-</main>
-<footer class="site-footer">
-<span>MASA</span>
-<p>Una herramienta para entender las cuentas detrás del peso. No reemplaza una evaluación clínica individual.</p>
-<div class="footer-actions">
-<button class="footer-about-button" id="open-about" type="button">Acerca de M.A.S.A.</button>
-<a data-legal-document="privacy" href="./privacy.html">Privacidad y condiciones</a>
-<a href="https://andresgonzalez.netlify.app/" rel="noopener" target="_blank">Más herramientas ↗</a>
-</div>
-</footer>
-<div aria-labelledby="tips-title" aria-modal="true" class="modal compact-modal" hidden id="tips-modal" role="dialog">
-<div class="modal-backdrop" data-close-tips></div>
-<article class="centered-modal-sheet tips-sheet">
-<div class="settings-header">
-<div><p class="eyebrow">ANTES DE EMPEZAR</p><h2 id="tips-title">La calidad del resultado depende de la calidad del registro.</h2></div>
-<button aria-label="Cerrar" class="close-button" data-close-tips type="button">×</button>
-</div>
-<div class="tips-copy">
-<article><span>01</span><div><b>Pesá la comida siempre que sea posible.</b><p>Ingresá lo que realmente consumiste. Una diferencia pequeña aislada no importa, pero repetir estimaciones incorrectas sí.</p></div></article>
-<article><span>02</span><div><b>Registrá pesajes comparables.</b><p>Intentá pesarte en condiciones similares y mirá la tendencia de varios días, no un valor suelto.</p></div></article>
-<article><span>03</span><div><b>No cierres como completo un día incompleto.</b><p>Las comidas omitidas hacen que el sistema estime un gasto distinto del real.</p></div></article>
-<article><span>04</span><div><b>Datos equivocados generan ajustes equivocados.</b><p>M.A.S.A. no adivina lo que faltó: calcula y se recalibra a partir de la información que le das.</p></div></article>
-</div>
-<div class="profile-actions about-actions"><button class="primary-action" id="accept-tips" type="button">Entendido, empezar</button></div>
-</article>
-</div>
-<div aria-labelledby="about-title" aria-modal="true" class="modal compact-modal" hidden id="about-modal" role="dialog">
-<div class="modal-backdrop" data-close-about></div>
-<article class="about-sheet">
-<div class="settings-header">
-<div><p class="eyebrow">POR QUÉ EXISTE M.A.S.A.</p><h2 id="about-title">¿Cuál es el objetivo de M.A.S.A.?</h2></div>
-<button aria-label="Cerrar" class="close-button" data-close-about type="button">×</button>
-</div>
-<div class="about-copy">
-<p><strong>M.A.S.A. no busca ser una aplicación de nutrición ni decirte qué alimentos deberías consumir.</strong> Su objetivo es ayudarte a estimar cuántas calorías necesitás consumir para alcanzar un peso determinado, teniendo en cuenta tu peso actual, tu actividad física y el plazo que te propongas.</p>
-<p>La aplicación parte de una estimación inicial y la compara con tus registros reales de comidas, ejercicio y peso. A medida que incorporás información, detecta si tu evolución se está alejando de lo previsto y reajusta las estimaciones para adaptarse mejor a tu cuerpo y a tu rutina.</p>
-<p>La idea nació como una planilla personal. Registrando calorías y peso, y realizando pequeños ajustes sobre la marcha, fue posible anticipar con bastante precisión la evolución del peso durante varios meses y perder <strong>4,2 kg en tres meses</strong> sin realizar cambios extremos en la alimentación.</p>
-<div class="about-mission"><p class="eyebrow inverted">MISIÓN</p><p>Transformar ese método en una herramienta simple, clara y adaptable, que permita tomar decisiones basadas en datos reales en lugar de depender únicamente de fórmulas generales.</p></div>
-<section class="about-math" aria-labelledby="about-math-title">
-<p class="eyebrow" id="about-math-title">MATEMÁTICAS DEL MODELO</p>
-<p>M.A.S.A. usa dos capas: una estimación inicial basada en fórmulas poblacionales y un gasto adaptativo que aprende de la relación entre tus ingestas y la tendencia del peso. Ningún pesaje aislado modifica el objetivo.</p>
-<div class="about-formulas">
-<article><b>1. Metabolismo en reposo</b><code>Mifflin: 10·P + 6,25·H − 5·E + S</code><code>Harris (M): 88,362 + 13,397·P + 4,799·H − 5,677·E</code><code>Harris (F): 447,593 + 9,247·P + 3,098·H − 4,330·E</code><code>Cunningham: 500 + 22·masa libre de grasa</code><p>P es el peso en kg, H la altura en cm, E la edad y S vale +5 o −161 en Mifflin. Cunningham requiere una estimación de grasa corporal; sin ella se usa Mifflin.</p></article>
-<article><b>2. Mantenimiento y meta inicial</b><code>Mantenimiento = RMR · factor de actividad + calibración</code><code>Objetivo = mantenimiento + (Δkg/sem · 7700 / 7)</code><p>El signo de Δkg/sem depende de si se busca bajar, mantener o subir. El valor de 7700 kcal/kg es una aproximación energética de trabajo, no una equivalencia exacta para cada persona.</p></article>
-<article><b>3. Tendencia del peso</b><code>Tₙ = (1 − α) · Tₙ₋₁ + α · Pₙ; α base = 0,10</code><p>El peso medido se suaviza con una media exponencial. Cuando faltan días, α se ajusta por el tiempo transcurrido para no tratar dos pesajes separados como días consecutivos.</p></article>
-<article><b>4. Ritmo observado</b><code>r = pendiente de la regresión lineal sobre T</code><p>La velocidad de cambio no se obtiene restando solamente el primer y último pesaje: se estima usando todos los puntos de la tendencia del período.</p></article>
-<article><b>5. Gasto observado</b><code>Gₒ = ingesta media − r · 7700 / 7</code><p>Con r expresado en kg por semana, el sistema infiere el gasto que mejor explica simultáneamente lo registrado y el cambio de peso.</p></article>
-<article><b>6. Gasto adaptativo</b><code>Gₐ = (1 − β) · G anterior + β · Gₒ</code><p>β aumenta con más días útiles, más pesajes, mayor duración y más días marcados como completos. Esto permite aprender sin reemplazar bruscamente la estimación previa.</p></article>
-<article><b>7. Revisión semanal</b><code>Objetivo nuevo = Gₐ + ajuste por meta</code><p>La app muestra el progreso, la confianza y la próxima fecha de revisión. Los cambios requieren confirmación, se separan por siete días y se limitan a ±250 kcal por revisión. Para volver a revisar exige al menos tres días de ingesta y dos pesajes nuevos.</p></article>
-<article><b>8. Macronutrientes</b><code>Proteína y carbohidratos: 4 kcal/g · Grasas: 9 kcal/g</code><p>El modo balanceado reparte 20% proteína, 30% grasas y 50% carbohidratos. El modo atlético fija proteína y grasas según el peso, y asigna a carbohidratos la energía restante.</p></article>
-</div>
-<p class="about-reference">El suavizado se inspira en <a href="https://www.fourmilab.ch/hackdiet/online/hdo.html" rel="noopener" target="_blank">The Hacker's Diet</a>. El enfoque de gasto inferido a partir de ingesta y peso también está relacionado con la metodología pública de <a href="https://macrofactor.com/expenditure-v3/" rel="noopener" target="_blank">MacroFactor</a>. Las reglas de confianza, los límites y la implementación son propios de M.A.S.A.</p>
-</section>
-<section class="about-credits" aria-labelledby="about-credits-title">
-<p class="eyebrow" id="about-credits-title">CRÉDITOS DE DATOS</p>
-<p>La biblioteca de alimentos incluida en M.A.S.A. fue elaborada a partir de <a href="https://www.opennutrition.app/" rel="noopener" target="_blank"><strong>OpenNutrition Foods</strong></a>. Para integrarla a la aplicación se adaptaron nombres, unidades y estructura de búsqueda. Parte de los datos de OpenNutrition procede de <a href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts contributors</a>.</p>
-<p>OpenNutrition Foods se distribuye bajo la <a href="https://opendatacommons.org/licenses/odbl/1-0/" rel="noopener" target="_blank">Open Database License 1.0 (ODbL)</a>. Los derechos sobre los contenidos individuales se ofrecen bajo una licencia de contenidos de base de datos modificada. La información completa se encuentra en el archivo <a href="DATA-LICENSE.md" target="_blank">DATA-LICENSE.md</a> incluido con M.A.S.A.</p>
-</section>
-<section class="about-legal" aria-labelledby="about-legal-title">
-<p class="eyebrow" id="about-legal-title">PRIVACIDAD Y CONDICIONES</p>
-<p>Consultá qué datos utiliza M.A.S.A., cómo podés eliminarlos y las reglas de uso del servicio.</p>
-<div class="about-legal-links"><a data-legal-document="privacy" href="./privacy.html">Política de privacidad ↗</a><a data-legal-document="terms" href="./terms.html">Condiciones del servicio ↗</a></div>
-</section>
-<section class="about-limitations" aria-labelledby="about-limitations-title">
-<p class="eyebrow" id="about-limitations-title">LIMITACIONES</p>
-<p>Los valores nutricionales son estimaciones obtenidas de bases de datos públicas y pueden variar según la marca, la preparación y la porción real. M.A.S.A. los utiliza como referencia para estimar el consumo energético y recalibrar la evolución del peso; no como información clínica ni como sustituto del etiquetado de cada producto.</p>
-</section>
-</div>
-<div class="profile-actions about-actions"><button class="primary-action" id="accept-about" type="button">Entendido, empezar</button></div>
-</article>
-</div>
-<div aria-labelledby="legal-modal-title" aria-modal="true" class="modal compact-modal" hidden id="legal-modal" role="dialog">
-<div class="modal-backdrop" data-close-legal></div>
-<article class="legal-modal-sheet">
-<header class="legal-modal-header">
-<div>
-<p class="eyebrow">INFORMACIÓN LEGAL</p>
-<h2 id="legal-modal-title">Política de privacidad</h2>
-</div>
-<button aria-label="Cerrar información legal" class="close-button" id="close-legal" type="button">×</button>
-</header>
-<nav aria-label="Documentos legales" class="legal-modal-tabs">
-<button class="active" data-legal-document="privacy" type="button">Privacidad</button>
-<button data-legal-document="terms" type="button">Condiciones</button>
-</nav>
-<div aria-live="polite" class="legal-modal-content" id="legal-modal-content">
-<p class="legal-modal-loading">Cargando documento…</p>
-</div>
-</article>
-</div>
-<div aria-labelledby="settings-title" aria-modal="true" class="modal" hidden="" id="settings-modal" role="dialog">
-<div class="modal-backdrop" data-close-settings=""></div>
-<div class="settings-sheet">
-<div class="settings-topbar">
-<div class="settings-header">
-<div>
-<p class="eyebrow">CONFIGURACIÓN PERSONAL</p>
-<h2 id="settings-title">Tu modelo y tus datos</h2>
-<p>Los ajustes cotidianos quedan fuera de la pantalla principal.</p>
-</div>
-<div class="settings-header-actions">
-<button class="settings-logout-button" hidden id="logout-button" type="button">Cerrar sesión</button>
-<button aria-label="Cerrar" class="close-button" id="close-settings" type="button">×</button>
-</div>
-</div>
-<nav aria-label="Secciones de configuración" class="settings-tabs">
-<button class="active" data-settings-tab="profile" type="button">Perfil y plan</button>
-<button data-settings-tab="account" type="button">Cuenta y datos</button>
-</nav>
-</div>
-<section class="settings-view" id="settings-profile">
+    <section class="auth-gate" id="auth-gate">
+        <article class="auth-card">
+            <div class="auth-brand">
+                <span aria-hidden="true" class="brand-mark"><b>P</b><i>=</i><strong>m·g</strong></span>
+                <div>
+                    <p class="eyebrow">M.A.S.A.</p>
+                    <h1>Registrá. Entendé. Avanzá.</h1>
+                </div>
+            </div>
+            <p class="auth-intro">Registrá comidas y pesajes para entender tu progreso. Iniciá sesión para continuar.
+            </p>
+            <div id="auth-loading" hidden="">
+                <div aria-hidden="true" class="auth-spinner"></div>
+                <b id="auth-loading-text">Abriendo M.A.S.A.…</b>
+            </div>
+            <div id="auth-forms">
+                <nav aria-label="Acceso a la cuenta" class="auth-tabs">
+                    <button class="active" id="auth-mode-login" type="button">Iniciar sesión</button>
+                    <button id="auth-mode-signup" type="button">Crear cuenta</button>
+                </nav>
+                <form class="auth-form" id="auth-login-form">
+                    <button class="auth-google" data-auth-google type="button">
+                        <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path
+                                d="M21.6 12.23c0-.71-.06-1.4-.18-2.06H12v3.9h5.38a4.6 4.6 0 0 1-2 3.02v2.53h3.24c1.9-1.75 2.98-4.33 2.98-7.39Z"
+                                fill="#4285F4" />
+                            <path
+                                d="M12 22c2.7 0 4.97-.9 6.62-2.38l-3.24-2.53c-.9.6-2.05.96-3.38.96-2.6 0-4.8-1.76-5.6-4.12H3.05v2.6A10 10 0 0 0 12 22Z"
+                                fill="#34A853" />
+                            <path
+                                d="M6.4 13.93A6.02 6.02 0 0 1 6.08 12c0-.67.12-1.32.32-1.93v-2.6H3.05A10 10 0 0 0 2 12c0 1.61.39 3.13 1.05 4.53l3.35-2.6Z"
+                                fill="#FBBC05" />
+                            <path
+                                d="M12 5.95c1.47 0 2.8.5 3.84 1.5l2.88-2.88A9.65 9.65 0 0 0 12 2a10 10 0 0 0-8.95 5.47l3.35 2.6c.8-2.36 3-4.12 5.6-4.12Z"
+                                fill="#EA4335" />
+                        </svg>
+                        <span>Continuar con Google</span>
+                    </button>
+                    <div class="auth-divider"><span>o usar correo</span></div>
+                    <label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email"
+                            name="email" required="" spellcheck="false" type="email" maxlength="254" /></label>
+                    <label><span>Contraseña</span>
+                        <div class="password-field"><input autocomplete="current-password" minlength="8" name="password"
+                                required="" type="password" maxlength="128" /><button aria-label="Mostrar contraseña"
+                                aria-pressed="false" class="password-toggle" data-password-toggle
+                                type="button"></button></div>
+                    </label>
+                    <button class="primary-action" type="submit">Entrar</button>
+                    <button class="text-action auth-forgot" id="forgot-password" type="button">Olvidé mi
+                        contraseña</button>
+                </form>
+                <form class="auth-form" hidden="" id="auth-signup-form">
+                    <button class="auth-google" data-auth-google type="button">
+                        <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path
+                                d="M21.6 12.23c0-.71-.06-1.4-.18-2.06H12v3.9h5.38a4.6 4.6 0 0 1-2 3.02v2.53h3.24c1.9-1.75 2.98-4.33 2.98-7.39Z"
+                                fill="#4285F4" />
+                            <path
+                                d="M12 22c2.7 0 4.97-.9 6.62-2.38l-3.24-2.53c-.9.6-2.05.96-3.38.96-2.6 0-4.8-1.76-5.6-4.12H3.05v2.6A10 10 0 0 0 12 22Z"
+                                fill="#34A853" />
+                            <path
+                                d="M6.4 13.93A6.02 6.02 0 0 1 6.08 12c0-.67.12-1.32.32-1.93v-2.6H3.05A10 10 0 0 0 2 12c0 1.61.39 3.13 1.05 4.53l3.35-2.6Z"
+                                fill="#FBBC05" />
+                            <path
+                                d="M12 5.95c1.47 0 2.8.5 3.84 1.5l2.88-2.88A9.65 9.65 0 0 0 12 2a10 10 0 0 0-8.95 5.47l3.35 2.6c.8-2.36 3-4.12 5.6-4.12Z"
+                                fill="#EA4335" />
+                        </svg>
+                        <span>Registrarme con Google</span>
+                    </button>
+                    <div class="auth-divider"><span>o crearla con correo</span></div>
+                    <label><span>Nombre <small>opcional</small></span><input autocomplete="name" maxlength="60"
+                            name="name" type="text" /></label>
+                    <label><span>Correo</span><input autocomplete="username" autocapitalize="none" inputmode="email"
+                            name="email" required="" spellcheck="false" type="email" maxlength="254" /></label>
+                    <label><span>Contraseña</span>
+                        <div class="password-field"><input autocomplete="new-password" name="password" required=""
+                                type="password" maxlength="128" minlength="10" /><button aria-label="Mostrar contraseña"
+                                aria-pressed="false" class="password-toggle" data-password-toggle
+                                type="button"></button></div>
+                    </label>
+                    <button class="primary-action" type="submit">Crear cuenta</button>
+                </form>
+                <form class="auth-form" hidden="" id="auth-recovery-form">
+                    <label><span>Nueva contraseña</span>
+                        <div class="password-field"><input autocomplete="new-password" name="password" required=""
+                                type="password" maxlength="128" minlength="10" /><button aria-label="Mostrar contraseña"
+                                aria-pressed="false" class="password-toggle" data-password-toggle
+                                type="button"></button></div>
+                    </label>
+                    <button class="primary-action" type="submit">Guardar contraseña</button>
+                </form>
+                <p aria-live="polite" class="auth-message" id="auth-message"></p>
+            </div>
+            <small class="auth-note">Los alimentos generales se comparten. Tus datos y alimentos agregados son
+                privados.</small>
+            <nav class="auth-legal-links" aria-label="Información legal"><a data-legal-document="privacy"
+                    href="./privacy.html">Privacidad</a><span>·</span><a data-legal-document="terms"
+                    href="./terms.html">Condiciones</a></nav>
+        </article>
+    </section>
+    <div aria-hidden="true" class="ambient ambient-a"></div>
+    <div aria-hidden="true" class="ambient ambient-b"></div>
+    <div aria-hidden="true" class="grid-noise"></div>
+    <header class="site-header">
+        <button aria-label="Ir al inicio" class="brand" id="brand-home" type="button">
+            <span aria-hidden="true" class="brand-mark"><b>P</b><i>=</i><strong>m·g</strong></span>
+            <span class="brand-name"><b>MASA</b></span>
+        </button>
+        <nav aria-label="Secciones principales" class="app-nav">
+            <button class="active primary-view" data-app-view="today"
+                type="button"><strong>Registros</strong><small>Principal</small></button>
+            <button class="secondary-view" data-app-view="progress"
+                type="button"><strong>Progreso</strong><small>Análisis</small></button>
+        </nav>
+        <div class="header-actions">
+            <div class="account-area" hidden="" id="account-area"><span class="sync-status" data-status="loading"
+                    id="sync-status">Cargando…</span><span class="account-email" id="account-email"></span></div>
+            <button aria-label="Abrir ajustes" class="settings-trigger" id="open-profile" type="button">
+                <span aria-hidden="true">⚙</span><b>Ajustes</b>
+            </button>
+        </div>
+    </header>
+    <main class="page-shell">
+        <section class="welcome-stage" hidden="" id="empty-state">
+            <div aria-hidden="true" class="welcome-code">OBJETIVO = DATOS + TIEMPO</div>
+            <p class="eyebrow">PRIMER INGRESO</p>
+            <h1>Empezá configurando tus datos.</h1>
+            <p class="welcome-copy">La herramienta necesita altura, edad, peso y objetivo para calcular una referencia
+                inicial. Después, tus cambios quedan vinculados a tu cuenta.</p>
+            <div class="welcome-actions">
+                <button class="primary-action" id="begin-setup" type="button">Configurar M.A.S.A.</button>
+            </div>
+        </section>
+        <section hidden="" id="dashboard">
+            <section class="app-view" id="today-view">
+                <section class="diary-section" id="daily-diary">
+                    <div class="diary-heading">
+                        <div>
+                            <p class="eyebrow">REGISTRO DIARIO</p>
+                            <h2>Registro de comidas</h2>
+                            <div class="diary-date-nav" id="diary-date-nav">
+                                <button aria-label="Ver día anterior" class="diary-day-step" id="diary-prev-day"
+                                    type="button">‹</button>
+                                <button aria-label="Elegir fecha del registro" class="diary-date-button"
+                                    id="diary-date-button" type="button">
+                                    <span id="diary-date-label">—</span>
+                                    <small id="diary-date-status">Hoy</small>
+                                </button>
+                                <button aria-label="Ver día siguiente" class="diary-day-step" id="diary-next-day"
+                                    type="button">›</button>
+                                <button class="diary-today-button" id="diary-today-button" type="button">Hoy</button>
+                                <input aria-hidden="true" class="native-diary-date" id="diary-native-date" tabindex="-1"
+                                    type="date" />
+                            </div>
+                        </div>
+                        <div class="diary-heading-actions">
+                            <div aria-label="Cambiar vista del registro" class="diary-view-switch">
+                                <button class="active" data-diary-view="record" type="button">Registro</button>
+                                <button data-diary-view="chart" type="button">Comparación</button>
+                            </div>
+                            <button class="add-intake-button" id="global-add-intake" type="button"><span>＋</span>
+                                Agregar ingesta</button>
+                        </div>
+                    </div>
+                    <div class="diary-view" id="diary-record-view">
+                        <div class="diary-workspace">
+                            <div class="meal-ledger" id="meal-grid">
+                                <article class="record-weight-card" id="record-weight-card">
+                                    <div class="record-weight-copy">
+                                        <p class="eyebrow">PESO DEL DÍA</p>
+                                        <h3 id="record-weight-title">Registrar peso</h3>
+                                        <p id="weight-context">El peso diario puede moverse mucho. La tendencia es la
+                                            que importa.</p>
+                                    </div>
+                                    <div class="record-weight-entry">
+                                        <div class="today-weight-recorded" hidden="" id="today-weight-recorded">
+                                            <div><span>Peso registrado</span><strong id="today-weight-value">—</strong>
+                                            </div>
+                                            <div class="recorded-weight-actions"><button id="edit-today-weight"
+                                                    type="button">Editar</button></div>
+                                        </div>
+                                        <form id="quick-weight-form">
+                                            <label class="weight-entry"><input id="quick-weight" name="weight"
+                                                    placeholder="73,8" required="" step="0.1" type="number" min="20"
+                                                    max="400" inputmode="decimal" /><span>kg</span></label>
+                                            <button class="weight-submit" type="submit">Guardar peso</button>
+                                        </form>
+                                        <p class="feedback" id="weight-feedback" role="status"></p>
+                                    </div>
+                                </article>
+                                <article class="meal-card" data-meal="breakfast">
+                                    <div class="meal-card-head">
+                                        <div><span>01</span>
+                                            <h3>Desayuno</h3>
+                                        </div>
+                                        <div><b data-meal-total="breakfast">0 kcal</b><button
+                                                aria-label="Agregar al desayuno" data-add-meal="breakfast"
+                                                type="button">＋</button></div>
+                                    </div>
+                                    <div class="meal-items" data-meal-items="breakfast"></div>
+                                </article>
+                                <article class="meal-card" data-meal="lunch">
+                                    <div class="meal-card-head">
+                                        <div><span>02</span>
+                                            <h3>Almuerzo</h3>
+                                        </div>
+                                        <div><b data-meal-total="lunch">0 kcal</b><button
+                                                aria-label="Agregar al almuerzo" data-add-meal="lunch"
+                                                type="button">＋</button></div>
+                                    </div>
+                                    <div class="meal-items" data-meal-items="lunch"></div>
+                                </article>
+                                <article class="meal-card" data-meal="snack">
+                                    <div class="meal-card-head">
+                                        <div><span>03</span>
+                                            <h3>Merienda</h3>
+                                        </div>
+                                        <div><b data-meal-total="snack">0 kcal</b><button
+                                                aria-label="Agregar a la merienda" data-add-meal="snack"
+                                                type="button">＋</button></div>
+                                    </div>
+                                    <div class="meal-items" data-meal-items="snack"></div>
+                                </article>
+                                <article class="meal-card" data-meal="dinner">
+                                    <div class="meal-card-head">
+                                        <div><span>04</span>
+                                            <h3>Cena</h3>
+                                        </div>
+                                        <div><b data-meal-total="dinner">0 kcal</b><button
+                                                aria-label="Agregar a la cena" data-add-meal="dinner"
+                                                type="button">＋</button></div>
+                                    </div>
+                                    <div class="meal-items" data-meal-items="dinner"></div>
+                                </article>
+                                <article class="meal-card compact-meal" data-meal="extras">
+                                    <div class="meal-card-head">
+                                        <div><span>05</span>
+                                            <h3>Snacks</h3>
+                                        </div>
+                                        <div><b data-meal-total="extras">0 kcal</b><button aria-label="Agregar snack"
+                                                data-add-meal="extras" type="button">＋</button></div>
+                                    </div>
+                                    <div class="meal-items" data-meal-items="extras"></div>
+                                </article>
+                            </div>
+                            <div class="records-sidebar">
+                                <aside class="diary-summary">
+                                    <div class="diary-total">
+                                        <span>Calorías consumidas</span>
+                                        <strong id="diary-calories">0</strong>
+                                        <small id="diary-remaining">— kcal disponibles</small>
+                                    </div>
+                                    <div aria-label="Progreso diario de calorías y macros" class="diary-progress">
+                                        <div><span>Calorías</span><b id="diary-calorie-progress">0 / —</b><i><em
+                                                    id="diary-calorie-bar"></em></i></div>
+                                        <div><span>Proteína</span><b id="diary-protein-progress">0 / — g</b><i><em
+                                                    id="diary-protein-bar"></em></i></div>
+                                        <div><span>Grasas</span><b id="diary-fat-progress">0 / — g</b><i><em
+                                                    id="diary-fat-bar"></em></i></div>
+                                        <div><span>Carbohidratos</span><b id="diary-carb-progress">0 / — g</b><i><em
+                                                    id="diary-carb-bar"></em></i></div>
+                                    </div>
+                                    <button class="finish-day-button" id="finish-day" type="button">Terminar
+                                        día</button>
+                                </aside>
+                                <div class="diary-quick-tools" aria-label="Accesos rápidos de biblioteca">
+                                    <button class="secondary-action" id="sidebar-new-food" type="button">Nuevo
+                                        alimento</button>
+                                    <button class="secondary-action" id="sidebar-open-library" type="button">Editar
+                                        recetas y alimentos</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="diary-view" hidden="" id="diary-chart-view">
+                        <div class="calorie-chart-toolbar">
+                            <div>
+                                <p class="eyebrow">BALANCE DIARIO</p>
+                                <h3>Lo consumido frente al objetivo.</h3>
+                            </div>
+                            <div aria-label="Rango de la gráfica de calorías" class="calorie-range">
+                                <button data-calorie-range="7" type="button">7 días</button>
+                                <button class="active" data-calorie-range="14" type="button">14 días</button>
+                                <button data-calorie-range="30" type="button">30 días</button>
+                            </div>
+                        </div>
+                        <div class="calorie-chart-wrap"><canvas aria-label="Calorías consumidas y objetivo por día"
+                                id="calorie-chart"></canvas>
+                            <p class="chart-empty" hidden="" id="calorie-chart-empty">Registrá comidas en distintos días
+                                para comparar el balance.</p>
+                        </div>
+                        <div class="calorie-chart-key"><span><i></i>Consumidas</span><span><i></i>Objetivo</span><span
+                                id="calorie-chart-summary">—</span></div>
+                    </div>
+                    <div class="day-reading" hidden="" id="day-reading">
+                        <div>
+                            <p class="eyebrow inverted">SI TODOS LOS DÍAS FUERAN COMO HOY</p>
+                            <h3 id="day-projection-title">Completá el día para ver una proyección.</h3>
+                            <p id="day-projection-text">La cuenta compara las calorías registradas con tu mantenimiento
+                                estimado. Es orientativa y no reemplaza la tendencia de pesajes.</p>
+                        </div>
+                        <div class="day-reading-controls"><label><span>Proyectar a</span><select
+                                    id="day-projection-weeks">
+                                    <option value="4">4 semanas</option>
+                                    <option selected="" value="6">6 semanas</option>
+                                    <option value="8">8 semanas</option>
+                                    <option value="12">12 semanas</option>
+                                </select></label><button id="hide-day-summary" type="button">Ocultar cierre</button>
+                        </div>
+                    </div>
+                </section>
+            </section>
+            <section class="app-view" hidden="" id="progress-view">
+                <section class="progress-plan-overview">
+                    <article class="daily-panel progress-daily-panel">
+                        <div class="section-topline">
+                            <div>
+                                <p class="eyebrow" id="daily-eyebrow">OBJETIVOS DIARIOS</p>
+                                <h1 id="daily-title">Tus números de hoy.</h1>
+                            </div>
+                            <button aria-label="Información sobre objetivos diarios" class="help-dot light"
+                                data-tooltip="Son estimaciones iniciales. La parte más útil aparece al comparar varias semanas de pesajes con la proyección y recalibrar cuando corresponde."
+                                type="button">?</button>
+                        </div>
+                        <div class="calorie-core">
+                            <span>CALORÍAS</span>
+                            <strong id="target-calories">—</strong>
+                            <small>kcal por día</small>
+                        </div>
+                        <div aria-label="Objetivos diarios de macronutrientes" class="macro-board">
+                            <article class="macro-card protein-card">
+                                <div><span>Proteína</span><button aria-label="Información sobre proteína"
+                                        class="help-dot dark"
+                                        data-tooltip="En automático se calcula según tu peso y objetivo. En personalizado podés escribir directamente los gramos diarios."
+                                        type="button">?</button></div>
+                                <strong id="protein-grams">—</strong>
+                                <small id="protein-detail">—</small>
+                                <i id="protein-bar"></i>
+                            </article>
+                            <article class="macro-card fat-card">
+                                <div><span>Grasas</span><button aria-label="Información sobre grasas"
+                                        class="help-dot dark"
+                                        data-tooltip="En automático se usa una proporción moderada de las calorías. En personalizado podés fijar los gramos diarios."
+                                        type="button">?</button></div>
+                                <strong id="fat-grams">—</strong>
+                                <small id="fat-detail">—</small>
+                                <i id="fat-bar"></i>
+                            </article>
+                            <article class="macro-card carb-card">
+                                <div><span>Carbohidratos</span><button aria-label="Información sobre carbohidratos"
+                                        class="help-dot dark"
+                                        data-tooltip="En automático completan las calorías restantes. En personalizado podés definirlos junto con proteína y grasas."
+                                        type="button">?</button></div>
+                                <strong id="carb-grams">—</strong>
+                                <small id="carb-detail">—</small>
+                                <i id="carb-bar"></i>
+                            </article>
+                        </div>
+                        <div class="daily-meta">
+                            <div><span>Mantenimiento estimado</span><b id="maintenance-calories">—</b></div>
+                            <div><span>Ajuste del objetivo</span><b id="calorie-adjustment">—</b></div>
+                            <div><span>Fórmula</span><b id="formula-name">—</b></div>
+                            <div><span>Actividad</span><b id="activity-name">—</b></div>
+                        </div>
+                        <div aria-label="Resumen de peso actual" class="progress-weight-strip">
+                            <div><span>Último peso</span><b id="current-weight">—</b></div>
+                            <div><span>Tendencia</span><b id="trend-weight">—</b></div>
+                            <div><span>Ritmo reciente</span><b id="observed-rate">—</b></div>
+                            <div><span>Grasa actual</span><b id="current-body-fat">—</b></div>
+                        </div>
+                        <p class="inline-note" id="macro-balance-note"></p>
+                        <section class="objective-plan-summary">
+                            <div class="plan-copy">
+                                <p class="eyebrow" id="plan-kicker">PLAN ACTUAL</p>
+                                <h2 id="plan-title">—</h2>
+                                <p id="plan-description">—</p>
+                            </div>
+                            <div class="plan-facts">
+                                <div><span>Objetivo</span><b id="target-weight">—</b></div>
+                                <div><span>Fecha pedida</span><b id="target-date">—</b></div>
+                                <div><span>Fecha estimada para el objetivo</span><b id="estimated-date">—</b></div>
+                                <div><span>Ritmo usado</span><b id="required-rate">—</b></div>
+                            </div>
+                            <span class="signal" id="goal-status">—</span>
+                            <p class="guidance" id="goal-guidance"></p>
+                        </section>
+                    </article>
+                </section>
+                <section class="recalibration-panel" data-state="learning" id="recalibration-panel">
+                    <div aria-hidden="true" class="recalibration-symbol">Δ</div>
+                    <div class="recalibration-content">
+                        <p class="eyebrow" id="recalibration-kicker">GASTO ADAPTATIVO</p>
+                        <h2 id="recalibration-title">M.A.S.A. está aprendiendo de tus registros.</h2>
+                        <p id="recalibration-text">—</p>
+                        <div class="recalibration-facts" id="recalibration-facts"></div>
+                        <div aria-label="Progreso del modelo adaptativo" class="recalibration-progress"><i
+                                id="recalibration-progress-fill"></i></div>
+                        <small id="recalibration-note">El cálculo usa el consumo realmente registrado y la tendencia
+                            observada del peso.</small>
+                    </div>
+                    <button class="primary-action" hidden id="apply-recalibration" type="button">Revisar ajuste
+                        automático</button>
+                </section>
+                <section class="progress-section">
+                    <article class="chart-module">
+                        <div class="chart-title-row progress-chart-title-row">
+                            <div class="progress-chart-heading">
+                                <button aria-label="Ver gráfica anterior" class="progress-chart-arrow"
+                                    id="previous-progress-chart" type="button">‹</button>
+                                <div>
+                                    <p class="eyebrow inverted" id="progress-chart-eyebrow">PLAN VS REALIDAD</p>
+                                    <h2 id="progress-chart-title">Tu peso real frente al camino previsto.</h2>
+                                </div>
+                                <button aria-label="Ver gráfica siguiente" class="progress-chart-arrow"
+                                    id="next-progress-chart" type="button">›</button>
+                            </div>
+                            <p id="progress-chart-description">La línea sólida muestra tu tendencia. La línea punteada
+                                es el plan.</p>
+                        </div>
+                        <div class="chart-toolbar">
+                            <div class="chart-legend"><span class="legend-real" id="progress-legend-1">Peso
+                                    real</span><span class="legend-trend" id="progress-legend-2">Tendencia</span><span
+                                    class="legend-plan" id="progress-legend-3">Plan</span><span class="legend-goal"
+                                    id="progress-legend-4">Objetivo</span></div>
+                            <div aria-label="Rango visible de la gráfica" class="chart-range">
+                                <button data-chart-range="1m" type="button">1 mes</button>
+                                <button class="active" data-chart-range="3m" type="button">3 meses</button>
+                                <button data-chart-range="6m" type="button">6 meses</button>
+                                <button data-chart-range="all" type="button">Todo</button>
+                            </div>
+                        </div>
+                        <div class="chart-canvas-wrap"><canvas aria-label="Gráfica de progreso"
+                                id="progress-chart"></canvas>
+                            <p class="chart-empty" hidden="" id="progress-chart-empty">Todavía faltan datos para
+                                construir esta gráfica.</p>
+                        </div>
+                        <div aria-label="Elegir gráfica" class="progress-chart-index">
+                            <button aria-label="Peso frente al plan" class="active" data-progress-chart="weight"
+                                type="button">1</button>
+                            <button aria-label="Calorías consumidas" data-progress-chart="calories"
+                                type="button">2</button>
+                            <button aria-label="Promedio semanal de calorías" data-progress-chart="weekly"
+                                type="button">3</button>
+                        </div>
+                    </article>
+                    <aside class="insight-panel">
+                        <p class="eyebrow inverted">LECTURA PERSONALIZADA</p>
+                        <h2 id="chart-insight-title">La dirección importa más que un día aislado.</h2>
+                        <p id="chart-insight">—</p>
+                        <div class="insight-facts">
+                            <div><span id="insight-fact-label-1">Esperado hoy</span><b id="expected-today">—</b></div>
+                            <div><span id="insight-fact-label-2">Diferencia</span><b id="expected-difference">—</b>
+                            </div>
+                            <div><span id="insight-fact-label-3">Cambio total</span><b id="stat-change">—</b></div>
+                        </div>
+                        <small id="chart-insight-meta">—</small>
+                        <section aria-label="Datos del modelo" class="progress-model-data">
+                            <div class="progress-model-heading">
+                                <p class="eyebrow inverted">DATOS DEL MODELO</p>
+                                <p>Referencias auxiliares para interpretar el plan.</p>
+                            </div>
+                            <div class="model-data-grid compact">
+                                <div><span>IMC orientativo</span><b id="stat-bmi">—</b><small
+                                        id="stat-bmi-note">—</small></div>
+                                <div class="body-fat-reading"><span>Grasa corporal actual</span><b
+                                        id="stat-body-fat">—</b><small id="stat-body-fat-note">dato manual; no se estima
+                                        solo</small></div>
+                                <div><span>FFMI</span><b id="stat-ffmi">—</b><small>requiere un % de grasa
+                                        razonable</small></div>
+                                <div><span>Inicio del plan</span><b id="plan-start">—</b><small
+                                        id="plan-start-weight">—</small></div>
+                            </div>
+                        </section>
+                    </aside>
+                </section>
+                <section class="data-quality-panel" id="data-quality-tips">
+                    <div class="data-quality-heading">
+                        <p class="eyebrow">DATOS ÚTILES, RESULTADOS ÚTILES</p>
+                        <h2>La estimación mejora cuando registrás lo que realmente pasó.</h2>
+                        <p>M.A.S.A. puede ajustar sus cálculos, pero no puede corregir datos incompletos o cantidades
+                            aproximadas sistemáticamente.</p>
+                    </div>
+                    <div class="data-quality-grid">
+                        <article><span>01</span>
+                            <div><b>Pesá la comida cuando puedas</b>
+                                <p>Registrá la cantidad que efectivamente consumiste, no la porción que pensabas
+                                    servirte.</p>
+                            </div>
+                        </article>
+                        <article><span>02</span>
+                            <div><b>Pesate en condiciones parecidas</b>
+                                <p>Usá horarios y condiciones similares. Un pesaje aislado importa menos que la
+                                    tendencia.</p>
+                            </div>
+                        </article>
+                        <article><span>03</span>
+                            <div><b>Cerrá días razonablemente completos</b>
+                                <p>Omitir comidas hace que el consumo parezca menor y puede llevar a un reajuste
+                                    equivocado.</p>
+                            </div>
+                        </article>
+                        <article><span>04</span>
+                            <div><b>Datos incorrectos producen resultados incorrectos</b>
+                                <p>La herramienta calcula con lo que recibe: cuanto más fiel sea el registro, más útil
+                                    será la estimación.</p>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+            </section>
+        </section>
+    </main>
+    <footer class="site-footer">
+        <span>MASA</span>
+        <p>Una herramienta para entender las cuentas detrás del peso. No reemplaza una evaluación clínica individual.
+        </p>
+        <div class="footer-actions">
+            <button class="footer-about-button" id="open-about" type="button">Acerca de M.A.S.A.</button>
+            <a data-legal-document="privacy" href="./privacy.html">Privacidad y condiciones</a>
+            <a href="https://andresgonzalez.netlify.app/" rel="noopener" target="_blank">Más herramientas ↗</a>
+        </div>
+    </footer>
+    <div aria-labelledby="tips-title" aria-modal="true" class="modal compact-modal" hidden id="tips-modal"
+        role="dialog">
+        <div class="modal-backdrop" data-close-tips></div>
+        <article class="centered-modal-sheet tips-sheet">
+            <div class="settings-header">
+                <div>
+                    <p class="eyebrow">ANTES DE EMPEZAR</p>
+                    <h2 id="tips-title">La calidad del resultado depende de la calidad del registro.</h2>
+                </div>
+                <button aria-label="Cerrar" class="close-button" data-close-tips type="button">×</button>
+            </div>
+            <div class="tips-copy">
+                <article><span>01</span>
+                    <div><b>Pesá la comida siempre que sea posible.</b>
+                        <p>Ingresá lo que realmente consumiste. Una diferencia pequeña aislada no importa, pero repetir
+                            estimaciones incorrectas sí.</p>
+                    </div>
+                </article>
+                <article><span>02</span>
+                    <div><b>Registrá pesajes comparables.</b>
+                        <p>Intentá pesarte en condiciones similares y mirá la tendencia de varios días, no un valor
+                            suelto.</p>
+                    </div>
+                </article>
+                <article><span>03</span>
+                    <div><b>No cierres como completo un día incompleto.</b>
+                        <p>Las comidas omitidas hacen que el sistema estime un gasto distinto del real.</p>
+                    </div>
+                </article>
+                <article><span>04</span>
+                    <div><b>Datos equivocados generan ajustes equivocados.</b>
+                        <p>M.A.S.A. no adivina lo que faltó: calcula y se recalibra a partir de la información que le
+                            das.</p>
+                    </div>
+                </article>
+            </div>
+            <div class="profile-actions about-actions"><button class="primary-action" id="accept-tips"
+                    type="button">Entendido, empezar</button></div>
+        </article>
+    </div>
+    <div aria-labelledby="about-title" aria-modal="true" class="modal compact-modal" hidden id="about-modal"
+        role="dialog">
+        <div class="modal-backdrop" data-close-about></div>
+        <article class="about-sheet">
+            <div class="settings-header">
+                <div>
+                    <p class="eyebrow">POR QUÉ EXISTE M.A.S.A.</p>
+                    <h2 id="about-title">¿Cuál es el objetivo de M.A.S.A.?</h2>
+                </div>
+                <button aria-label="Cerrar" class="close-button" data-close-about type="button">×</button>
+            </div>
+            <div class="about-copy">
+                <p><strong>M.A.S.A. no busca ser una aplicación de nutrición ni decirte qué alimentos deberías
+                        consumir.</strong> Su objetivo es ayudarte a estimar cuántas calorías necesitás consumir para
+                    alcanzar un peso determinado, teniendo en cuenta tu peso actual, tu actividad física y el plazo que
+                    te propongas.</p>
+                <p>La aplicación parte de una estimación inicial y la compara con tus registros reales de comidas,
+                    ejercicio y peso. A medida que incorporás información, detecta si tu evolución se está alejando de
+                    lo previsto y reajusta las estimaciones para adaptarse mejor a tu cuerpo y a tu rutina.</p>
+                <p>La idea nació como una planilla personal. Registrando calorías y peso, y realizando pequeños ajustes
+                    sobre la marcha, fue posible anticipar con bastante precisión la evolución del peso durante varios
+                    meses y perder <strong>4,2 kg en tres meses</strong> sin realizar cambios extremos en la
+                    alimentación.</p>
+                <div class="about-mission">
+                    <p class="eyebrow inverted">MISIÓN</p>
+                    <p>Transformar ese método en una herramienta simple, clara y adaptable, que permita tomar decisiones
+                        basadas en datos reales en lugar de depender únicamente de fórmulas generales.</p>
+                </div>
+                <section class="about-math" aria-labelledby="about-math-title">
+                    <p class="eyebrow" id="about-math-title">MATEMÁTICAS DEL MODELO</p>
+                    <p>M.A.S.A. usa dos capas: una estimación inicial basada en fórmulas poblacionales y un gasto
+                        adaptativo que aprende de la relación entre tus ingestas y la tendencia del peso. Ningún pesaje
+                        aislado modifica el objetivo.</p>
+                    <div class="about-formulas">
+                        <article><b>1. Metabolismo en
+                                reposo</b><code>Mifflin: 10·P + 6,25·H − 5·E + S</code><code>Harris (M): 88,362 + 13,397·P + 4,799·H − 5,677·E</code><code>Harris (F): 447,593 + 9,247·P + 3,098·H − 4,330·E</code><code>Cunningham: 500 + 22·masa libre de grasa</code>
+                            <p>P es el peso en kg, H la altura en cm, E la edad y S vale +5 o −161 en Mifflin.
+                                Cunningham requiere una estimación de grasa corporal; sin ella se usa Mifflin.</p>
+                        </article>
+                        <article><b>2. Mantenimiento y meta
+                                inicial</b><code>Mantenimiento = RMR · factor de actividad + calibración</code><code>Objetivo = mantenimiento + (Δkg/sem · 7700 / 7)</code>
+                            <p>El signo de Δkg/sem depende de si se busca bajar, mantener o subir. El valor de 7700
+                                kcal/kg es una aproximación energética de trabajo, no una equivalencia exacta para cada
+                                persona.</p>
+                        </article>
+                        <article><b>3. Tendencia del peso</b><code>Tₙ = (1 − α) · Tₙ₋₁ + α · Pₙ; α base = 0,10</code>
+                            <p>El peso medido se suaviza con una media exponencial. Cuando faltan días, α se ajusta por
+                                el tiempo transcurrido para no tratar dos pesajes separados como días consecutivos.</p>
+                        </article>
+                        <article><b>4. Ritmo observado</b><code>r = pendiente de la regresión lineal sobre T</code>
+                            <p>La velocidad de cambio no se obtiene restando solamente el primer y último pesaje: se
+                                estima usando todos los puntos de la tendencia del período.</p>
+                        </article>
+                        <article><b>5. Gasto observado</b><code>Gₒ = ingesta media − r · 7700 / 7</code>
+                            <p>Con r expresado en kg por semana, el sistema infiere el gasto que mejor explica
+                                simultáneamente lo registrado y el cambio de peso.</p>
+                        </article>
+                        <article><b>6. Gasto adaptativo</b><code>Gₐ = (1 − β) · G anterior + β · Gₒ</code>
+                            <p>β aumenta con más días útiles, más pesajes, mayor duración y más días marcados como
+                                completos. Esto permite aprender sin reemplazar bruscamente la estimación previa.</p>
+                        </article>
+                        <article><b>7. Revisión semanal</b><code>Objetivo nuevo = Gₐ + ajuste por meta</code>
+                            <p>La app muestra el progreso, la confianza y la próxima fecha de revisión. Los cambios
+                                requieren confirmación, se separan por siete días y se limitan a ±250 kcal por revisión.
+                                Para volver a revisar exige al menos tres días de ingesta y dos pesajes nuevos.</p>
+                        </article>
+                        <article><b>8.
+                                Macronutrientes</b><code>Proteína y carbohidratos: 4 kcal/g · Grasas: 9 kcal/g</code>
+                            <p>El modo balanceado reparte 20% proteína, 30% grasas y 50% carbohidratos. El modo atlético
+                                fija proteína y grasas según el peso, y asigna a carbohidratos la energía restante.</p>
+                        </article>
+                    </div>
+                    <p class="about-reference">El suavizado se inspira en <a
+                            href="https://www.fourmilab.ch/hackdiet/online/hdo.html" rel="noopener" target="_blank">The
+                            Hacker's Diet</a>. El enfoque de gasto inferido a partir de ingesta y peso también está
+                        relacionado con la metodología pública de <a href="https://macrofactor.com/expenditure-v3/"
+                            rel="noopener" target="_blank">MacroFactor</a>. Las reglas de confianza, los límites y la
+                        implementación son propios de M.A.S.A.</p>
+                </section>
+                <section class="about-credits" aria-labelledby="about-credits-title">
+                    <p class="eyebrow" id="about-credits-title">CRÉDITOS DE DATOS</p>
+                    <p>La biblioteca de alimentos incluida en M.A.S.A. fue elaborada a partir de <a
+                            href="https://www.opennutrition.app/" rel="noopener" target="_blank"><strong>OpenNutrition
+                                Foods</strong></a>. Para integrarla a la aplicación se adaptaron nombres, unidades y
+                        estructura de búsqueda. Parte de los datos de OpenNutrition procede de <a
+                            href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts
+                            contributors</a>.</p>
+                    <p>OpenNutrition Foods se distribuye bajo la <a
+                            href="https://opendatacommons.org/licenses/odbl/1-0/" rel="noopener" target="_blank">Open
+                            Database License 1.0 (ODbL)</a>. Los derechos sobre los contenidos individuales se ofrecen
+                        bajo una licencia de contenidos de base de datos modificada. La información completa se
+                        encuentra en el archivo <a href="DATA-LICENSE.md" target="_blank">DATA-LICENSE.md</a> incluido
+                        con M.A.S.A.</p>
+                </section>
+                <section class="about-legal" aria-labelledby="about-legal-title">
+                    <p class="eyebrow" id="about-legal-title">PRIVACIDAD Y CONDICIONES</p>
+                    <p>Consultá qué datos utiliza M.A.S.A., cómo podés eliminarlos y las reglas de uso del servicio.</p>
+                    <div class="about-legal-links"><a data-legal-document="privacy" href="./privacy.html">Política
+                            de privacidad ↗</a><a data-legal-document="terms" href="./terms.html">Condiciones del
+                            servicio ↗</a></div>
+                </section>
+                <section class="about-limitations" aria-labelledby="about-limitations-title">
+                    <p class="eyebrow" id="about-limitations-title">LIMITACIONES</p>
+                    <p>Los valores nutricionales son estimaciones obtenidas de bases de datos públicas y pueden variar
+                        según la marca, la preparación y la porción real. M.A.S.A. los utiliza como referencia para
+                        estimar el consumo energético y recalibrar la evolución del peso; no como información clínica ni
+                        como sustituto del etiquetado de cada producto.</p>
+                </section>
+            </div>
+            <div class="profile-actions about-actions"><button class="primary-action" id="accept-about"
+                    type="button">Entendido, empezar</button></div>
+        </article>
+    </div>
+    <div aria-labelledby="legal-modal-title" aria-modal="true" class="modal compact-modal" hidden id="legal-modal"
+        role="dialog">
+        <div class="modal-backdrop" data-close-legal></div>
+        <article class="legal-modal-sheet">
+            <header class="legal-modal-header">
+                <div>
+                    <p class="eyebrow">INFORMACIÓN LEGAL</p>
+                    <h2 id="legal-modal-title">Política de privacidad</h2>
+                </div>
+                <button aria-label="Cerrar información legal" class="close-button" id="close-legal"
+                    type="button">×</button>
+            </header>
+            <nav aria-label="Documentos legales" class="legal-modal-tabs">
+                <button class="active" data-legal-document="privacy" type="button">Privacidad</button>
+                <button data-legal-document="terms" type="button">Condiciones</button>
+            </nav>
+            <div aria-live="polite" class="legal-modal-content" id="legal-modal-content">
+                <p class="legal-modal-loading">Cargando documento…</p>
+            </div>
+        </article>
+    </div>
+    <div aria-labelledby="settings-title" aria-modal="true" class="modal" hidden="" id="settings-modal" role="dialog">
+        <div class="modal-backdrop" data-close-settings=""></div>
+        <div class="settings-sheet">
+            <div class="settings-topbar">
+                <div class="settings-header">
+                    <div>
+                        <p class="eyebrow">CONFIGURACIÓN PERSONAL</p>
+                        <h2 id="settings-title">Tu modelo y tus datos</h2>
+                        <p>Los ajustes cotidianos quedan fuera de la pantalla principal.</p>
+                    </div>
+                    <div class="settings-header-actions">
+                        <button class="settings-logout-button" hidden id="logout-button" type="button">Cerrar
+                            sesión</button>
+                        <button aria-label="Cerrar" class="close-button" id="close-settings" type="button">×</button>
+                    </div>
+                </div>
+                <nav aria-label="Secciones de configuración" class="settings-tabs">
+                    <button class="active" data-settings-tab="profile" type="button">Perfil y plan</button>
+                    <button data-settings-tab="account" type="button">Cuenta y datos</button>
+                </nav>
+            </div>
+            <section class="settings-view" id="settings-profile">
 
-<form id="profile-form" novalidate="">
-<section class="form-block">
-<div class="form-block-title"><span>01</span><div><h3>Datos base</h3><p>Lo mínimo para calcular una referencia inicial.</p></div></div>
-<div class="form-grid base-data-grid">
-<label><span>Fecha de nacimiento</span><div class="date-control"><input autocomplete="bday" class="date-input" inputmode="numeric" maxlength="10" name="birthDate" placeholder="dd/mm/aaaa" required="" type="text"/><button aria-label="Elegir fecha de nacimiento" class="calendar-trigger" data-calendar-for="birthDate" type="button">▦</button><input aria-hidden="true" class="native-date-picker" data-native-date="birthDate" tabindex="-1" type="date"/></div></label>
-<label><span>Sexo usado por la fórmula</span><select name="sex" required=""><option value="male">Masculino</option><option value="female">Femenino</option></select></label>
-<label><span>Altura</span><div class="unit-input"><input name="heightCm" required="" step="1" type="number" min="120" max="230" inputmode="decimal"/><i>cm</i></div></label>
-<label><span>Peso actual</span><div class="unit-input"><input name="currentWeight" required="" step="0.1" type="number" min="20" max="400" inputmode="decimal"/><i>kg</i></div><small>Se registra automáticamente con la fecha de hoy.</small></label>
-<label>
-<span>Grasa corporal <small>opcional</small> <button aria-label="Información sobre grasa corporal" class="help-dot inline" data-tooltip="Dejala vacía si no tenés una medición razonable. Solo es necesaria para Cunningham, FFMI o un objetivo de porcentaje de grasa." type="button">?</button></span>
-<div class="unit-input"><input name="bodyFat" placeholder="No lo sé" step="0.1" type="number" min="1" max="75" inputmode="decimal"/><i>%</i></div>
-</label>
-</div>
-</section>
-<section class="form-block">
-<div class="form-block-title"><span>02</span><div><h3>Fórmula y actividad</h3><p>Elegí la estimación de base y describí tu rutina completa.</p></div></div>
-<fieldset class="formula-options">
-<legend>Fórmula de calorías <button aria-label="Información sobre fórmulas" class="help-dot inline" data-tooltip="Ninguna fórmula conoce exactamente tu gasto. Elegí una referencia y dejá que la tendencia de varias semanas ayude a calibrarla." type="button">?</button></legend>
-<label class="choice-card"><input checked="" name="formula" type="radio" value="mifflin"/><span><b>Mifflin–St Jeor</b><small>Opción general y conservadora para la mayoría de adultos.</small></span></label>
-<label class="choice-card"><input name="formula" type="radio" value="harris"/><span><b>Harris–Benedict revisada</b><small>Alternativa clásica; suele producir un valor algo diferente.</small></span></label>
-<label class="choice-card" id="cunningham-choice"><input name="formula" type="radio" value="cunningham"/><span><b>Cunningham</b><small>Usa masa libre de grasa; tiene más sentido si ese dato es razonable.</small></span></label>
-</fieldset>
-<label class="wide-field">
-<span>Factor de actividad <button aria-label="Información sobre factor de actividad" class="help-dot inline" data-tooltip="Representa trabajo, pasos, tareas y entrenamiento durante toda la semana. No elijas un factor alto solo por entrenar una hora si el resto del día estás sentado." type="button">?</button></span>
-<select name="activityFactor" required="">
-<option value="1.2">1,20 · Bajo — trabajo sentado y poco ejercicio</option>
-<option value="1.35">1,35 · Ligero — mayormente sentado, 2–3 sesiones</option>
-<option value="1.5">1,50 · Medio — movimiento frecuente o 3–5 sesiones</option>
-<option value="1.7">1,70 · Alto — trabajo físico o entrenamiento exigente</option>
-<option value="1.9">1,90 · Muy alto — trabajo físico y entrenamiento intenso diario</option>
-</select>
-</label>
-<div class="explanation-box" id="activity-explanation"></div>
-</section>
-<section class="form-block">
-<div class="form-block-title"><span>03</span><div><h3>Objetivo</h3><p>Qué querés alcanzar y, por separado, para cuándo.</p></div></div>
-<div class="form-grid">
-<label><span>Tipo de objetivo</span><select name="goalType"><option value="loss">Bajar</option><option value="maintain">Mantener</option><option value="gain">Subir</option></select></label>
-<label><span>Medir objetivo por</span><select name="goalMetric"><option value="weight">Peso corporal</option><option value="bodyFat">Porcentaje de grasa</option></select></label>
-<label id="goal-weight-field"><span>Peso objetivo</span><div class="unit-input"><input name="goalWeight" step="0.1" type="number" min="20" max="400" inputmode="decimal"/><i>kg</i></div></label>
-<label hidden="" id="goal-bodyfat-field"><span>Grasa objetivo</span><div class="unit-input"><input name="goalBodyFat" step="0.1" type="number" min="1" max="75" inputmode="decimal"/><i>%</i></div></label>
-<label><span>Fecha objetivo</span><div class="date-control"><input autocomplete="off" class="date-input" inputmode="numeric" maxlength="10" name="goalDate" placeholder="dd/mm/aaaa" type="text"/><button aria-label="Elegir fecha objetivo" class="calendar-trigger" data-calendar-for="goalDate" type="button">▦</button><input aria-hidden="true" class="native-date-picker" data-native-date="goalDate" tabindex="-1" type="date"/></div><small>Si escribís solo día y mes, se completa el año actual.</small></label>
-<label><span>Ritmo semanal <button aria-label="Información sobre ritmo semanal" class="help-dot inline" data-tooltip="En automático se usa la fecha si es razonable. Como referencia, la app marca 0,5–1% semanal al bajar y 0,25–0,5% al subir." type="button">?</button></span><select name="rateMode"><option value="auto">Automático</option><option value="manual">Manual</option></select></label>
-<label hidden="" id="manual-rate-field"><span>Ritmo elegido</span><div class="unit-input"><input name="weeklyRatePct" step="0.05" type="number" min="0" max="2" inputmode="decimal"/><i>%</i></div></label>
-</div>
-<div class="explanation-box" id="goal-explanation"></div>
-</section>
-<section class="form-block">
-<div class="form-block-title"><span>04</span><div><h3>Macros</h3><p>Elegí una lógica de distribución. El objetivo calórico se calcula por separado.</p></div></div>
-<fieldset class="formula-options macro-mode-options">
-<legend>Modo de macronutrientes</legend>
-<label class="choice-card"><input name="macroMode" type="radio" value="balanced"/><span><b>Balanceado</b><small>20% proteína, 30% grasas y 50% carbohidratos, similar a una configuración general.</small></span></label>
-<label class="choice-card"><input checked="" name="macroMode" type="radio" value="athletic"/><span><b>Atlético</b><small>Proteína y grasas según peso corporal; carbohidratos con la energía restante.</small></span></label>
-<label class="choice-card"><input name="macroMode" type="radio" value="custom"/><span><b>Personalizado</b><small>Definí manualmente el porcentaje de cada macronutriente.</small></span></label>
-</fieldset>
-<div class="form-grid manual-macro-grid percent-macro-grid" hidden="" id="custom-macro-fields">
-<label><span>Proteína <button aria-label="Información sobre proteína personalizada" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de proteína. Cada gramo aporta 4 kcal." type="button">?</button></span><div class="unit-input"><input name="proteinPct" step="1" type="number" min="5" max="70" inputmode="decimal"/><i>%</i></div></label>
-<label><span>Grasas <button aria-label="Información sobre grasas personalizadas" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de grasas. Cada gramo aporta 9 kcal." type="button">?</button></span><div class="unit-input"><input name="fatPct" step="1" type="number" min="10" max="70" inputmode="decimal"/><i>%</i></div></label>
-<label><span>Carbohidratos <button aria-label="Información sobre carbohidratos personalizados" class="help-dot inline" data-tooltip="Porcentaje de calorías provenientes de carbohidratos. Cada gramo aporta 4 kcal." type="button">?</button></span><div class="unit-input"><input name="carbPct" step="1" type="number" min="5" max="80" inputmode="decimal"/><i>%</i></div></label>
-</div>
-<div class="macro-sum-line" hidden="" id="macro-sum-line"><span>Distribución total</span><b id="macro-percent-sum">100%</b><small id="macro-mode-label">atlético</small></div>
-<div class="explanation-box" id="macro-explanation"></div>
-</section>
-<section class="form-block automatic-adjustment-block">
-<div class="form-block-title"><span>05</span><div><h3>Gasto adaptativo</h3><p>Compara ingestas y tendencia de peso, y habilita una revisión gradual cada siete días.</p></div></div>
-<div class="automatic-adjustment-card">
-<div class="automatic-adjustment-copy">
-<p class="eyebrow">MODELO OBSERVADO</p>
-<h4>La fórmula inicia el cálculo; tus resultados reales lo corrigen.</h4>
-<p id="automatic-adjustment-summary">M.A.S.A. necesita varias semanas de datos para estimar tu gasto real.</p>
-</div>
-<div class="automatic-adjustment-facts" id="automatic-adjustment-facts"><div><span>Gasto adaptativo</span><b>Aprendiendo</b></div><div><span>Confianza</span><b>Inicial</b></div><div><span>Registro acumulado</span><b>0 días</b></div><div><span>Revisión</span><b>Faltan registros</b></div></div>
-<button class="primary-action" hidden id="run-auto-adjustment" type="button">Revisar ajuste automático</button>
-<small>Usa hasta 42 días, una tendencia exponencial del peso, regresión lineal y correcciones de hasta 250 kcal. Los días completos aumentan la confianza y cada revisión requiere registros nuevos.</small>
-<p class="feedback" id="automatic-adjustment-feedback" role="status"></p>
-</div>
-</section>
-<section class="preview-block">
-<div><span>Mantenimiento</span><b id="preview-maintenance">—</b></div>
-<div><span>Objetivo diario</span><b id="preview-calories">—</b></div>
-<div><span>Proteína</span><b id="preview-protein">—</b></div>
-<div><span>Grasas</span><b id="preview-fat">—</b></div>
-<div><span>Carbohidratos</span><b id="preview-carbs">—</b></div>
-<div><span>Fecha estimada para el objetivo</span><b id="preview-date">—</b></div>
-</section>
-<p class="feedback" id="profile-feedback" role="status"></p>
-<div class="profile-actions settings-sticky-actions action-pair">
-<button class="secondary-action" id="cancel-profile" type="button">Cancelar</button>
-<button class="primary-action" type="submit">Guardar cambios</button>
-</div>
-</form>
-</section>
-<section class="settings-view" hidden="" id="settings-account">
-<section class="form-block account-overview-block">
-<div class="form-block-title"><span>01</span><div><h3>Cuenta</h3><p>Tu identidad visible, acceso y seguridad en un solo lugar.</p></div></div>
-<form class="account-identity-form" id="account-identity-form">
-<label><span>Nombre <small>opcional</small></span><input autocomplete="name" id="account-display-name" maxlength="60" name="displayName" type="text"/></label>
-<div class="account-email-compact"><span>Correo de la cuenta</span><b id="security-account-email">—</b></div>
-<button class="secondary-action" type="submit">Guardar nombre</button>
-</form>
-<p class="feedback" id="account-profile-feedback" role="status"></p>
-<button aria-expanded="false" class="history-manager-toggle account-password-toggle" id="toggle-account-password" type="button">
-<span><b>Acceso y contraseña</b><small id="account-security-description">Cambiá la contraseña solamente cuando lo necesites.</small></span>
-<i aria-hidden="true">＋</i>
-</button>
-<div class="account-password-manager" hidden="" id="account-password-manager">
-<p class="account-provider-note" hidden id="account-provider-note"></p>
-<form class="account-password-form" id="account-password-form">
-<label><span>Contraseña actual</span><div class="password-field"><input autocomplete="current-password" minlength="8" name="currentPassword" required="" type="password" maxlength="128"/><button aria-label="Mostrar contraseña actual" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
-<label><span>Nueva contraseña</span><div class="password-field"><input autocomplete="new-password" name="newPassword" required="" type="password" maxlength="128" minlength="10"/><button aria-label="Mostrar nueva contraseña" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
-<label><span>Repetir nueva contraseña</span><div class="password-field"><input autocomplete="new-password" name="confirmPassword" required="" type="password" maxlength="128" minlength="10"/><button aria-label="Mostrar contraseña repetida" aria-pressed="false" class="password-toggle" data-password-toggle type="button"></button></div></label>
-<div class="account-security-actions"><button class="primary-action" type="submit">Cambiar contraseña</button></div>
-</form>
-<p class="feedback" id="account-security-feedback" role="status"></p>
-</div>
-</section>
-<section class="form-block account-data-block">
-<div class="form-block-title"><span>02</span><div><h3>Datos y respaldos</h3><p>Importá, exportá o corregí tus registros desde la misma sección de cuenta.</p></div></div>
-<div class="data-tools-grid">
-<article class="data-tool">
-<span>01</span><h3>Pesajes</h3><p>Importá o exportá tu historial en Excel. Los días repetidos se actualizan y la plantilla usa fechas reales.</p>
-<div class="data-tool-actions"><button class="secondary-action" id="import-history" type="button">Importar Excel</button><button class="secondary-action" id="export-weights" type="button">Exportar Excel</button></div>
-<a class="text-link" download="" href="plantilla-pesajes.xlsx">Descargar plantilla Excel</a>
-</article>
-<article class="data-tool intake-data-tool">
-<span>02</span><h3>Consumo de calorías</h3><p>Exportá o importá el diario en Excel. Incluye una hoja con cada ingesta y otra con el resumen por día.</p>
-<div class="data-tool-actions"><button class="secondary-action" id="export-intakes" type="button">Exportar Excel</button><button class="secondary-action" id="import-intakes" type="button">Importar Excel</button></div>
-<a class="text-link" download="" href="plantilla-ingestas.xlsx">Descargar plantilla de ingestas</a>
-</article>
-<article class="data-tool library-data-tool">
-<span>03</span><h3>Recetas y alimentos propios</h3><p>Guardá o recuperá en JSON las recetas y los cambios que hiciste en tu biblioteca, sin importar el resto del perfil.</p>
-<div class="data-tool-actions"><button class="secondary-action" id="import-library" type="button">Importar biblioteca</button><button class="secondary-action" id="export-library" type="button">Exportar biblioteca</button></div>
-</article>
-</div>
-<button aria-expanded="false" class="history-manager-toggle" id="toggle-history-manager" type="button">
-<span><b>Gestionar pesajes</b><small id="history-count">0 registros · corregir o eliminar</small></span><i aria-hidden="true">＋</i>
-</button>
-<div class="history-manager" hidden="" id="history-manager">
-<div class="history-heading"><div><p class="eyebrow">GESTIONAR PESAJES</p><h3>Corregir o eliminar un registro</h3></div></div>
-<label class="history-date-picker"><span>Fecha ingresada</span><select id="history-date-select" aria-label="Elegir pesaje por fecha"></select></label>
-<div class="history-list" id="history-list"></div>
-<p class="empty-message" hidden="" id="history-empty">No hay pesajes cargados.</p>
-</div>
-<section class="reset-data-panel" aria-labelledby="reset-data-title">
-<div><p class="eyebrow">ZONA DE BORRADO</p><h3 id="reset-data-title">Empezar de nuevo</h3><p>Elimina perfil, objetivo, pesajes, alimentos propios, recetas y todos los registros diarios de esta instalación.</p></div>
-<button class="danger-action" id="start-over" type="button">Borrar todos los datos</button>
-</section>
-</section>
-</section>
-</div>
-</div>
-<div aria-labelledby="meal-picker-title" aria-modal="true" class="modal compact-modal" hidden="" id="meal-picker-modal" role="dialog">
-<div class="modal-backdrop" data-close-meal-picker=""></div>
-<div class="meal-picker-card">
-<div class="settings-header"><div><p class="eyebrow">NUEVA INGESTA</p><h2 id="meal-picker-title">¿A qué comida pertenece?</h2><p>Elegí la comida. La ingesta se guarda en la fecha que estás viendo.</p></div><button aria-label="Cerrar" class="close-button" id="close-meal-picker" type="button">×</button></div>
-<div class="meal-picker-grid">
-<button data-pick-meal="breakfast" type="button"><span>01</span><b>Desayuno</b></button>
-<button data-pick-meal="lunch" type="button"><span>02</span><b>Almuerzo</b></button>
-<button data-pick-meal="snack" type="button"><span>03</span><b>Merienda</b></button>
-<button data-pick-meal="dinner" type="button"><span>04</span><b>Cena</b></button>
-<button class="secondary-meal" data-pick-meal="extras" type="button"><span>05</span><b>Snack</b></button>
-</div>
-</div>
-</div><div aria-labelledby="food-modal-title" aria-modal="true" class="modal compact-modal" hidden="" id="food-modal" role="dialog">
-<div class="modal-backdrop" data-close-food=""></div>
-<div class="food-sheet">
-<div class="settings-header">
-<div><p class="eyebrow">AGREGAR AL REGISTRO</p><h2 id="food-modal-title">Elegí cómo cargarlo</h2><p id="food-meal-label">—</p><button class="change-meal-button" id="change-active-meal" type="button">Cambiar comida</button></div>
-<button aria-label="Cerrar" class="close-button" id="close-food" type="button">×</button>
-</div>
-<p class="food-add-feedback" hidden id="food-add-feedback" role="status"></p>
-<div class="food-search-row">
-<label class="food-search food-search-always"><span>Buscar alimentos o recetas</span><input id="food-search-input" placeholder="Ej.: arroz, huevo, café..." type="search" maxlength="120" autocomplete="off"/></label>
-<div class="food-scan-actions">
-<button class="primary-action food-scan-action" id="scan-barcode-food" type="button">Código</button>
-<button class="secondary-action food-scan-action" data-native-only id="scan-label-food" type="button">Rótulo</button>
-</div>
-</div>
-<div class="food-library-actions food-global-actions"><button class="secondary-action" id="new-custom-food" type="button">Crear alimento</button><button class="secondary-action" id="new-recipe" type="button">Crear receta</button></div>
-<p class="data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a>.</p>
-<section class="food-search-results-panel" hidden id="food-search-panel">
-<p class="mode-help">Resultados de búsqueda. Al borrar el texto volvés automáticamente a Recientes.</p>
-<div class="food-results" id="food-results"></div>
-</section>
-<div class="food-browse-area" id="food-browse-area">
-<div class="food-mode-tabs">
-<button class="active" data-food-mode="recent" type="button">Recientes</button>
-<button data-food-mode="frequent" type="button">Frecuentes</button>
-<button data-food-mode="recipe" type="button">Recetas</button>
-<button data-food-mode="quick" type="button">Solo calorías</button>
-</div>
-<section class="food-mode" id="food-mode-recent">
-<p class="mode-help">Los últimos alimentos agregados al registro, ordenados desde el más reciente.</p>
-<div class="food-results" id="recent-food-results"></div>
-</section>
-<section class="food-mode" hidden="" id="food-mode-frequent">
-<p class="mode-help">Tus alimentos más consumidos, ordenados por cantidad de veces.</p>
-<div class="food-results" id="frequent-food-results"></div>
-</section>
-<section class="food-mode" hidden="" id="food-mode-recipe">
-<div class="food-results" id="recipe-results"></div>
-<div class="food-library-actions"><button class="secondary-action" id="new-recipe-secondary" type="button">Crear una receta</button></div>
-</section>
-<section class="food-mode" hidden="" id="food-mode-quick">
-<form class="compact-form" id="quick-calorie-form">
-<label><span>Descripción</span><input name="name" placeholder="Ej.: cena fuera" required="" type="text" maxlength="120"/></label>
-<label><span>Calorías</span><div class="unit-input"><input name="calories" required="" step="1" type="number" min="1" max="10000" inputmode="decimal"/><i>kcal</i></div></label>
-<button class="primary-action" type="submit">Agregar</button>
-</form>
-</section>
-</div>
-</div>
-</div>
-<div aria-labelledby="barcode-title" aria-modal="true" class="modal compact-modal" hidden id="barcode-modal" role="dialog">
-<div class="modal-backdrop" data-close-barcode></div>
-<div class="centered-modal-sheet barcode-sheet">
-<div class="settings-header"><div><p class="eyebrow">CÓDIGO DE BARRAS</p><h2 id="barcode-title">Escanear producto</h2><p>La cámara lee el código y M.A.S.A. busca primero en tu biblioteca y luego en Open Food Facts.</p></div><button aria-label="Cerrar" class="close-button" id="close-barcode" type="button">×</button></div>
-<div class="barcode-camera"><video autoplay muted playsinline id="barcode-video"></video><div aria-hidden="true" class="barcode-guide"></div></div>
-<p class="barcode-status" id="barcode-status" role="status">Preparando cámara…</p>
-<div class="barcode-tools"><button aria-pressed="false" class="secondary-action" hidden id="barcode-torch" type="button">Linterna</button></div>
-<form class="barcode-manual-form" id="barcode-manual-form"><label><span>Ingresar código manualmente</span><input autocomplete="off" name="barcode" placeholder="Ej.: 3017620422003" required type="text" minlength="8" maxlength="14" pattern="[0-9]{8,14}" inputmode="numeric"/></label><button class="primary-action" type="submit">Buscar código</button></form>
-<p class="data-attribution">Datos de productos por <a href="https://world.openfoodfacts.org/" rel="noopener" target="_blank">Open Food Facts</a>.</p>
-</div></div>
-<div aria-labelledby="food-editor-title" aria-modal="true" class="modal compact-modal" hidden="" id="food-editor-modal" role="dialog">
-<div class="modal-backdrop" data-close-food-editor=""></div>
-<div class="food-sheet small-sheet">
-<div class="settings-header">
-<div><p class="eyebrow">BIBLIOTECA PERSONAL</p><h2 id="food-editor-title">Nuevo alimento</h2><p id="food-editor-description">Guardalo una vez y reutilizalo en registros y recetas.</p></div>
-<div class="food-editor-header-actions">
-<button aria-label="Cerrar" class="close-button" id="close-food-editor" type="button">×</button>
-<button aria-label="Volver a escanear" class="rescan-icon-button" hidden id="rescan-food-editor" title="Volver a escanear" type="button">↻</button>
-</div>
-</div>
-<form class="form-grid editor-grid" id="food-editor-form">
-<div class="food-editor-scan-row full-field">
-<button class="secondary-action" id="scan-barcode-editor" type="button"><span aria-hidden="true">▥</span> Código de barras</button>
-<button class="secondary-action" data-native-only id="scan-label-editor" type="button"><span aria-hidden="true">▤</span> Rótulo nutricional</button>
-</div>
-<label class="full-field"><span>Nombre</span><input name="name" required="" type="text" maxlength="120"/></label>
-<input name="barcode" type="hidden" minlength="8" maxlength="14" pattern="[0-9]{8,14}" inputmode="numeric"/>
-<label><span>Marca <small>(opcional)</small></span><input name="brand" type="text" maxlength="120"/></label>
-<p class="explanation-box full-field" hidden id="food-editor-source-note"></p>
-<label><span>Calorías</span><div class="unit-input"><input name="calories" required="" step="1" type="number" min="0" max="10000" inputmode="decimal"/><i>kcal</i></div></label>
-<label><span>Cantidad base</span><input name="servingAmount" required="" step="any" type="number" value="1" min="0.01" max="100000" inputmode="decimal"/></label>
-<label><span>Unidad</span><select name="servingUnit" required>
-<option value="g">gramos (g)</option>
-<option value="kg">kilogramos (kg)</option>
-<option value="ml">mililitros (ml)</option>
-<option value="l">litros (l)</option>
-<option value="unit">unidad</option>
-<option value="serving">porción</option>
-<option value="cup">taza</option>
-<option value="tablespoon">cucharada</option>
-<option value="teaspoon">cucharadita</option>
-<option value="plate">plato</option>
-<option value="slice">feta</option>
-<option value="package">paquete</option>
-<option value="custom">otra unidad…</option>
-</select></label>
-<label class="full-field custom-unit-field" hidden><span>Nombre de la unidad</span><input name="servingUnitCustom" placeholder="Ej.: scoop, barra, vaso..." type="text" maxlength="40"/></label>
-<p class="field-note full-field">Las calorías y los macros ingresados corresponden a esa cantidad base.</p>
-<section class="equivalence-editor full-field" aria-labelledby="food-equivalence-title">
-<div class="equivalence-editor-head"><div><h3 id="food-equivalence-title">Unidades y equivalencias</h3><p>Agregá formas alternativas de registrar el alimento, por ejemplo: 1 unidad = 200 g.</p></div><button class="secondary-action" id="add-food-equivalence" type="button">Agregar equivalencia</button></div>
-<div class="equivalence-list" id="food-equivalence-list"></div>
-</section>
-<label><span>Proteína</span><div class="unit-input"><input name="protein" step="0.1" type="number" min="0" max="10000" inputmode="decimal"/><i>g</i></div></label>
-<label><span>Grasas</span><div class="unit-input"><input name="fat" step="0.1" type="number" min="0" max="10000" inputmode="decimal"/><i>g</i></div></label>
-<label><span>Carbohidratos</span><div class="unit-input"><input name="carbs" step="0.1" type="number" min="0" max="10000" inputmode="decimal"/><i>g</i></div></label>
-<p class="form-error full-field" hidden id="food-editor-error"></p>
-<div class="profile-actions full-field action-pair"><button class="secondary-action" data-close-food-editor="" type="button">Cancelar</button><button class="primary-action" id="save-food-editor" type="submit">Guardar alimento</button></div>
-</form>
-</div>
-</div>
-<div aria-labelledby="recipe-title" aria-modal="true" class="modal compact-modal" hidden="" id="recipe-modal" role="dialog">
-<div class="modal-backdrop" data-close-recipe=""></div>
-<div class="food-sheet recipe-sheet">
-<div class="settings-header">
-<div><p class="eyebrow">RECETA PROPIA</p><h2 id="recipe-title">Crear receta por ingredientes</h2><p id="recipe-description">Buscá cada ingrediente en la base, indicá su cantidad y agregalo a la receta.</p></div>
-<button aria-label="Cerrar" class="close-button" id="close-recipe" type="button">×</button>
-</div>
-<form id="recipe-form">
-<div class="form-grid editor-grid recipe-meta-grid">
-<label class="full-field"><span>Nombre de la receta</span><input name="name" required="" type="text" maxlength="120"/></label>
-<label><span>La receta rinde</span><input name="yield" required="" step="any" type="number" value="1" min="0.01" max="100000" inputmode="decimal"/></label>
-<label><span>Unidad del rendimiento</span><select name="yieldUnit" required>
-<option value="serving">porciones</option>
-<option value="g">gramos (g)</option>
-<option value="kg">kilogramos (kg)</option>
-<option value="ml">mililitros (ml)</option>
-<option value="l">litros (l)</option>
-<option value="unit">unidades</option>
-<option value="cup">tazas</option>
-<option value="tablespoon">cucharadas</option>
-<option value="teaspoon">cucharaditas</option>
-<option value="plate">platos</option>
-<option value="slice">fetas</option>
-<option value="package">paquetes</option>
-<option value="custom">otra unidad…</option>
-</select></label>
-<label><span>Cantidad base al registrar</span><input name="servingAmount" required="" step="any" type="number" value="1" min="0.01" max="100000" inputmode="decimal"/></label>
-<label class="full-field custom-recipe-unit-field" hidden><span>Nombre de la unidad</span><input name="yieldUnitCustom" placeholder="Ej.: bowl, bandeja..." type="text" maxlength="40"/></label>
-<p class="field-note full-field">Ejemplo: si la receta rinde 800 g, podés dejar 100 g como cantidad base para registrarla.</p>
-<section class="equivalence-editor full-field" aria-labelledby="recipe-equivalence-title">
-<div class="equivalence-editor-head"><div><h3 id="recipe-equivalence-title">Unidades y equivalencias</h3><p>Agregá otras formas de registrar la receta, por ejemplo: 1 porción = 200 g.</p></div><button class="secondary-action" id="add-recipe-equivalence" type="button">Agregar equivalencia</button></div>
-<div class="equivalence-list" id="recipe-equivalence-list"></div>
-</section>
-</div>
-<div class="recipe-builder">
-<section class="recipe-search-panel">
-<label class="food-search"><span>Buscar ingrediente</span><input id="recipe-ingredient-search" placeholder="Ej.: harina, huevo, leche..." type="search" maxlength="120" autocomplete="off"/></label>
-<div class="recipe-search-actions"><button class="secondary-action" id="scan-barcode-recipe" type="button">Código de barras</button><button class="secondary-action" data-native-only id="scan-label-recipe" type="button">Rótulo nutricional</button><button class="secondary-action" id="create-missing-ingredient" type="button">Crear alimento nuevo</button></div>
-<p class="data-attribution recipe-data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a>.</p>
-<div class="food-results recipe-ingredient-results" id="recipe-ingredient-results"></div>
-</section>
-<section class="recipe-selected-panel">
-<div class="recipe-section-head"><div><p class="eyebrow">INGREDIENTES</p><h3>Contenido de la receta</h3></div><span id="recipe-ingredient-count">0</span></div>
-<div class="recipe-ingredient-list" id="recipe-ingredient-list"></div>
-<div class="recipe-totals" id="recipe-totals">
-<div><small>Receta completa</small><b id="recipe-total-calories">0 kcal</b><span id="recipe-total-macros">P 0 · G 0 · C 0</span></div>
-<div><small id="recipe-serving-label">Por porción</small><b id="recipe-serving-calories">0 kcal</b><span id="recipe-serving-macros">P 0 · G 0 · C 0</span></div>
-</div>
-<p class="form-error" hidden="" id="recipe-error"></p>
-</section>
-</div>
-<div class="profile-actions recipe-save-actions action-pair"><button class="secondary-action" data-close-recipe="" type="button">Cancelar</button><button class="primary-action" id="save-recipe" type="submit">Guardar receta</button></div>
-</form>
-</div>
-</div>
-<div aria-labelledby="library-title" aria-modal="true" class="modal compact-modal" hidden="" id="library-modal" role="dialog">
-<div class="modal-backdrop" data-close-library=""></div>
-<div class="food-sheet library-sheet">
-<div class="settings-header">
-<div><p class="eyebrow">TU BIBLIOTECA</p><h2 id="library-title">Editar alimentos y recetas</h2><p>Los cambios del catálogo general quedan guardados solamente en tu cuenta.</p></div>
-<button aria-label="Cerrar" class="close-button" id="close-library" type="button">×</button>
-</div>
-<div class="library-toolbar">
-<div class="library-create-actions"><button class="primary-action" id="library-new-food" type="button">Nuevo alimento</button><button class="secondary-action" id="library-new-recipe" type="button">Nueva receta</button></div>
-<div class="library-transfer-actions"><button class="secondary-action" id="library-import" type="button">Importar</button><button class="secondary-action" id="library-export" type="button">Exportar</button></div>
-</div>
-<div class="library-columns">
-<section><div class="library-section-title"><h3>Alimentos propios</h3><span id="library-food-count">0</span></div><div class="library-list" id="library-food-list"></div></section>
-<section><div class="library-section-title"><h3>Recetas</h3><span id="library-recipe-count">0</span></div><div class="library-list" id="library-recipe-list"></div></section>
-<section class="library-catalog-section">
-<div class="library-section-title"><div><h3>Catálogo personalizado</h3><span id="library-catalog-count">0</span></div><button aria-expanded="false" class="secondary-action" id="library-search-catalog" type="button">Buscar alimento de la base</button></div>
-<p class="mode-help">Alimentos generales que editaste u ocultaste. Podés restaurarlos cuando quieras.</p>
-<div class="library-catalog-search-panel" hidden id="library-catalog-search-panel">
-<label class="food-search"><span>Buscar cualquier alimento para editar</span><input id="library-catalog-search-input" placeholder="Ej.: arroz, huevo, yogur..." type="search" maxlength="120" autocomplete="off"/></label>
-<div class="library-list library-catalog-search-results" id="library-catalog-search-results"></div>
-</div>
-<div class="library-list" id="library-catalog-list"></div>
-</section>
-</div>
-</div>
-</div>
-<div aria-labelledby="daily-checkin-title" aria-modal="true" class="modal compact-modal" hidden="" id="daily-checkin-modal" role="dialog">
-<div class="modal-backdrop"></div>
-<div class="checkin-card">
-<p class="eyebrow">ANTES DE EMPEZAR EL DÍA</p>
-<h2 id="daily-checkin-title">¿Te pesaste hoy?</h2>
-<p>Podés registrarlo ahora o saltear este paso. MASA no vuelve a preguntarlo hasta mañana.</p>
-<form id="daily-checkin-form">
-<label class="weight-entry"><input name="weight" placeholder="73,8" step="0.1" type="number" min="20" max="400" inputmode="decimal"/><span>kg</span></label>
-<div><button class="secondary-action" id="skip-daily-weight" type="button">Hoy no</button><button class="primary-action" type="submit">Registrar y continuar</button></div>
-</form>
-</div>
-</div>
-<div aria-labelledby="confirm-title" aria-modal="true" class="confirm-modal" hidden="" id="confirm-modal" role="dialog">
-<div class="modal-backdrop"></div>
-<div class="confirm-card">
-<p class="eyebrow">CONFIRMAR</p>
-<h2 id="confirm-title">Empezar de nuevo</h2>
-<p>Esto elimina de tu cuenta el perfil, el objetivo, los pesajes, los alimentos propios, las recetas y todos los registros diarios.</p>
-<div><button class="secondary-action" id="cancel-confirm" type="button">Cancelar</button><button class="danger-action" id="confirm-action" type="button">Borrar y reiniciar</button></div>
-</div>
-</div>
-<input accept=".json,.csv,.tsv,.txt,.xlsx,.xls" hidden="" id="import-file" type="file"/><input accept=".xlsx,.xls,.csv,.tsv,.txt" hidden="" id="intake-import-file" type="file"/>
-<noscript>Esta aplicación necesita JavaScript para funcionar.</noscript>
-<div class="floating-tooltip" hidden="" id="floating-tooltip" role="tooltip"></div></body>
+                <form id="profile-form" novalidate="">
+                    <section class="form-block">
+                        <div class="form-block-title"><span>01</span>
+                            <div>
+                                <h3>Datos base</h3>
+                                <p>Lo mínimo para calcular una referencia inicial.</p>
+                            </div>
+                        </div>
+                        <div class="form-grid base-data-grid">
+                            <label><span>Fecha de nacimiento</span>
+                                <div class="date-control"><input autocomplete="bday" class="date-input"
+                                        inputmode="numeric" maxlength="10" name="birthDate" placeholder="dd/mm/aaaa"
+                                        required="" type="text" /><button aria-label="Elegir fecha de nacimiento"
+                                        class="calendar-trigger" data-calendar-for="birthDate"
+                                        type="button">▦</button><input aria-hidden="true" class="native-date-picker"
+                                        data-native-date="birthDate" tabindex="-1" type="date" /></div>
+                            </label>
+                            <label><span>Sexo usado por la fórmula</span><select name="sex" required="">
+                                    <option value="male">Masculino</option>
+                                    <option value="female">Femenino</option>
+                                </select></label>
+                            <label><span>Altura</span>
+                                <div class="unit-input"><input name="heightCm" required="" step="1" type="number"
+                                        min="120" max="230" inputmode="decimal" /><i>cm</i></div>
+                            </label>
+                            <label><span>Peso actual</span>
+                                <div class="unit-input"><input name="currentWeight" required="" step="0.1" type="number"
+                                        min="20" max="400" inputmode="decimal" /><i>kg</i></div><small>Se registra
+                                    automáticamente con la fecha de hoy.</small>
+                            </label>
+                            <label>
+                                <span>Grasa corporal <small>opcional</small> <button
+                                        aria-label="Información sobre grasa corporal" class="help-dot inline"
+                                        data-tooltip="Dejala vacía si no tenés una medición razonable. Solo es necesaria para Cunningham, FFMI o un objetivo de porcentaje de grasa."
+                                        type="button">?</button></span>
+                                <div class="unit-input"><input name="bodyFat" placeholder="No lo sé" step="0.1"
+                                        type="number" min="1" max="75" inputmode="decimal" /><i>%</i></div>
+                            </label>
+                        </div>
+                    </section>
+                    <section class="form-block">
+                        <div class="form-block-title"><span>02</span>
+                            <div>
+                                <h3>Fórmula y actividad</h3>
+                                <p>Elegí la estimación de base y describí tu rutina completa.</p>
+                            </div>
+                        </div>
+                        <fieldset class="formula-options">
+                            <legend>Fórmula de calorías <button aria-label="Información sobre fórmulas"
+                                    class="help-dot inline"
+                                    data-tooltip="Ninguna fórmula conoce exactamente tu gasto. Elegí una referencia y dejá que la tendencia de varias semanas ayude a calibrarla."
+                                    type="button">?</button></legend>
+                            <label class="choice-card"><input checked="" name="formula" type="radio"
+                                    value="mifflin" /><span><b>Mifflin–St Jeor</b><small>Opción general y conservadora
+                                        para la mayoría de adultos.</small></span></label>
+                            <label class="choice-card"><input name="formula" type="radio"
+                                    value="harris" /><span><b>Harris–Benedict revisada</b><small>Alternativa clásica;
+                                        suele producir un valor algo diferente.</small></span></label>
+                            <label class="choice-card" id="cunningham-choice"><input name="formula" type="radio"
+                                    value="cunningham" /><span><b>Cunningham</b><small>Usa masa libre de grasa; tiene
+                                        más sentido si ese dato es razonable.</small></span></label>
+                        </fieldset>
+                        <label class="wide-field">
+                            <span>Factor de actividad <button aria-label="Información sobre factor de actividad"
+                                    class="help-dot inline"
+                                    data-tooltip="Representa trabajo, pasos, tareas y entrenamiento durante toda la semana. No elijas un factor alto solo por entrenar una hora si el resto del día estás sentado."
+                                    type="button">?</button></span>
+                            <select name="activityFactor" required="">
+                                <option value="1.2">1,20 · Bajo — trabajo sentado y poco ejercicio</option>
+                                <option value="1.35">1,35 · Ligero — mayormente sentado, 2–3 sesiones</option>
+                                <option value="1.5">1,50 · Medio — movimiento frecuente o 3–5 sesiones</option>
+                                <option value="1.7">1,70 · Alto — trabajo físico o entrenamiento exigente</option>
+                                <option value="1.9">1,90 · Muy alto — trabajo físico y entrenamiento intenso diario
+                                </option>
+                            </select>
+                        </label>
+                        <div class="explanation-box" id="activity-explanation"></div>
+                    </section>
+                    <section class="form-block">
+                        <div class="form-block-title"><span>03</span>
+                            <div>
+                                <h3>Objetivo</h3>
+                                <p>Qué querés alcanzar y, por separado, para cuándo.</p>
+                            </div>
+                        </div>
+                        <div class="form-grid">
+                            <label><span>Tipo de objetivo</span><select name="goalType">
+                                    <option value="loss">Bajar</option>
+                                    <option value="maintain">Mantener</option>
+                                    <option value="gain">Subir</option>
+                                </select></label>
+                            <label><span>Medir objetivo por</span><select name="goalMetric">
+                                    <option value="weight">Peso corporal</option>
+                                    <option value="bodyFat">Porcentaje de grasa</option>
+                                </select></label>
+                            <label id="goal-weight-field"><span>Peso objetivo</span>
+                                <div class="unit-input"><input name="goalWeight" step="0.1" type="number" min="20"
+                                        max="400" inputmode="decimal" /><i>kg</i></div>
+                            </label>
+                            <label hidden="" id="goal-bodyfat-field"><span>Grasa objetivo</span>
+                                <div class="unit-input"><input name="goalBodyFat" step="0.1" type="number" min="1"
+                                        max="75" inputmode="decimal" /><i>%</i></div>
+                            </label>
+                            <label><span>Fecha objetivo</span>
+                                <div class="date-control"><input autocomplete="off" class="date-input"
+                                        inputmode="numeric" maxlength="10" name="goalDate" placeholder="dd/mm/aaaa"
+                                        type="text" /><button aria-label="Elegir fecha objetivo"
+                                        class="calendar-trigger" data-calendar-for="goalDate"
+                                        type="button">▦</button><input aria-hidden="true" class="native-date-picker"
+                                        data-native-date="goalDate" tabindex="-1" type="date" /></div><small>Si escribís
+                                    solo día y mes, se completa el año actual.</small>
+                            </label>
+                            <label><span>Ritmo semanal <button aria-label="Información sobre ritmo semanal"
+                                        class="help-dot inline"
+                                        data-tooltip="En automático se usa la fecha si es razonable. Como referencia, la app marca 0,5–1% semanal al bajar y 0,25–0,5% al subir."
+                                        type="button">?</button></span><select name="rateMode">
+                                    <option value="auto">Automático</option>
+                                    <option value="manual">Manual</option>
+                                </select></label>
+                            <label hidden="" id="manual-rate-field"><span>Ritmo elegido</span>
+                                <div class="unit-input"><input name="weeklyRatePct" step="0.05" type="number" min="0"
+                                        max="2" inputmode="decimal" /><i>%</i></div>
+                            </label>
+                        </div>
+                        <div class="explanation-box" id="goal-explanation"></div>
+                    </section>
+                    <section class="form-block">
+                        <div class="form-block-title"><span>04</span>
+                            <div>
+                                <h3>Macros</h3>
+                                <p>Elegí una lógica de distribución. El objetivo calórico se calcula por separado.</p>
+                            </div>
+                        </div>
+                        <fieldset class="formula-options macro-mode-options">
+                            <legend>Modo de macronutrientes</legend>
+                            <label class="choice-card"><input name="macroMode" type="radio"
+                                    value="balanced" /><span><b>Balanceado</b><small>20% proteína, 30% grasas y 50%
+                                        carbohidratos, similar a una configuración general.</small></span></label>
+                            <label class="choice-card"><input checked="" name="macroMode" type="radio"
+                                    value="athletic" /><span><b>Atlético</b><small>Proteína y grasas según peso
+                                        corporal; carbohidratos con la energía restante.</small></span></label>
+                            <label class="choice-card"><input name="macroMode" type="radio"
+                                    value="custom" /><span><b>Personalizado</b><small>Definí manualmente el porcentaje
+                                        de cada macronutriente.</small></span></label>
+                        </fieldset>
+                        <div class="form-grid manual-macro-grid percent-macro-grid" hidden="" id="custom-macro-fields">
+                            <label><span>Proteína <button aria-label="Información sobre proteína personalizada"
+                                        class="help-dot inline"
+                                        data-tooltip="Porcentaje de calorías provenientes de proteína. Cada gramo aporta 4 kcal."
+                                        type="button">?</button></span>
+                                <div class="unit-input"><input name="proteinPct" step="1" type="number" min="5" max="70"
+                                        inputmode="decimal" /><i>%</i></div>
+                            </label>
+                            <label><span>Grasas <button aria-label="Información sobre grasas personalizadas"
+                                        class="help-dot inline"
+                                        data-tooltip="Porcentaje de calorías provenientes de grasas. Cada gramo aporta 9 kcal."
+                                        type="button">?</button></span>
+                                <div class="unit-input"><input name="fatPct" step="1" type="number" min="10" max="70"
+                                        inputmode="decimal" /><i>%</i></div>
+                            </label>
+                            <label><span>Carbohidratos <button
+                                        aria-label="Información sobre carbohidratos personalizados"
+                                        class="help-dot inline"
+                                        data-tooltip="Porcentaje de calorías provenientes de carbohidratos. Cada gramo aporta 4 kcal."
+                                        type="button">?</button></span>
+                                <div class="unit-input"><input name="carbPct" step="1" type="number" min="5" max="80"
+                                        inputmode="decimal" /><i>%</i></div>
+                            </label>
+                        </div>
+                        <div class="macro-sum-line" hidden="" id="macro-sum-line"><span>Distribución total</span><b
+                                id="macro-percent-sum">100%</b><small id="macro-mode-label">atlético</small></div>
+                        <div class="explanation-box" id="macro-explanation"></div>
+                    </section>
+                    <section class="form-block automatic-adjustment-block">
+                        <div class="form-block-title"><span>05</span>
+                            <div>
+                                <h3>Gasto adaptativo</h3>
+                                <p>Compara ingestas y tendencia de peso, y habilita una revisión gradual cada siete
+                                    días.</p>
+                            </div>
+                        </div>
+                        <div class="automatic-adjustment-card">
+                            <div class="automatic-adjustment-copy">
+                                <p class="eyebrow">MODELO OBSERVADO</p>
+                                <h4>La fórmula inicia el cálculo; tus resultados reales lo corrigen.</h4>
+                                <p id="automatic-adjustment-summary">M.A.S.A. necesita varias semanas de datos para
+                                    estimar tu gasto real.</p>
+                            </div>
+                            <div class="automatic-adjustment-facts" id="automatic-adjustment-facts">
+                                <div><span>Gasto adaptativo</span><b>Aprendiendo</b></div>
+                                <div><span>Confianza</span><b>Inicial</b></div>
+                                <div><span>Registro acumulado</span><b>0 días</b></div>
+                                <div><span>Revisión</span><b>Faltan registros</b></div>
+                            </div>
+                            <button class="primary-action" hidden id="run-auto-adjustment" type="button">Revisar ajuste
+                                automático</button>
+                            <small>Usa hasta 42 días, una tendencia exponencial del peso, regresión lineal y
+                                correcciones de hasta 250 kcal. Los días completos aumentan la confianza y cada revisión
+                                requiere registros nuevos.</small>
+                            <p class="feedback" id="automatic-adjustment-feedback" role="status"></p>
+                        </div>
+                    </section>
+                    <section class="preview-block">
+                        <div><span>Mantenimiento</span><b id="preview-maintenance">—</b></div>
+                        <div><span>Objetivo diario</span><b id="preview-calories">—</b></div>
+                        <div><span>Proteína</span><b id="preview-protein">—</b></div>
+                        <div><span>Grasas</span><b id="preview-fat">—</b></div>
+                        <div><span>Carbohidratos</span><b id="preview-carbs">—</b></div>
+                        <div><span>Fecha estimada para el objetivo</span><b id="preview-date">—</b></div>
+                    </section>
+                    <p class="feedback" id="profile-feedback" role="status"></p>
+                    <div class="profile-actions settings-sticky-actions action-pair">
+                        <button class="secondary-action" id="cancel-profile" type="button">Cancelar</button>
+                        <button class="primary-action" type="submit">Guardar cambios</button>
+                    </div>
+                </form>
+            </section>
+            <section class="settings-view" hidden="" id="settings-account">
+                <section class="form-block account-overview-block">
+                    <div class="form-block-title"><span>01</span>
+                        <div>
+                            <h3>Cuenta</h3>
+                            <p>Tu identidad visible, acceso y seguridad en un solo lugar.</p>
+                        </div>
+                    </div>
+                    <form class="account-identity-form" id="account-identity-form">
+                        <label><span>Nombre <small>opcional</small></span><input autocomplete="name"
+                                id="account-display-name" maxlength="60" name="displayName" type="text" /></label>
+                        <div class="account-email-compact"><span>Correo de la cuenta</span><b
+                                id="security-account-email">—</b></div>
+                        <button class="secondary-action" type="submit">Guardar nombre</button>
+                    </form>
+                    <p class="feedback" id="account-profile-feedback" role="status"></p>
+                    <button aria-expanded="false" class="history-manager-toggle account-password-toggle"
+                        id="toggle-account-password" type="button">
+                        <span><b>Acceso y contraseña</b><small id="account-security-description">Cambiá la contraseña
+                                solamente cuando lo necesites.</small></span>
+                        <i aria-hidden="true">＋</i>
+                    </button>
+                    <div class="account-password-manager" hidden="" id="account-password-manager">
+                        <p class="account-provider-note" hidden id="account-provider-note"></p>
+                        <form class="account-password-form" id="account-password-form">
+                            <label><span>Contraseña actual</span>
+                                <div class="password-field"><input autocomplete="current-password" minlength="8"
+                                        name="currentPassword" required="" type="password" maxlength="128" /><button
+                                        aria-label="Mostrar contraseña actual" aria-pressed="false"
+                                        class="password-toggle" data-password-toggle type="button"></button></div>
+                            </label>
+                            <label><span>Nueva contraseña</span>
+                                <div class="password-field"><input autocomplete="new-password" name="newPassword"
+                                        required="" type="password" maxlength="128" minlength="10" /><button
+                                        aria-label="Mostrar nueva contraseña" aria-pressed="false"
+                                        class="password-toggle" data-password-toggle type="button"></button></div>
+                            </label>
+                            <label><span>Repetir nueva contraseña</span>
+                                <div class="password-field"><input autocomplete="new-password" name="confirmPassword"
+                                        required="" type="password" maxlength="128" minlength="10" /><button
+                                        aria-label="Mostrar contraseña repetida" aria-pressed="false"
+                                        class="password-toggle" data-password-toggle type="button"></button></div>
+                            </label>
+                            <div class="account-security-actions"><button class="primary-action" type="submit">Cambiar
+                                    contraseña</button></div>
+                        </form>
+                        <p class="feedback" id="account-security-feedback" role="status"></p>
+                    </div>
+                </section>
+                <section class="form-block account-data-block">
+                    <div class="form-block-title"><span>02</span>
+                        <div>
+                            <h3>Datos y respaldos</h3>
+                            <p>Importá, exportá o corregí tus registros desde la misma sección de cuenta.</p>
+                        </div>
+                    </div>
+                    <div class="data-tools-grid">
+                        <article class="data-tool">
+                            <span>01</span>
+                            <h3>Pesajes</h3>
+                            <p>Importá o exportá tu historial en Excel. Los días repetidos se actualizan y la plantilla
+                                usa fechas reales.</p>
+                            <div class="data-tool-actions"><button class="secondary-action" id="import-history"
+                                    type="button">Importar Excel</button><button class="secondary-action"
+                                    id="export-weights" type="button">Exportar Excel</button></div>
+                            <a class="text-link" download="" href="plantilla-pesajes.xlsx">Descargar plantilla Excel</a>
+                        </article>
+                        <article class="data-tool intake-data-tool">
+                            <span>02</span>
+                            <h3>Consumo de calorías</h3>
+                            <p>Exportá o importá el diario en Excel. Incluye una hoja con cada ingesta y otra con el
+                                resumen por día.</p>
+                            <div class="data-tool-actions"><button class="secondary-action" id="import-intakes"
+                                    type="button">Importar Excel</button><button class="secondary-action"
+                                    id="export-intakes" type="button">Exportar Excel</button></div>
+                            <a class="text-link" download="" href="plantilla-ingestas.xlsx">Descargar plantilla de
+                                ingestas</a>
+                        </article>
+                        <article class="data-tool library-data-tool">
+                            <span>03</span>
+                            <h3>Recetas y alimentos propios</h3>
+                            <p>Guardá o recuperá en JSON las recetas y los cambios que hiciste en tu biblioteca, sin
+                                importar el resto del perfil.</p>
+                            <div class="data-tool-actions"><button class="secondary-action" id="import-library"
+                                    type="button">Importar biblioteca</button><button class="secondary-action"
+                                    id="export-library" type="button">Exportar biblioteca</button></div>
+                        </article>
+                    </div>
+                    <button aria-expanded="false" class="history-manager-toggle" id="toggle-history-manager"
+                        type="button">
+                        <span><b>Gestionar pesajes</b><small id="history-count">0 registros · corregir o
+                                eliminar</small></span><i aria-hidden="true">＋</i>
+                    </button>
+                    <div class="history-manager" hidden="" id="history-manager">
+                        <div class="history-heading">
+                            <div>
+                                <p class="eyebrow">GESTIONAR PESAJES</p>
+                                <h3>Corregir o eliminar un registro</h3>
+                            </div>
+                        </div>
+                        <label class="history-date-picker"><span>Fecha ingresada</span><select id="history-date-select"
+                                aria-label="Elegir pesaje por fecha"></select></label>
+                        <div class="history-list" id="history-list"></div>
+                        <p class="empty-message" hidden="" id="history-empty">No hay pesajes cargados.</p>
+                    </div>
+                    <section class="reset-data-panel" aria-labelledby="reset-data-title">
+                        <div>
+                            <p class="eyebrow">ZONA DE BORRADO</p>
+                            <h3 id="reset-data-title">Empezar de nuevo</h3>
+                            <p>Elimina perfil, objetivo, pesajes, alimentos propios, recetas y todos los registros
+                                diarios de esta instalación.</p>
+                        </div>
+                        <button class="danger-action" id="start-over" type="button">Borrar todos los datos</button>
+                    </section>
+                </section>
+            </section>
+        </div>
+    </div>
+    <div aria-labelledby="meal-picker-title" aria-modal="true" class="modal compact-modal" hidden=""
+        id="meal-picker-modal" role="dialog">
+        <div class="modal-backdrop" data-close-meal-picker=""></div>
+        <div class="meal-picker-card">
+            <div class="settings-header">
+                <div>
+                    <p class="eyebrow">NUEVA INGESTA</p>
+                    <h2 id="meal-picker-title">¿A qué comida pertenece?</h2>
+                    <p>Elegí la comida. La ingesta se guarda en la fecha que estás viendo.</p>
+                </div><button aria-label="Cerrar" class="close-button" id="close-meal-picker" type="button">×</button>
+            </div>
+            <div class="meal-picker-grid">
+                <button data-pick-meal="breakfast" type="button"><span>01</span><b>Desayuno</b></button>
+                <button data-pick-meal="lunch" type="button"><span>02</span><b>Almuerzo</b></button>
+                <button data-pick-meal="snack" type="button"><span>03</span><b>Merienda</b></button>
+                <button data-pick-meal="dinner" type="button"><span>04</span><b>Cena</b></button>
+                <button class="secondary-meal" data-pick-meal="extras"
+                    type="button"><span>05</span><b>Snack</b></button>
+            </div>
+        </div>
+    </div>
+    <div aria-labelledby="food-modal-title" aria-modal="true" class="modal compact-modal" hidden="" id="food-modal"
+        role="dialog">
+        <div class="modal-backdrop" data-close-food=""></div>
+        <div class="food-sheet">
+            <div class="settings-header">
+                <div>
+                    <p class="eyebrow">AGREGAR AL REGISTRO</p>
+                    <h2 id="food-modal-title">Elegí cómo cargarlo</h2>
+                    <p id="food-meal-label">—</p><button class="change-meal-button" id="change-active-meal"
+                        type="button">Cambiar comida</button>
+                </div>
+                <button aria-label="Cerrar" class="close-button" id="close-food" type="button">×</button>
+            </div>
+            <p class="food-add-feedback" hidden id="food-add-feedback" role="status"></p>
+            <div class="food-search-row">
+                <label class="food-search food-search-always"><span>Buscar alimentos o recetas</span><input
+                        id="food-search-input" placeholder="Ej.: arroz, huevo, café..." type="search" maxlength="120"
+                        autocomplete="off" /></label>
+                <div class="food-scan-actions">
+                    <button class="primary-action food-scan-action" id="scan-barcode-food" type="button">Código</button>
+                    <button class="secondary-action food-scan-action" data-native-only id="scan-label-food"
+                        type="button">Rótulo</button>
+                </div>
+            </div>
+            <div class="food-library-actions food-global-actions"><button class="secondary-action" id="new-custom-food"
+                    type="button">Crear alimento</button><button class="secondary-action" id="new-recipe"
+                    type="button">Crear receta</button></div>
+            <p class="data-attribution">Resultados basados en <a href="https://www.opennutrition.app/" rel="noopener"
+                    target="_blank">OpenNutrition</a>.</p>
+            <section class="food-search-results-panel" hidden id="food-search-panel">
+                <p class="mode-help">Resultados de búsqueda. Al borrar el texto volvés automáticamente a Recientes.</p>
+                <div class="food-results" id="food-results"></div>
+            </section>
+            <div class="food-browse-area" id="food-browse-area">
+                <div class="food-mode-tabs">
+                    <button class="active" data-food-mode="recent" type="button">Recientes</button>
+                    <button data-food-mode="frequent" type="button">Frecuentes</button>
+                    <button data-food-mode="recipe" type="button">Recetas</button>
+                    <button data-food-mode="quick" type="button">Solo calorías</button>
+                </div>
+                <section class="food-mode" id="food-mode-recent">
+                    <p class="mode-help">Los últimos alimentos agregados al registro, ordenados desde el más reciente.
+                    </p>
+                    <div class="food-results" id="recent-food-results"></div>
+                </section>
+                <section class="food-mode" hidden="" id="food-mode-frequent">
+                    <p class="mode-help">Tus alimentos más consumidos, ordenados por cantidad de veces.</p>
+                    <div class="food-results" id="frequent-food-results"></div>
+                </section>
+                <section class="food-mode" hidden="" id="food-mode-recipe">
+                    <div class="food-results" id="recipe-results"></div>
+                    <div class="food-library-actions"><button class="secondary-action" id="new-recipe-secondary"
+                            type="button">Crear una receta</button></div>
+                </section>
+                <section class="food-mode" hidden="" id="food-mode-quick">
+                    <form class="compact-form" id="quick-calorie-form">
+                        <label><span>Descripción</span><input name="name" placeholder="Ej.: cena fuera" required=""
+                                type="text" maxlength="120" /></label>
+                        <label><span>Calorías</span>
+                            <div class="unit-input"><input name="calories" required="" step="1" type="number" min="1"
+                                    max="10000" inputmode="decimal" /><i>kcal</i></div>
+                        </label>
+                        <button class="primary-action" type="submit">Agregar</button>
+                    </form>
+                </section>
+            </div>
+        </div>
+    </div>
+    <div aria-labelledby="barcode-title" aria-modal="true" class="modal compact-modal" hidden id="barcode-modal"
+        role="dialog">
+        <div class="modal-backdrop" data-close-barcode></div>
+        <div class="centered-modal-sheet barcode-sheet">
+            <div class="settings-header">
+                <div>
+                    <p class="eyebrow">CÓDIGO DE BARRAS</p>
+                    <h2 id="barcode-title">Escanear producto</h2>
+                    <p>La cámara lee el código y M.A.S.A. busca primero en tu biblioteca y luego en Open Food Facts.</p>
+                </div><button aria-label="Cerrar" class="close-button" id="close-barcode" type="button">×</button>
+            </div>
+            <div class="barcode-camera"><video autoplay muted playsinline id="barcode-video"></video>
+                <div aria-hidden="true" class="barcode-guide"></div>
+            </div>
+            <p class="barcode-status" id="barcode-status" role="status">Preparando cámara…</p>
+            <div class="barcode-tools"><button aria-pressed="false" class="secondary-action" hidden id="barcode-torch"
+                    type="button">Linterna</button></div>
+            <form class="barcode-manual-form" id="barcode-manual-form"><label><span>Ingresar código
+                        manualmente</span><input autocomplete="off" name="barcode" placeholder="Ej.: 3017620422003"
+                        required type="text" minlength="8" maxlength="14" pattern="[0-9]{8,14}"
+                        inputmode="numeric" /></label><button class="primary-action" type="submit">Buscar
+                    código</button></form>
+            <p class="data-attribution">Datos de productos por <a href="https://world.openfoodfacts.org/" rel="noopener"
+                    target="_blank">Open Food Facts</a>.</p>
+        </div>
+    </div>
+    <div aria-labelledby="food-editor-title" aria-modal="true" class="modal compact-modal" hidden=""
+        id="food-editor-modal" role="dialog">
+        <div class="modal-backdrop" data-close-food-editor=""></div>
+        <div class="food-sheet small-sheet">
+            <div class="settings-header">
+                <div>
+                    <p class="eyebrow">BIBLIOTECA PERSONAL</p>
+                    <h2 id="food-editor-title">Nuevo alimento</h2>
+                    <p id="food-editor-description">Guardalo una vez y reutilizalo en registros y recetas.</p>
+                </div>
+                <div class="food-editor-header-actions">
+                    <button aria-label="Cerrar" class="close-button" id="close-food-editor" type="button">×</button>
+                    <button aria-label="Volver a escanear" class="rescan-icon-button" hidden id="rescan-food-editor"
+                        title="Volver a escanear" type="button">↻</button>
+                </div>
+            </div>
+            <form class="form-grid editor-grid" id="food-editor-form">
+                <div class="food-editor-scan-row full-field">
+                    <button class="secondary-action" id="scan-barcode-editor" type="button"><span
+                            aria-hidden="true">▥</span> Código de barras</button>
+                    <button class="secondary-action" data-native-only id="scan-label-editor" type="button"><span
+                            aria-hidden="true">▤</span> Rótulo nutricional</button>
+                </div>
+                <label class="full-field"><span>Nombre</span><input name="name" required="" type="text"
+                        maxlength="120" /></label>
+                <input name="barcode" type="hidden" minlength="8" maxlength="14" pattern="[0-9]{8,14}"
+                    inputmode="numeric" />
+                <label><span>Marca <small>(opcional)</small></span><input name="brand" type="text"
+                        maxlength="120" /></label>
+                <p class="explanation-box full-field" hidden id="food-editor-source-note"></p>
+                <label><span>Calorías</span>
+                    <div class="unit-input"><input name="calories" required="" step="1" type="number" min="0"
+                            max="10000" inputmode="decimal" /><i>kcal</i></div>
+                </label>
+                <label><span>Cantidad base</span><input name="servingAmount" required="" step="any" type="number"
+                        value="1" min="0.01" max="100000" inputmode="decimal" /></label>
+                <label><span>Unidad</span><select name="servingUnit" required>
+                        <option value="g">gramos (g)</option>
+                        <option value="kg">kilogramos (kg)</option>
+                        <option value="ml">mililitros (ml)</option>
+                        <option value="l">litros (l)</option>
+                        <option value="unit">unidad</option>
+                        <option value="serving">porción</option>
+                        <option value="cup">taza</option>
+                        <option value="tablespoon">cucharada</option>
+                        <option value="teaspoon">cucharadita</option>
+                        <option value="plate">plato</option>
+                        <option value="slice">feta</option>
+                        <option value="package">paquete</option>
+                        <option value="custom">otra unidad…</option>
+                    </select></label>
+                <label class="full-field custom-unit-field" hidden><span>Nombre de la unidad</span><input
+                        name="servingUnitCustom" placeholder="Ej.: scoop, barra, vaso..." type="text"
+                        maxlength="40" /></label>
+                <p class="field-note full-field">Las calorías y los macros ingresados corresponden a esa cantidad base.
+                </p>
+                <section class="equivalence-editor full-field" aria-labelledby="food-equivalence-title">
+                    <div class="equivalence-editor-head">
+                        <div>
+                            <h3 id="food-equivalence-title">Unidades y equivalencias</h3>
+                            <p>Agregá formas alternativas de registrar el alimento, por ejemplo: 1 unidad = 200 g.</p>
+                        </div><button class="secondary-action" id="add-food-equivalence" type="button">Agregar
+                            equivalencia</button>
+                    </div>
+                    <div class="equivalence-list" id="food-equivalence-list"></div>
+                </section>
+                <label><span>Proteína</span>
+                    <div class="unit-input"><input name="protein" step="0.1" type="number" min="0" max="10000"
+                            inputmode="decimal" /><i>g</i></div>
+                </label>
+                <label><span>Grasas</span>
+                    <div class="unit-input"><input name="fat" step="0.1" type="number" min="0" max="10000"
+                            inputmode="decimal" /><i>g</i></div>
+                </label>
+                <label><span>Carbohidratos</span>
+                    <div class="unit-input"><input name="carbs" step="0.1" type="number" min="0" max="10000"
+                            inputmode="decimal" /><i>g</i></div>
+                </label>
+                <p class="form-error full-field" hidden id="food-editor-error"></p>
+                <div class="profile-actions full-field action-pair"><button class="secondary-action"
+                        data-close-food-editor="" type="button">Cancelar</button><button class="primary-action"
+                        id="save-food-editor" type="submit">Guardar alimento</button></div>
+            </form>
+        </div>
+    </div>
+    <div aria-labelledby="recipe-title" aria-modal="true" class="modal compact-modal" hidden="" id="recipe-modal"
+        role="dialog">
+        <div class="modal-backdrop" data-close-recipe=""></div>
+        <div class="food-sheet recipe-sheet">
+            <div class="settings-header">
+                <div>
+                    <p class="eyebrow">RECETA PROPIA</p>
+                    <h2 id="recipe-title">Crear receta por ingredientes</h2>
+                    <p id="recipe-description">Buscá cada ingrediente en la base, indicá su cantidad y agregalo a la
+                        receta.</p>
+                </div>
+                <button aria-label="Cerrar" class="close-button" id="close-recipe" type="button">×</button>
+            </div>
+            <form id="recipe-form">
+                <div class="form-grid editor-grid recipe-meta-grid">
+                    <label class="full-field"><span>Nombre de la receta</span><input name="name" required="" type="text"
+                            maxlength="120" /></label>
+                    <label><span>La receta rinde</span><input name="yield" required="" step="any" type="number"
+                            value="1" min="0.01" max="100000" inputmode="decimal" /></label>
+                    <label><span>Unidad del rendimiento</span><select name="yieldUnit" required>
+                            <option value="serving">porciones</option>
+                            <option value="g">gramos (g)</option>
+                            <option value="kg">kilogramos (kg)</option>
+                            <option value="ml">mililitros (ml)</option>
+                            <option value="l">litros (l)</option>
+                            <option value="unit">unidades</option>
+                            <option value="cup">tazas</option>
+                            <option value="tablespoon">cucharadas</option>
+                            <option value="teaspoon">cucharaditas</option>
+                            <option value="plate">platos</option>
+                            <option value="slice">fetas</option>
+                            <option value="package">paquetes</option>
+                            <option value="custom">otra unidad…</option>
+                        </select></label>
+                    <label><span>Cantidad base al registrar</span><input name="servingAmount" required="" step="any"
+                            type="number" value="1" min="0.01" max="100000" inputmode="decimal" /></label>
+                    <label class="full-field custom-recipe-unit-field" hidden><span>Nombre de la unidad</span><input
+                            name="yieldUnitCustom" placeholder="Ej.: bowl, bandeja..." type="text"
+                            maxlength="40" /></label>
+                    <p class="field-note full-field">Ejemplo: si la receta rinde 800 g, podés dejar 100 g como cantidad
+                        base para registrarla.</p>
+                    <section class="equivalence-editor full-field" aria-labelledby="recipe-equivalence-title">
+                        <div class="equivalence-editor-head">
+                            <div>
+                                <h3 id="recipe-equivalence-title">Unidades y equivalencias</h3>
+                                <p>Agregá otras formas de registrar la receta, por ejemplo: 1 porción = 200 g.</p>
+                            </div><button class="secondary-action" id="add-recipe-equivalence" type="button">Agregar
+                                equivalencia</button>
+                        </div>
+                        <div class="equivalence-list" id="recipe-equivalence-list"></div>
+                    </section>
+                </div>
+                <div class="recipe-builder">
+                    <section class="recipe-search-panel">
+                        <label class="food-search"><span>Buscar ingrediente</span><input id="recipe-ingredient-search"
+                                placeholder="Ej.: harina, huevo, leche..." type="search" maxlength="120"
+                                autocomplete="off" /></label>
+                        <div class="recipe-search-actions"><button class="secondary-action" id="scan-barcode-recipe"
+                                type="button">Código de barras</button><button class="secondary-action" data-native-only
+                                id="scan-label-recipe" type="button">Rótulo nutricional</button><button
+                                class="secondary-action" id="create-missing-ingredient" type="button">Crear alimento
+                                nuevo</button></div>
+                        <p class="data-attribution recipe-data-attribution">Resultados basados en <a
+                                href="https://www.opennutrition.app/" rel="noopener" target="_blank">OpenNutrition</a>.
+                        </p>
+                        <div class="food-results recipe-ingredient-results" id="recipe-ingredient-results"></div>
+                    </section>
+                    <section class="recipe-selected-panel">
+                        <div class="recipe-section-head">
+                            <div>
+                                <p class="eyebrow">INGREDIENTES</p>
+                                <h3>Contenido de la receta</h3>
+                            </div><span id="recipe-ingredient-count">0</span>
+                        </div>
+                        <div class="recipe-ingredient-list" id="recipe-ingredient-list"></div>
+                        <div class="recipe-totals" id="recipe-totals">
+                            <div><small>Receta completa</small><b id="recipe-total-calories">0 kcal</b><span
+                                    id="recipe-total-macros">P 0 · G 0 · C 0</span></div>
+                            <div><small id="recipe-serving-label">Por porción</small><b id="recipe-serving-calories">0
+                                    kcal</b><span id="recipe-serving-macros">P 0 · G 0 · C 0</span></div>
+                        </div>
+                        <p class="form-error" hidden="" id="recipe-error"></p>
+                    </section>
+                </div>
+                <div class="profile-actions recipe-save-actions action-pair"><button class="secondary-action"
+                        data-close-recipe="" type="button">Cancelar</button><button class="primary-action"
+                        id="save-recipe" type="submit">Guardar receta</button></div>
+            </form>
+        </div>
+    </div>
+    <div aria-labelledby="library-title" aria-modal="true" class="modal compact-modal" hidden="" id="library-modal"
+        role="dialog">
+        <div class="modal-backdrop" data-close-library=""></div>
+        <div class="food-sheet library-sheet">
+            <div class="settings-header">
+                <div>
+                    <p class="eyebrow">TU BIBLIOTECA</p>
+                    <h2 id="library-title">Editar alimentos y recetas</h2>
+                    <p>Los cambios del catálogo general quedan guardados solamente en tu cuenta.</p>
+                </div>
+                <button aria-label="Cerrar" class="close-button" id="close-library" type="button">×</button>
+            </div>
+            <div class="library-toolbar">
+                <div class="library-create-actions"><button class="primary-action" id="library-new-food"
+                        type="button">Nuevo alimento</button><button class="secondary-action" id="library-new-recipe"
+                        type="button">Nueva receta</button></div>
+                <div class="library-transfer-actions"><button class="secondary-action" id="library-import"
+                        type="button">Importar</button><button class="secondary-action" id="library-export"
+                        type="button">Exportar</button></div>
+            </div>
+            <div class="library-columns">
+                <section>
+                    <div class="library-section-title">
+                        <h3>Alimentos propios</h3><span id="library-food-count">0</span>
+                    </div>
+                    <div class="library-list" id="library-food-list"></div>
+                </section>
+                <section>
+                    <div class="library-section-title">
+                        <h3>Recetas</h3><span id="library-recipe-count">0</span>
+                    </div>
+                    <div class="library-list" id="library-recipe-list"></div>
+                </section>
+                <section class="library-catalog-section">
+                    <div class="library-section-title">
+                        <div>
+                            <h3>Catálogo personalizado</h3><span id="library-catalog-count">0</span>
+                        </div><button aria-expanded="false" class="secondary-action" id="library-search-catalog"
+                            type="button">Buscar alimento de la base</button>
+                    </div>
+                    <p class="mode-help">Alimentos generales que editaste u ocultaste. Podés restaurarlos cuando
+                        quieras.</p>
+                    <div class="library-catalog-search-panel" hidden id="library-catalog-search-panel">
+                        <label class="food-search"><span>Buscar cualquier alimento para editar</span><input
+                                id="library-catalog-search-input" placeholder="Ej.: arroz, huevo, yogur..."
+                                type="search" maxlength="120" autocomplete="off" /></label>
+                        <div class="library-list library-catalog-search-results" id="library-catalog-search-results">
+                        </div>
+                    </div>
+                    <div class="library-list" id="library-catalog-list"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+    <div aria-labelledby="daily-checkin-title" aria-modal="true" class="modal compact-modal" hidden=""
+        id="daily-checkin-modal" role="dialog">
+        <div class="modal-backdrop"></div>
+        <div class="checkin-card">
+            <p class="eyebrow">ANTES DE EMPEZAR EL DÍA</p>
+            <h2 id="daily-checkin-title">¿Te pesaste hoy?</h2>
+            <p>Podés registrarlo ahora o saltear este paso. MASA no vuelve a preguntarlo hasta mañana.</p>
+            <form id="daily-checkin-form">
+                <label class="weight-entry"><input name="weight" placeholder="73,8" step="0.1" type="number" min="20"
+                        max="400" inputmode="decimal" /><span>kg</span></label>
+                <div><button class="secondary-action" id="skip-daily-weight" type="button">Hoy no</button><button
+                        class="primary-action" type="submit">Registrar y continuar</button></div>
+            </form>
+        </div>
+    </div>
+    <div aria-labelledby="confirm-title" aria-modal="true" class="confirm-modal" hidden="" id="confirm-modal"
+        role="dialog">
+        <div class="modal-backdrop"></div>
+        <div class="confirm-card">
+            <p class="eyebrow">CONFIRMAR</p>
+            <h2 id="confirm-title">Empezar de nuevo</h2>
+            <p>Esto elimina de tu cuenta el perfil, el objetivo, los pesajes, los alimentos propios, las recetas y todos
+                los registros diarios.</p>
+            <div><button class="secondary-action" id="cancel-confirm" type="button">Cancelar</button><button
+                    class="danger-action" id="confirm-action" type="button">Borrar y reiniciar</button></div>
+        </div>
+    </div>
+    <input accept=".json,.csv,.tsv,.txt,.xlsx,.xls" hidden="" id="import-file" type="file" /><input
+        accept=".xlsx,.xls,.csv,.tsv,.txt" hidden="" id="intake-import-file" type="file" />
+    <noscript>Esta aplicación necesita JavaScript para funcionar.</noscript>
+    <div class="floating-tooltip" hidden="" id="floating-tooltip" role="tooltip"></div>
+</body>
+
 </html>
