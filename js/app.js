@@ -751,7 +751,7 @@
       completedDays,
       foodUsage,
       catalogOverrides,
-      calibrationHistory: Array.isArray(input.calibrationHistory) ? input.calibrationHistory.slice(-20) : [],
+      calibrationHistory: Array.isArray(input.calibrationHistory) ? input.calibrationHistory.slice(-30) : [],
       lastCheckinDate: normalizeDate(input.lastCheckinDate)
     };
   }
@@ -1276,11 +1276,77 @@
     return [...trends].reverse().find(item => item.date <= iso)?.trend ?? null;
   }
 
-  function expectedAtDate(profile, plan, date) {
-    const startDate = parseDate(profile.planStartDate) || parseDate(sortedWeighIns()[0]?.date);
-    const startWeight = toNumber(profile.planStartWeight, sortedWeighIns()[0]?.weight);
-    if (!startDate || !Number.isFinite(startWeight)) return null;
-    return projectWeight(profile, startWeight, startDate, plan.targetWeight, plan.rate.selected, date);
+  function planRevisionAnchors(profile, plan, weighIns = state.weighIns, trends = rollingTrend(weighIns, profile.trendWindow)) {
+    const sorted = [...weighIns].sort((a, b) => a.date.localeCompare(b.date));
+    const first = sorted[0];
+    const history = [...(state.calibrationHistory || [])]
+      .filter(item => item && item.reviewOnly !== true)
+      .sort((a, b) => String(a.planAnchorDate || a.date || "").localeCompare(String(b.planAnchorDate || b.date || "")));
+    let initialDate = normalizeDate(profile.planStartDate) || first?.date || "";
+    let initialWeight = toNumber(profile.planStartWeight, first?.weight);
+    const earliestRevisionDate = normalizeDate(history[0]?.planAnchorDate || history[0]?.date);
+    if (earliestRevisionDate && first?.date && first.date < initialDate && initialDate >= earliestRevisionDate) {
+      initialDate = first.date;
+      initialWeight = first.weight;
+    }
+    if (!initialDate || !Number.isFinite(initialWeight)) return [];
+
+    const firstRevision = history.find(item => normalizeDate(item.planAnchorDate || item.date) > initialDate);
+    const initialRate = toNumber(firstRevision?.previousPlanRatePct, plan.rate.selected);
+    const initialTarget = toNumber(firstRevision?.previousTargetWeight, plan.targetWeight);
+    const initialGoalType = ["loss", "maintain", "gain"].includes(firstRevision?.previousGoalType)
+      ? firstRevision.previousGoalType
+      : profile.goalType;
+    const anchors = [{
+      date: initialDate,
+      weight: initialWeight,
+      ratePct: initialRate,
+      targetWeight: initialTarget,
+      goalType: initialGoalType,
+      source: "initial"
+    }];
+
+    history.forEach(item => {
+      const date = normalizeDate(item.planAnchorDate || item.date);
+      if (!date || date <= initialDate) return;
+      const fallbackWeight = trendAtDate(parseDate(date), trends);
+      const weight = toNumber(item.planAnchorWeight, fallbackWeight);
+      if (!Number.isFinite(weight)) return;
+      anchors.push({
+        date,
+        weight,
+        ratePct: toNumber(item.planRatePct, plan.rate.selected),
+        targetWeight: toNumber(item.targetWeight, plan.targetWeight),
+        goalType: ["loss", "maintain", "gain"].includes(item.goalType) ? item.goalType : profile.goalType,
+        source: item.source || "automatic",
+        revisionDate: normalizeDate(item.date) || date
+      });
+    });
+
+    const byDate = new Map();
+    anchors.forEach(anchor => byDate.set(anchor.date, anchor));
+    return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function projectPlanAnchor(anchor, targetDate) {
+    const startDate = parseDate(anchor?.date);
+    if (!startDate || !targetDate || !Number.isFinite(anchor?.weight)) return null;
+    return projectWeight(
+      { goalType: anchor.goalType },
+      anchor.weight,
+      startDate,
+      anchor.targetWeight,
+      anchor.ratePct,
+      targetDate
+    );
+  }
+
+  function expectedAtDate(profile, plan, date, weighIns = state.weighIns, trends = rollingTrend(weighIns, profile.trendWindow)) {
+    if (!date) return null;
+    const iso = toISODate(date);
+    const anchors = planRevisionAnchors(profile, plan, weighIns, trends);
+    const anchor = [...anchors].reverse().find(item => item.date <= iso) || anchors[0];
+    return anchor ? projectPlanAnchor(anchor, date) : null;
   }
 
   function bmiCategory(bmi) {
@@ -4657,6 +4723,7 @@
     const latest = weighIns.at(-1);
     const latestTrend = trends.at(-1)?.trend;
     const plan = calculatePlan(profile, weighIns);
+    const planStartAnchor = planRevisionAnchors(profile, plan, weighIns, trends)[0];
     const adaptiveRateData = automaticAdjustmentData(profile, plan, weighIns);
     const observedWeekly = Number.isFinite(adaptiveRateData.observedWeekly)
       ? adaptiveRateData.observedWeekly
@@ -4718,8 +4785,8 @@
     $("#stat-bmi-note").textContent = bmiCategory(plan.bmi);
     $("#stat-body-fat").textContent = Number.isFinite(toNumber(profile.bodyFat, NaN)) ? `${formatNumber(profile.bodyFat,1)}%` : "Sin dato";
     $("#stat-ffmi").textContent = formatNumber(plan.ffmi, 1);
-    $("#plan-start").textContent = formatDate(profile.planStartDate || first?.date);
-    $("#plan-start-weight").textContent = formatKg(toNumber(profile.planStartWeight, first?.weight));
+    $("#plan-start").textContent = formatDate(planStartAnchor?.date || profile.planStartDate || first?.date);
+    $("#plan-start-weight").textContent = formatKg(toNumber(planStartAnchor?.weight, toNumber(profile.planStartWeight, first?.weight)));
   }
 
   function renderPlanStrip(profile, plan) {
@@ -4811,7 +4878,7 @@
       }
 
       if (Number.isFinite(difference) && Math.abs(difference) >= 0.5) {
-        text += ` Hoy la tendencia está ${formatNumber(Math.abs(difference), 2)} kg ${difference > 0 ? "por encima" : "por debajo"} de la proyección original.`;
+        text += ` Hoy la tendencia está ${formatNumber(Math.abs(difference), 2)} kg ${difference > 0 ? "por encima" : "por debajo"} de la proyección original. Esa separación es acumulada desde el inicio del plan y puede seguir siendo grande aunque el ritmo reciente esté cerca del previsto.`;
       }
     }
 
@@ -5009,6 +5076,9 @@
       meaningful,
       latest: relatedWeighIns.at(-1),
       latestTrend,
+      planRatePct: plan.rate.selected,
+      planTargetWeight: plan.targetWeight,
+      planGoalType: profile.goalType,
       limited: Math.abs(rawChange) > EXPENDITURE_CONFIG.maxAdjustment
     };
   }
@@ -5093,11 +5163,20 @@
   function applyAutomaticAdjustment(suggestion, profile = state.profile) {
     if (!suggestion?.ready || !suggestion.reviewDue || !suggestion.meaningful) return null;
     const adjusted = true;
+    const planAnchorDate = suggestion.latest?.date || todayISO();
+    const planAnchorWeight = Number(toNumber(suggestion.latestTrend, suggestion.latest?.weight).toFixed(2));
     profile.calibrationOffset = suggestion.newOffset;
-    profile.planStartDate = suggestion.latest?.date || todayISO();
-    profile.planStartWeight = Number(toNumber(suggestion.latestTrend, suggestion.latest?.weight).toFixed(2));
     state.calibrationHistory = [...(state.calibrationHistory || []), {
       date: todayISO(),
+      source: "automatic",
+      planAnchorDate,
+      planAnchorWeight,
+      previousPlanRatePct: suggestion.planRatePct,
+      planRatePct: suggestion.planRatePct,
+      previousTargetWeight: suggestion.planTargetWeight,
+      targetWeight: suggestion.planTargetWeight,
+      previousGoalType: suggestion.planGoalType,
+      goalType: suggestion.planGoalType,
       intakeDays: suggestion.intakeDays,
       completedDays: suggestion.completedDays,
       weighInCount: suggestion.weighInCount,
@@ -5355,16 +5434,16 @@
       weight: {
         eyebrow: "PLAN VS REALIDAD",
         title: "Tu peso real frente al camino previsto.",
-        description: "La línea sólida muestra la tendencia real. La punteada conserva el plan original.",
+        description: "La línea sólida muestra la tendencia real. La punteada conserva cada tramo del plan y empieza una pendiente nueva en cada reajuste.",
         legend: ["Peso real", "Tendencia", "Plan", "Objetivo"],
         classes: ["legend-real", "legend-trend", "legend-plan", "legend-goal"]
       },
       calories: {
         eyebrow: "CONSUMO VS OBJETIVO",
         title: "Las calorías que registrás frente al número del plan.",
-        description: "El promedio se calcula con días terminados cuando hay suficientes; de lo contrario usa todos los días con ingestas.",
-        legend: ["Consumidas", "Objetivo", "", ""],
-        classes: ["legend-trend", "legend-plan", "", ""]
+        description: "Cada barra representa un día: azul por debajo, verde dentro del margen y rojo por encima. Los días todavía abiertos se muestran más transparentes.",
+        legend: ["Por debajo", "Dentro del margen", "Por encima", "Objetivo"],
+        classes: ["legend-below", "legend-aligned", "legend-above", "legend-plan"]
       },
       weekly: {
         eyebrow: "PROMEDIO SEMANAL",
@@ -5492,30 +5571,53 @@
     renderActiveProgressChart();
   }
 
-  function renderCharts(profile, plan, weighIns, trends, observedWeekly) {
-    const planProjection = [];
-    const planStart = parseDate(profile.planStartDate) || parseDate(weighIns[0]?.date);
-    const planStartWeight = toNumber(profile.planStartWeight, weighIns[0]?.weight);
-    if (planStart && Number.isFinite(planStartWeight)) {
-      const weeks = Math.min(104, Math.max(26, Math.ceil(plan.estimatedWeeks || 52)));
-      for (let week = 0; week <= weeks; week += 1) {
-        const date = addDays(planStart, week * 7);
-        const weight = projectWeight(profile, planStartWeight, planStart, plan.targetWeight, plan.rate.selected, date);
-        planProjection.push({ date: toISODate(date), weight });
-        if (Number.isFinite(plan.targetWeight) && Math.abs(weight - plan.targetWeight) < 0.03 && date > new Date()) break;
+  function buildPlanSegments(profile, plan, weighIns, trends) {
+    const anchors = planRevisionAnchors(profile, plan, weighIns, trends);
+    if (!anchors.length) return [];
+    const latestDataDate = parseDate(weighIns.at(-1)?.date || todayISO()) || parseDate(todayISO());
+    const futureWeeks = Math.min(104, Math.max(26, Math.ceil(plan.estimatedWeeks || 52)));
+    const finalEnd = addDays(latestDataDate, futureWeeks * 7);
+
+    return anchors.map((anchor, index) => {
+      const startDate = parseDate(anchor.date);
+      const nextAnchor = anchors[index + 1];
+      const endDate = nextAnchor ? parseDate(nextAnchor.date) : finalEnd;
+      const points = [{ date: anchor.date, weight: anchor.weight }];
+      let cursor = addDays(startDate, 7);
+      while (cursor < endDate) {
+        points.push({ date: toISODate(cursor), weight: projectPlanAnchor(anchor, cursor) });
+        cursor = addDays(cursor, 7);
       }
-    }
-    chartPayload = { profile, plan, weighIns, trends, planProjection, observedWeekly };
+      if (endDate > startDate) {
+        points.push({ date: toISODate(endDate), weight: projectPlanAnchor(anchor, endDate) });
+      }
+      return {
+        anchor,
+        points: points.filter(item => Number.isFinite(item.weight)),
+        revised: index > 0
+      };
+    });
+  }
+
+  function renderCharts(profile, plan, weighIns, trends, observedWeekly) {
+    const planSegments = buildPlanSegments(profile, plan, weighIns, trends);
+    const planProjection = planSegments.flatMap(segment => segment.points);
+    chartPayload = { profile, plan, weighIns, trends, planSegments, planProjection, observedWeekly };
     renderActiveProgressChart();
   }
 
   function visibleChartPoints(payload) {
     const bounds = chartBounds(payload, false);
     const within = item => withinBounds(parseDate(item.date), bounds);
+    const planSegments = (payload.planSegments || []).map(segment => ({
+      ...segment,
+      points: segment.points.filter(within)
+    })).filter(segment => segment.points.length);
     return {
       weighIns: payload.weighIns.filter(within),
       trends: payload.trends.filter(within),
-      planProjection: payload.planProjection.filter(within),
+      planSegments,
+      planProjection: planSegments.flatMap(segment => segment.points),
       start: bounds.start,
       end: bounds.end
     };
@@ -5531,6 +5633,72 @@
     const ctx = canvas.getContext("2d");
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     return { ctx, width: rect.width, height: rect.height };
+  }
+
+  function progressDateTicks(minDate, maxDate, width) {
+    const start = new Date(minDate);
+    const end = new Date(maxDate);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return [];
+    if (end <= start) return [start];
+
+    if (chartRange === "1m") {
+      const divisions = width < 520 ? 3 : 5;
+      const ticks = [];
+      const seen = new Set();
+      for (let index = 0; index <= divisions; index += 1) {
+        const date = new Date(start.getTime() + (end.getTime() - start.getTime()) * index / divisions);
+        const key = toISODate(date);
+        if (!seen.has(key)) {
+          seen.add(key);
+          ticks.push(date);
+        }
+      }
+      return ticks;
+    }
+
+    const ticks = [start];
+    let cursor = new Date(start.getFullYear(), start.getMonth() + 1, 1, 12, 0, 0, 0);
+    while (cursor <= end) {
+      ticks.push(new Date(cursor));
+      cursor = addMonths(cursor, 1);
+    }
+
+    const monthKey = date => `${date.getFullYear()}-${date.getMonth()}`;
+    if (monthKey(ticks.at(-1)) !== monthKey(end)) ticks.push(end);
+
+    const maxLabels = width < 520 ? 4 : chartRange === "all" ? 8 : 7;
+    if (ticks.length <= maxLabels) return ticks;
+
+    const selected = [];
+    const seenMonths = new Set();
+    for (let index = 0; index < maxLabels; index += 1) {
+      const sourceIndex = Math.round(index * (ticks.length - 1) / Math.max(1, maxLabels - 1));
+      const date = ticks[sourceIndex];
+      const key = monthKey(date);
+      if (!seenMonths.has(key)) {
+        seenMonths.add(key);
+        selected.push(date);
+      }
+    }
+    return selected;
+  }
+
+  function drawProgressDateLabels(ctx, minDate, maxDate, width, height, margin, x) {
+    const start = new Date(minDate);
+    const end = new Date(maxDate);
+    const crossesYears = start.getFullYear() !== end.getFullYear();
+    const options = chartRange === "1m"
+      ? { day: "2-digit", month: "short" }
+      : crossesYears
+        ? { month: "short", year: "2-digit" }
+        : { month: "short" };
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    progressDateTicks(minDate, maxDate, width).forEach(date => {
+      ctx.fillStyle = "rgba(242,239,230,.48)";
+      ctx.fillText(new Intl.DateTimeFormat("es-UY", options).format(date), x(date), height - margin.bottom + 11);
+    });
   }
 
   function drawWeightChart(canvas, payload) {
@@ -5575,20 +5743,7 @@
       ctx.fillText(formatNumber(value, 1), margin.left - 8, py);
     }
 
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    const horizontalTicks = width < 520 ? 3 : 5;
-    for (let i = 0; i <= horizontalTicks; i += 1) {
-      const timestamp = minDate + (maxDate - minDate) * i / horizontalTicks;
-      const date = new Date(timestamp);
-      const tickOptions = chartRange === "all"
-        ? { month: "short", year: "2-digit" }
-        : chartRange === "6m"
-          ? { month: "short" }
-          : { day: "2-digit", month: "short" };
-      ctx.fillStyle = "rgba(242,239,230,.48)";
-      ctx.fillText(new Intl.DateTimeFormat("es-UY", tickOptions).format(date), x(date), height - margin.bottom + 11);
-    }
+    drawProgressDateLabels(ctx, minDate, maxDate, width, height, margin, x);
 
     if (Number.isFinite(payload.plan.targetWeight)) {
       ctx.strokeStyle = "rgba(141,124,255,.82)";
@@ -5601,7 +5756,13 @@
     drawLine(ctx, visible.weighIns.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "rgba(242,239,230,.38)", 1.4, false);
     drawPoints(ctx, visible.weighIns.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "#f2efe6", 2.4);
     drawLine(ctx, visible.trends.map(item => ({ date: parseDate(item.date), value: item.trend })), x, y, "#c8ff46", 3, false);
-    drawLine(ctx, visible.planProjection.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "#ff6b52", 2.3, true);
+    visible.planSegments.forEach(segment => {
+      drawLine(ctx, segment.points.map(item => ({ date: parseDate(item.date), value: item.weight })), x, y, "#ff6b52", 2.3, true);
+    });
+    const revisionPoints = visible.planSegments
+      .filter(segment => segment.revised && segment.points.some(item => item.date === segment.anchor.date))
+      .map(segment => ({ date: parseDate(segment.anchor.date), value: segment.anchor.weight }));
+    drawPlanRevisionPoints(ctx, revisionPoints, x, y);
     return true;
   }
 
@@ -5642,21 +5803,19 @@
     ctx.beginPath(); ctx.moveTo(margin.left, y(target)); ctx.lineTo(width - margin.right, y(target)); ctx.stroke();
     ctx.restore();
 
+    const tolerance = Math.max(75, target * .05);
     days.forEach(day => {
       const px = x(day.date);
       const top = y(day.calories);
-      ctx.fillStyle = day.completed ? "#c8ff46" : "#8d7cff";
+      const difference = day.calories - target;
+      ctx.save();
+      ctx.globalAlpha = day.completed ? 1 : .48;
+      ctx.fillStyle = Math.abs(difference) <= tolerance ? "#c8ff46" : difference > 0 ? "#ff6b52" : "#58a6ff";
       ctx.fillRect(px - barWidth / 2, top, barWidth, y(0) - top);
+      ctx.restore();
     });
 
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    const horizontalTicks = width < 520 ? 3 : 5;
-    for (let i = 0; i <= horizontalTicks; i += 1) {
-      const date = new Date(minDate + (maxDate - minDate) * i / horizontalTicks);
-      ctx.fillStyle = "rgba(242,239,230,.48)";
-      ctx.fillText(new Intl.DateTimeFormat("es-UY", { month: "short", day: chartRange === "1m" ? "2-digit" : undefined }).format(date), x(date), height - margin.bottom + 10);
-    }
+    drawProgressDateLabels(ctx, minDate, maxDate, width, height, margin, x);
     return true;
   }
 
@@ -5758,7 +5917,7 @@
       const px = margin.left + step * (index + .5);
       const top = y(sample.average);
       const tolerance = Math.max(75, target * .05);
-      ctx.fillStyle = Math.abs(sample.average - target) <= tolerance ? "#c8ff46" : sample.average > target ? "#ff6b52" : "#8d7cff";
+      ctx.fillStyle = Math.abs(sample.average - target) <= tolerance ? "#c8ff46" : sample.average > target ? "#ff6b52" : "#58a6ff";
       ctx.fillRect(px - barWidth / 2, top, barWidth, y(0) - top);
       const labelStep = width < 520 ? Math.max(2, Math.ceil(samples.length / 5)) : Math.max(1, Math.ceil(samples.length / 10));
       if ((width < 520 ? index % labelStep === 0 : samples.length <= 14 || index % labelStep === 0) || index === samples.length - 1) {
@@ -5836,6 +5995,21 @@
     if (dashed) ctx.setLineDash(dashPattern);
     ctx.stroke();
     ctx.restore();
+  }
+
+  function drawPlanRevisionPoints(ctx, points, x, y) {
+    points.forEach(point => {
+      if (!point.date || !Number.isFinite(point.value)) return;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x(point.date), y(point.value), 4.2, 0, Math.PI * 2);
+      ctx.fillStyle = "#10131a";
+      ctx.fill();
+      ctx.strokeStyle = "#ff6b52";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    });
   }
 
   function drawPoints(ctx, points, x, y, color, radius) {
