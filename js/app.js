@@ -5369,9 +5369,9 @@
       weekly: {
         eyebrow: "PROMEDIO SEMANAL",
         title: "Una lectura más estable de tus calorías.",
-        description: "Cada barra muestra el promedio diario de una semana. La línea punteada es el objetivo diario.",
-        legend: ["Promedio semanal", "Objetivo", "", ""],
-        classes: ["legend-trend", "legend-plan", "", ""]
+        description: "Cada barra muestra el promedio diario de una semana: azul por debajo, verde dentro del margen y rojo por encima. La línea punteada es el objetivo diario.",
+        legend: ["Por debajo", "Dentro del margen", "Por encima", "Objetivo"],
+        classes: ["legend-below", "legend-aligned", "legend-above", "legend-plan"]
       }
     }[kind];
     $("#progress-chart-eyebrow").textContent = copy.eyebrow;
@@ -5510,7 +5510,7 @@
   }
 
   function visibleChartPoints(payload) {
-    const bounds = chartBounds(payload, true);
+    const bounds = chartBounds(payload, false);
     const within = item => withinBounds(parseDate(item.date), bounds);
     return {
       weighIns: payload.weighIns.filter(within),
@@ -5581,8 +5581,13 @@
     for (let i = 0; i <= horizontalTicks; i += 1) {
       const timestamp = minDate + (maxDate - minDate) * i / horizontalTicks;
       const date = new Date(timestamp);
+      const tickOptions = chartRange === "all"
+        ? { month: "short", year: "2-digit" }
+        : chartRange === "6m"
+          ? { month: "short" }
+          : { day: "2-digit", month: "short" };
       ctx.fillStyle = "rgba(242,239,230,.48)";
-      ctx.fillText(new Intl.DateTimeFormat("es-UY", { month: "short", year: chartRange === "all" ? "2-digit" : undefined }).format(date), x(date), height - margin.bottom + 11);
+      ctx.fillText(new Intl.DateTimeFormat("es-UY", tickOptions).format(date), x(date), height - margin.bottom + 11);
     }
 
     if (Number.isFinite(payload.plan.targetWeight)) {

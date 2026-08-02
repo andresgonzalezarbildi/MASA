@@ -4033,3 +4033,37 @@ html {
     border: 1px solid var(--ink);
   }
 }
+
+/* --- MASA v31.0.9: ajustes visuales de búsqueda, respaldos y progreso web --- */
+.chart-legend .legend-below::before { background: var(--violet); }
+.chart-legend .legend-aligned::before { background: var(--acid); }
+.chart-legend .legend-above::before { background: var(--coral); }
+.chart-legend .legend-below { color: var(--violet); border-color: rgba(141,124,255,.55); }
+.chart-legend .legend-aligned { color: var(--acid); border-color: rgba(200,255,70,.5); }
+.chart-legend .legend-above { color: var(--coral); border-color: rgba(255,107,82,.55); }
+
+/* La columna reservada al botón evita que "Código" quede recortado en la web. */
+html.web-runtime #food-modal .food-search-row {
+  grid-template-columns: minmax(0, 1fr) 104px;
+}
+html.web-runtime #food-modal .food-scan-action {
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+/* La tarjeta sin enlace de plantilla reserva el mismo espacio inferior que las otras. */
+@media (min-width: 591px) {
+  .library-data-tool::after {
+    content: "";
+    display: block;
+    flex: 0 0 27px;
+    height: 27px;
+  }
+}
+
+@media (max-width: 470px) {
+  html.web-runtime #food-modal .food-search-row {
+    grid-template-columns: minmax(0, 1fr) 96px;
+  }
+}
+
