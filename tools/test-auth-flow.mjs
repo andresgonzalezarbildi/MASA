@@ -84,7 +84,7 @@ function buildDom() {
   const googleSignupButton = new FakeElement({ type: "button" });
   make("#account-email");
   make("#account-area");
-  make("#logout-button");
+  const logoutButton = make("#logout-button");
   make("#sync-status");
   make("#forgot-password");
   make("#security-account-email");
@@ -150,6 +150,7 @@ function buildDom() {
     googleSignupButton,
     loginEmail,
     loginPassword,
+    logoutButton,
     eye,
     accountPasswordForm,
     currentPassword,
@@ -172,6 +173,7 @@ async function createRuntime({ initialSession = null, signInResult, online = tru
   let oauthArgs = null;
   let openedAuthUrl = null;
   let authCallback = null;
+  let reloadCalls = 0;
 
   const session = initialSession || { user: { id: "user-1", email: "user@example.com" } };
   const auth = {
@@ -224,7 +226,13 @@ async function createRuntime({ initialSession = null, signInResult, online = tru
     addEventListener() {},
     location: null
   };
-  const location = { search: "", hash: "", origin: "https://localhost", pathname: "/" };
+  const location = {
+    search: "",
+    hash: "",
+    origin: "https://localhost",
+    pathname: "/",
+    reload() { reloadCalls += 1; }
+  };
   window.location = location;
   window.window = window;
 
@@ -273,6 +281,7 @@ async function createRuntime({ initialSession = null, signInResult, online = tru
     get oauthArgs() { return oauthArgs; },
     get openedAuthUrl() { return openedAuthUrl; },
     get authCallback() { return authCallback; },
+    get reloadCalls() { return reloadCalls; },
     storage
   };
 }
@@ -427,6 +436,59 @@ async function testCredentialErrorMessage() {
   assert.equal(runtime.dom.gate.hidden, false);
 }
 
+
+async function testRememberedEmailPrefillsLogin() {
+  const runtime = await createRuntime({
+    initialSession: null,
+    initialStorage: { "masa-last-email-v1": "saved@example.com" }
+  });
+  runtime.cloud.requireSession();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(runtime.dom.loginEmail.value, "saved@example.com");
+}
+
+async function testMissingRemoteSessionKeepsLocalAccessOnline() {
+  const runtime = await createRuntime({
+    initialSession: null,
+    online: true,
+    initialStorage: {
+      "masa-last-user-v1": JSON.stringify({ id: "local-user", email: "local@example.com" })
+    }
+  });
+  const localSession = await runtime.cloud.requireSession();
+  assert.equal(localSession.user.id, "local-user");
+  assert.equal(localSession.masaOffline, true);
+  assert.equal(runtime.dom.gate.hidden, true);
+}
+
+async function testAutomaticSignedOutKeepsLocalAccess() {
+  const existing = { user: { id: "existing", email: "existing@example.com" } };
+  const runtime = await createRuntime({ initialSession: existing, online: true });
+  await runtime.cloud.requireSession();
+  runtime.cloud.finishBoot();
+
+  runtime.authCallback("SIGNED_OUT", null);
+
+  assert.equal(runtime.cloud.isAuthenticated(), true);
+  assert.equal(runtime.cloud.user.id, "existing");
+  assert.equal(runtime.cloud.user.offline, true);
+  assert.equal(runtime.dom.gate.hidden, true);
+  assert.ok(runtime.storage.has("masa-last-user-v1"));
+  assert.equal(runtime.reloadCalls, 0);
+}
+
+async function testExplicitLogoutKeepsOnlyEmail() {
+  const existing = { user: { id: "logout-user", email: "logout@example.com" } };
+  const runtime = await createRuntime({ initialSession: existing });
+  await runtime.cloud.requireSession();
+
+  await runtime.dom.logoutButton.emit("click");
+
+  assert.equal(runtime.storage.get("masa-last-email-v1"), "logout@example.com");
+  assert.equal(runtime.storage.has("masa-last-user-v1"), false);
+  assert.equal(runtime.reloadCalls, 1);
+}
+
 async function testOfflineSessionAndDurableQueue() {
   const cachedState = { configured: true, weighIns: [{ id: "w1", date: "2026-07-30", weight: 73.5 }], diary: {} };
   const initialStorage = {
@@ -463,5 +525,9 @@ await testGoogleLoginUsesConfiguredReturn();
 await testGoogleSignupButtonUsesSameFlow();
 await testNativeGoogleLoginUsesDeepLink();
 await testCredentialErrorMessage();
+await testRememberedEmailPrefillsLogin();
+await testMissingRemoteSessionKeepsLocalAccessOnline();
+await testAutomaticSignedOutKeepsLocalAccess();
+await testExplicitLogoutKeepsOnlyEmail();
 await testOfflineSessionAndDurableQueue();
 console.log("Auth flow tests: OK");

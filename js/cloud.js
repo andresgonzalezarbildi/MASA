@@ -5,6 +5,7 @@
   const CACHE_PREFIX = "masa-user-cache-v1:";
   const PENDING_PREFIX = "masa-user-pending-v1:";
   const LAST_USER_KEY = "masa-last-user-v1";
+  const LAST_EMAIL_KEY = "masa-last-email-v1";
   const PAGE_SIZE = 1000;
   const BATCH_SIZE = 250;
   // MASA_SECURITY_CLOUD_GUARDS_V1
@@ -296,12 +297,38 @@
     }
   }
 
+  function rememberLoginEmail(email) {
+    const normalized = String(email || "").trim();
+    if (!normalized) return;
+    try {
+      localStorage.setItem(LAST_EMAIL_KEY, normalized);
+    } catch (error) {
+      noteStorageFailure("guardar el último correo", error);
+    }
+  }
+
+  function readRememberedEmail() {
+    try {
+      return String(localStorage.getItem(LAST_EMAIL_KEY) || "").trim();
+    } catch (error) {
+      noteStorageFailure("leer el último correo", error);
+      return "";
+    }
+  }
+
+  function prefillLoginEmail() {
+    const input = $("#auth-login-form")?.querySelector('input[name="email"]');
+    if (input && !input.value) input.value = readRememberedEmail();
+  }
+
   function rememberUser(user) {
     if (!user?.id) return;
+    const email = String(user.email || "");
     writeLocalJson(LAST_USER_KEY, {
       id: String(user.id),
-      email: String(user.email || "")
+      email
     }, "guardar la identidad para el modo offline");
+    rememberLoginEmail(email);
   }
 
   function forgetRememberedUser() {
@@ -313,13 +340,19 @@
     return user?.id ? { id: String(user.id), email: String(user.email || "") } : null;
   }
 
-  function activateOfflineSession() {
-    const user = readRememberedUser();
-    if (!user) return null;
+  function activateOfflineSession(fallbackUser = null) {
+    const storedUser = readRememberedUser();
+    const sourceUser = storedUser || fallbackUser;
+    if (!sourceUser?.id) return null;
+
+    const user = {
+      id: String(sourceUser.id),
+      email: String(sourceUser.email || "")
+    };
+    rememberUser(user);
 
     const queued = readLocalJson(`${PENDING_PREFIX}${user.id}`, "leer los cambios offline");
-    const cached = readLocalJson(`${CACHE_PREFIX}${user.id}`, "leer los datos offline");
-    if (!queued && !cached) return null;
+    if (queued) pendingState = clone(queued);
 
     session = {
       user: { ...user, offline: true },
@@ -328,7 +361,12 @@
     updateAccountUI();
     refreshAccountSecurity();
     resolveSessionWaiters();
-    setSyncStatus("offline", queued ? "Sin conexión · cambios pendientes" : "Sin conexión · modo local");
+    setSyncStatus(
+      navigator.onLine ? "error" : "offline",
+      navigator.onLine
+        ? (queued ? "Sesión local · cambios pendientes" : "Sesión local · sin sincronizar")
+        : (queued ? "Sin conexión · cambios pendientes" : "Sin conexión · modo local")
+    );
     return session;
   }
 
@@ -357,6 +395,7 @@
     $("#auth-loading")?.setAttribute("hidden", "");
     $("#auth-forms")?.removeAttribute("hidden");
     setAuthMessage("");
+    if (login) prefillLoginEmail();
   }
 
   function showRecoveryMode() {
@@ -449,7 +488,10 @@
   }
 
   function handleSignedOut({ forgetIdentity = explicitSignOut } = {}) {
-    if (forgetIdentity) forgetRememberedUser();
+    if (forgetIdentity) {
+      rememberLoginEmail(session?.user?.email || readRememberedUser()?.email || "");
+      forgetRememberedUser();
+    }
     explicitSignOut = false;
     session = null;
     pendingState = null;
@@ -635,6 +677,7 @@
   function bindAuthUI() {
     if (authBound) return;
     authBound = true;
+    prefillLoginEmail();
 
     $("#auth-mode-login")?.addEventListener("click", () => showAuthMode("login"));
     $("#auth-mode-signup")?.addEventListener("click", () => showAuthMode("signup"));
@@ -668,6 +711,7 @@
       const passwordInput = form.querySelector('input[name="password"]');
       const email = emailInput.value.trim();
       const password = passwordInput.value;
+      rememberLoginEmail(email);
 
       setAuthBusy(true);
       setAuthMessage("");
@@ -861,6 +905,7 @@
     });
 
     $("#logout-button")?.addEventListener("click", async () => {
+      rememberLoginEmail(session?.user?.email || readRememberedUser()?.email || "");
       explicitSignOut = true;
       forgetRememberedUser();
       try {
@@ -950,8 +995,14 @@
     }
 
     if (event === "SIGNED_OUT") {
-      if (!explicitSignOut && !navigator.onLine && activateOfflineSession()) return;
-      handleSignedOut({ forgetIdentity: explicitSignOut || navigator.onLine });
+      if (!explicitSignOut) {
+        const localSession = activateOfflineSession(session?.user);
+        if (localSession) {
+          if (appBooted) hideLoadingGate({ showForms: false, hideGate: true });
+          return;
+        }
+      }
+      handleSignedOut({ forgetIdentity: explicitSignOut });
     }
   }
 
@@ -989,7 +1040,7 @@
         session = result.data?.session || null;
       }
       if (session?.user) rememberUser(session.user);
-      if (!session && !navigator.onLine) activateOfflineSession();
+      if (!session) activateOfflineSession();
       updateAccountUI();
       refreshAccountSecurity();
 
@@ -1009,19 +1060,9 @@
     } catch (error) {
       logRealError("startup", "Falló la recuperación inicial de la sesión", error);
 
-      const offlineSession = (!navigator.onLine || isNetworkError(error) || error?.masaKind === "timeout")
-        ? activateOfflineSession()
-        : null;
+      const offlineSession = activateOfflineSession();
       if (offlineSession) return offlineSession;
 
-      if (isInvalidSessionError(error)) {
-        forgetRememberedUser();
-        try {
-          await withTimeout(getClient().auth.signOut({ scope: "local" }), "La limpieza de la sesión inválida");
-        } catch (signOutError) {
-          logRealError("storage", "No se pudo limpiar la sesión inválida", signOutError);
-        }
-      }
       session = null;
       updateAccountUI();
       showAuthMode("login");
@@ -1154,7 +1195,12 @@
     const localState = pendingState || readCachedState();
 
     if ((!navigator.onLine || isOfflineSession()) && localState) {
-      setSyncStatus("offline", pendingState ? "Sin conexión · cambios pendientes" : "Sin conexión · datos locales");
+      setSyncStatus(
+        navigator.onLine ? "error" : "offline",
+        navigator.onLine
+          ? (pendingState ? "Sesión local · cambios pendientes" : "Sesión local · datos locales")
+          : (pendingState ? "Sin conexión · cambios pendientes" : "Sin conexión · datos locales")
+      );
       return {
         state: localState,
         hasData: true,
@@ -1186,21 +1232,8 @@
       return result;
     } catch (error) {
       logRealError("sync", "Falló la carga de datos del usuario", error);
-      if (isInvalidSessionError(error) && navigator.onLine && !isOfflineSession()) {
-        forgetRememberedUser();
-        try {
-          await withTimeout(getClient().auth.signOut({ scope: "local" }), "La limpieza de la sesión inválida");
-        } catch (signOutError) {
-          logRealError("auth", "No se pudo limpiar la sesión inválida", signOutError);
-        }
-        session = null;
-        const safeError = errorWithContext(
-          error,
-          "auth",
-          "Sesión inválida",
-          "INVALID_SESSION"
-        );
-        throw safeError;
+      if (isInvalidSessionError(error) && !isOfflineSession()) {
+        activateOfflineSession(session?.user);
       }
 
       const cached = readPersistedPendingState() || readCachedState();
@@ -1709,22 +1742,18 @@
       if (result.error) throw errorWithContext(result.error, "auth", "Recuperación de sesión online");
       const nextSession = result.data?.session;
       if (!nextSession?.user) {
-        const gate = $("#auth-gate");
-        if (gate) gate.hidden = false;
-        showAuthMode("login");
-        setAuthMessage("La sesión venció. Iniciá sesión para sincronizar los cambios guardados en este dispositivo.", true);
-        setSyncStatus("error", "Iniciá sesión para sincronizar");
+        activateOfflineSession(session?.user);
+        hideLoadingGate({ showForms: false, hideGate: true });
+        setSyncStatus("error", "Sesión local · sin sincronizar");
         return false;
       }
       acceptSession(nextSession);
       return true;
     } catch (error) {
       logRealError("auth", "No se pudo recuperar la sesión online", error);
-      const gate = $("#auth-gate");
-      if (gate) gate.hidden = false;
-      showAuthMode("login");
-      setAuthMessage("Iniciá sesión para sincronizar los cambios guardados en este dispositivo.", true);
-      setSyncStatus("error", "Conexión recuperada · falta iniciar sesión");
+      activateOfflineSession(session?.user);
+      hideLoadingGate({ showForms: false, hideGate: true });
+      setSyncStatus("error", "Sesión local · sin sincronizar");
       return false;
     }
   }

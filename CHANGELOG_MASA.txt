@@ -33,3 +33,6 @@ Se incorporó el lector de rotulados nutricionales en Android como alternativa a
 
 v31.0.3
 Se corrigió el funcionamiento del teclado dentro de modales y formularios Android, permitiendo desplazar el contenido hasta el último campo y recuperar la vista completa al cerrar el teclado. El lector de rotulados quedó disponible únicamente en Android y se ajustó su integración visual. También se incorporó el sistema de equivalencias al crear o editar alimentos y recetas, se incluyó el reconocimiento necesario dentro de la APK, se mejoró el procesamiento de fotografías y se corrigieron problemas de identificación de alimentos propios o editados.
+
+v31.0.8
+Se reforzó la permanencia de la sesión. Si Supabase no puede restaurar o renovar el acceso, o el dispositivo pierde la conexión, M.A.S.A. conserva una sesión local y continúa funcionando sin volver a mostrar el inicio de sesión. El cierre de sesión queda reservado a la acción manual del usuario. Al cerrar sesión se elimina la identidad local, pero se recuerda el último correo para dejarlo precargado en el próximo acceso.
