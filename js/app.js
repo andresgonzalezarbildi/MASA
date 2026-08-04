@@ -555,7 +555,8 @@
   function normalizeEquivalence(item = {}) {
     const amount = Math.max(0, toNumber(item.amount, 0));
     const baseAmount = Math.max(0, toNumber(item.baseAmount, 0));
-    if (amount <= 0 || baseAmount <= 0) return null;
+    const referenceAmount = Math.max(0, toNumber(item.referenceAmount ?? item.baseAmount, 0));
+    if (amount <= 0 || baseAmount <= 0 || referenceAmount <= 0) return null;
     const rawUnit = String(item.unit || "unit").trim() || "unit";
     const unit = ["g", "kg", "ml", "l", "unit", "serving", "cup", "tablespoon", "teaspoon", "plate", "slice", "package", "custom"].includes(rawUnit)
       ? rawUnit
@@ -567,6 +568,8 @@
       amount,
       unit,
       customUnit,
+      referenceAmount,
+      referenceId: String(item.referenceId || "").trim(),
       baseAmount
     };
   }
@@ -3069,51 +3072,252 @@
     ["teaspoon", "cucharadita"], ["plate", "plato"], ["slice", "feta"], ["package", "paquete"], ["custom", "otra unidad…"]
   ];
 
-  function equivalenceBaseUnitLabel(type) {
+  function equivalenceBaseUnitData(type) {
     const form = type === "recipe" ? $("#recipe-form") : $("#food-editor-form");
     const select = type === "recipe" ? form?.elements.yieldUnit : form?.elements.servingUnit;
     const custom = type === "recipe" ? form?.elements.yieldUnitCustom : form?.elements.servingUnitCustom;
-    if (!select) return "unidad base";
-    return editableUnitNames(select.value, select.value === "custom" ? custom?.value : "")[1];
+    const amountInput = form?.elements.servingAmount;
+    const unit = select?.value || "serving";
+    const customUnit = unit === "custom" ? String(custom?.value || "").trim() : "";
+    return {
+      unit,
+      customUnit,
+      amount: Math.max(0.01, toNumber(amountInput?.value, defaultServingAmountForUnit(unit)) || defaultServingAmountForUnit(unit))
+    };
+  }
+
+  function equivalenceBaseUnitLabel(type, amount = 2) {
+    const base = equivalenceBaseUnitData(type);
+    const names = editableUnitNames(base.unit, base.customUnit);
+    return Math.abs(toNumber(amount, 0) - 1) < 0.0001 ? names[0] : names[1];
   }
 
   function equivalenceDraft(type) {
     return type === "recipe" ? recipeEditorEquivalences : foodEditorEquivalences;
   }
 
+  function equivalenceUnitKey(unit, customUnit = "") {
+    return `${unit}:${normalizeHeader(customUnit)}`;
+  }
+
+  function equivalenceUnitText(equivalence, amount = equivalence?.amount) {
+    const [singular, plural] = editableUnitNames(equivalence?.unit || "unit", equivalence?.customUnit || "");
+    return Math.abs(toNumber(amount, 0) - 1) < 0.0001 ? singular : plural;
+  }
+
+  function equivalenceReferenceText(type, equivalence) {
+    const reference = equivalence.referenceId
+      ? equivalenceDraft(type).find(item => item.id === equivalence.referenceId)
+      : null;
+    return reference
+      ? equivalenceUnitText(reference, equivalence.referenceAmount)
+      : equivalenceBaseUnitLabel(type, equivalence.referenceAmount);
+  }
+
+  function equivalenceReferenceOptions(type, current) {
+    const baseLabel = equivalenceBaseUnitLabel(type, 2);
+    const options = [`<option value="" ${current.referenceId ? "" : "selected"}>${escapeHTML(baseLabel)} (unidad base)</option>`];
+    equivalenceDraft(type).forEach(item => {
+      if (item.id === current.id) return;
+      const label = equivalenceUnitText(item, 2);
+      options.push(`<option value="${escapeHTML(item.id)}" ${item.id === current.referenceId ? "selected" : ""}>${escapeHTML(label)}</option>`);
+    });
+    return options.join("");
+  }
+
+  function equivalenceRelationText(type, equivalence) {
+    return `${formatQuantityAmount(equivalence.amount)} ${equivalenceUnitText(equivalence, equivalence.amount)} = ${formatQuantityAmount(equivalence.referenceAmount)} ${equivalenceReferenceText(type, equivalence)}`;
+  }
+
+  function equivalenceBaseSummary(type, equivalence) {
+    if (!equivalence.referenceId) return "";
+    return `Equivale a ${formatQuantityAmount(equivalence.baseAmount)} ${equivalenceBaseUnitLabel(type, equivalence.baseAmount)} de la base.`;
+  }
+
+  function resolveEquivalenceDrafts(type, rawItems = equivalenceDraft(type)) {
+    const base = equivalenceBaseUnitData(type);
+    const baseKey = equivalenceUnitKey(base.unit, base.customUnit);
+    const normalized = [];
+    const seen = new Map();
+
+    for (let index = 0; index < rawItems.length; index++) {
+      const raw = rawItems[index] || {};
+      const amount = Math.max(0, toNumber(raw.amount, 0));
+      const referenceAmount = Math.max(0, toNumber(raw.referenceAmount ?? raw.baseAmount, 0));
+      const rawUnit = String(raw.unit || "unit").trim() || "unit";
+      const unit = ["g", "kg", "ml", "l", "unit", "serving", "cup", "tablespoon", "teaspoon", "plate", "slice", "package", "custom"].includes(rawUnit)
+        ? rawUnit
+        : canonicalEditableUnit(rawUnit);
+      const customUnit = String(raw.customUnit || raw.unitCustom || (unit === "custom" && rawUnit !== "custom" ? rawUnit : "")).trim();
+      const id = String(raw.id || createId());
+      const referenceId = String(raw.referenceId || "").trim();
+
+      if (amount <= 0 || referenceAmount <= 0) {
+        return { error: { index, message: "Las dos cantidades deben ser mayores a cero." } };
+      }
+      if (unit === "custom" && !customUnit) {
+        return { error: { index, message: "Escribí el nombre de la unidad personalizada." } };
+      }
+
+      const key = equivalenceUnitKey(unit, customUnit);
+      if (key === baseKey) {
+        return { error: { index, message: "La unidad alternativa debe ser distinta de la unidad base." } };
+      }
+      if (seen.has(key)) {
+        return { error: { index, message: "No repitas la misma unidad alternativa." } };
+      }
+      seen.set(key, index);
+      normalized.push({ id, amount, unit, customUnit, referenceAmount, referenceId, baseAmount: 0 });
+    }
+
+    const byId = new Map(normalized.map((item, index) => [item.id, { item, index }]));
+    const status = new Map();
+
+    function resolveItem(item, index) {
+      const currentStatus = status.get(item.id);
+      if (currentStatus === "done") return item.baseAmount;
+      if (currentStatus === "visiting") {
+        throw { index, message: "Las equivalencias no pueden depender circularmente entre sí." };
+      }
+      status.set(item.id, "visiting");
+
+      if (!item.referenceId) {
+        item.baseAmount = item.referenceAmount;
+      } else {
+        const target = byId.get(item.referenceId);
+        if (!target) throw { index, message: "La unidad usada a la derecha ya no existe." };
+        if (target.item.id === item.id) throw { index, message: "Una unidad no puede equivaler a sí misma." };
+        const targetBaseAmount = resolveItem(target.item, target.index);
+        item.baseAmount = item.referenceAmount * targetBaseAmount / target.item.amount;
+      }
+
+      if (!Number.isFinite(item.baseAmount) || item.baseAmount <= 0) {
+        throw { index, message: "No se pudo calcular esta equivalencia." };
+      }
+      status.set(item.id, "done");
+      return item.baseAmount;
+    }
+
+    try {
+      normalized.forEach((item, index) => resolveItem(item, index));
+    } catch (error) {
+      return { error: { index: Number.isInteger(error?.index) ? error.index : 0, message: error?.message || "No se pudo calcular la equivalencia." } };
+    }
+
+    return { items: normalized };
+  }
+
   function renderEquivalenceEditor(type) {
     const container = type === "recipe" ? $("#recipe-equivalence-list") : $("#food-equivalence-list");
     if (!container) return;
     const draft = equivalenceDraft(type);
-    const baseLabel = equivalenceBaseUnitLabel(type);
     container.innerHTML = "";
     if (!draft.length) {
       container.innerHTML = '<p class="equivalence-empty">No agregaste equivalencias.</p>';
       return;
     }
+
     draft.forEach((equivalence, index) => {
       const row = document.createElement("article");
-      row.className = "equivalence-row";
+      row.className = `equivalence-row${equivalence._editing ? " editing" : " confirmed"}`;
       row.dataset.equivalenceIndex = index;
       row.dataset.equivalenceType = type;
+
+      if (!equivalence._editing) {
+        row.innerHTML = `
+          <div class="equivalence-confirmed-summary">
+            <span class="equivalence-confirmed-badge">✓ Confirmada</span>
+            <strong>${escapeHTML(equivalenceRelationText(type, equivalence))}</strong>
+            ${equivalenceBaseSummary(type, equivalence) ? `<small>${escapeHTML(equivalenceBaseSummary(type, equivalence))}</small>` : ""}
+          </div>
+          <div class="equivalence-row-actions">
+            <button class="text-action" data-edit-equivalence="${index}" type="button">Editar</button>
+            <button class="danger-text-action" data-remove-equivalence="${index}" type="button">Quitar</button>
+          </div>`;
+        container.appendChild(row);
+        return;
+      }
+
       row.innerHTML = `
         <label><span>Cantidad</span><input name="equivalenceAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.amount)}"></label>
-        <label><span>Unidad alternativa</span><select name="equivalenceUnit">${EQUIVALENCE_UNIT_CHOICES.map(([value, label]) => `<option value="${value}" ${value === equivalence.unit ? "selected" : ""}>${escapeHTML(label)}</option>`).join("")}</select></label>
+        <label><span>Unidad</span><select name="equivalenceUnit">${EQUIVALENCE_UNIT_CHOICES.map(([value, label]) => `<option value="${value}" ${value === equivalence.unit ? "selected" : ""}>${escapeHTML(label)}</option>`).join("")}</select></label>
         <label class="equivalence-custom-unit" ${equivalence.unit === "custom" ? "" : "hidden"}><span>Nombre</span><input name="equivalenceCustomUnit" maxlength="40" placeholder="Ej.: vaso" value="${escapeHTML(equivalence.customUnit || "")}"></label>
         <span class="equivalence-equals" aria-hidden="true">=</span>
-        <label><span>Equivale a</span><div class="equivalence-base-input"><input name="equivalenceBaseAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.baseAmount)}"><i>${escapeHTML(baseLabel)}</i></div></label>
-        <button class="danger-text-action" data-remove-equivalence="${index}" type="button">Quitar</button>`;
+        <label><span>Cantidad equivalente</span><input name="equivalenceReferenceAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.referenceAmount ?? equivalence.baseAmount)}"></label>
+        <label><span>Unidad de referencia</span><select name="equivalenceReferenceId">${equivalenceReferenceOptions(type, equivalence)}</select></label>
+        <div class="equivalence-row-actions">
+          <button class="secondary-action" data-confirm-equivalence="${index}" type="button">Confirmar</button>
+          <button class="danger-text-action" data-remove-equivalence="${index}" type="button">Quitar</button>
+        </div>
+        <p class="equivalence-inline-error" hidden></p>`;
       container.appendChild(row);
     });
   }
 
+  function syncEquivalenceRow(row) {
+    if (!row) return;
+    const type = row.dataset.equivalenceType;
+    const item = equivalenceDraft(type)[Number(row.dataset.equivalenceIndex)];
+    if (!item || !item._editing) return;
+    item.amount = toNumber(row.querySelector('[name="equivalenceAmount"]')?.value, 0);
+    item.unit = row.querySelector('[name="equivalenceUnit"]')?.value || "unit";
+    item.customUnit = String(row.querySelector('[name="equivalenceCustomUnit"]')?.value || "").trim();
+    item.referenceAmount = toNumber(row.querySelector('[name="equivalenceReferenceAmount"]')?.value, 0);
+    item.referenceId = String(row.querySelector('[name="equivalenceReferenceId"]')?.value || "").trim();
+    const customField = row.querySelector(".equivalence-custom-unit");
+    if (customField) customField.hidden = item.unit !== "custom";
+    const inlineError = row.querySelector(".equivalence-inline-error");
+    if (inlineError) inlineError.hidden = true;
+  }
+
+  function showEquivalenceError(type, index, message) {
+    const container = type === "recipe" ? $("#recipe-equivalence-list") : $("#food-equivalence-list");
+    const row = container?.querySelector(`[data-equivalence-index="${index}"]`);
+    const error = row?.querySelector(".equivalence-inline-error");
+    if (error) {
+      error.textContent = message;
+      error.hidden = false;
+    }
+  }
+
+  function confirmEquivalence(type, index) {
+    const container = type === "recipe" ? $("#recipe-equivalence-list") : $("#food-equivalence-list");
+    const row = container?.querySelector(`[data-equivalence-index="${index}"]`);
+    syncEquivalenceRow(row);
+    const result = resolveEquivalenceDrafts(type);
+    if (result.error) {
+      const draft = equivalenceDraft(type);
+      if (draft[result.error.index]) draft[result.error.index]._editing = true;
+      showEquivalenceError(type, result.error.index, result.error.message);
+      return false;
+    }
+    const draft = equivalenceDraft(type);
+    draft.splice(0, draft.length, ...result.items.map(item => ({ ...item, _editing: false })));
+    renderEquivalenceEditor(type);
+    return true;
+  }
+
+  function confirmEditingEquivalence(type, exceptIndex = -1) {
+    const draft = equivalenceDraft(type);
+    const index = draft.findIndex((item, itemIndex) => item._editing && itemIndex !== exceptIndex);
+    return index < 0 || confirmEquivalence(type, index);
+  }
+
   function addEquivalence(type) {
     const draft = equivalenceDraft(type);
-    if (draft.length >= 20) return;
-    const form = type === "recipe" ? $("#recipe-form") : $("#food-editor-form");
-    const baseUnit = type === "recipe" ? form?.elements.yieldUnit?.value : form?.elements.servingUnit?.value;
-    const alternativeUnit = baseUnit === "unit" ? "serving" : "unit";
-    draft.push({ id: createId(), amount: 1, unit: alternativeUnit, customUnit: "", baseAmount: 1 });
+    if (draft.length >= 20 || !confirmEditingEquivalence(type)) return;
+    const base = equivalenceBaseUnitData(type);
+    const alternativeUnit = base.unit === "unit" ? "serving" : "unit";
+    draft.push({
+      id: createId(),
+      amount: 1,
+      unit: alternativeUnit,
+      customUnit: "",
+      referenceAmount: base.amount,
+      referenceId: "",
+      baseAmount: base.amount,
+      _editing: true
+    });
     renderEquivalenceEditor(type);
     const container = type === "recipe" ? $("#recipe-equivalence-list") : $("#food-equivalence-list");
     container?.querySelector(`[data-equivalence-index="${draft.length - 1}"] input`)?.select();
@@ -3122,52 +3326,68 @@
   function updateEquivalenceDraft(event) {
     const row = event.target.closest("[data-equivalence-index]");
     if (!row) return;
-    const type = row.dataset.equivalenceType;
-    const item = equivalenceDraft(type)[Number(row.dataset.equivalenceIndex)];
-    if (!item) return;
-    item.amount = toNumber(row.querySelector('[name="equivalenceAmount"]')?.value, 0);
-    item.unit = row.querySelector('[name="equivalenceUnit"]')?.value || "unit";
-    item.customUnit = String(row.querySelector('[name="equivalenceCustomUnit"]')?.value || "").trim();
-    item.baseAmount = toNumber(row.querySelector('[name="equivalenceBaseAmount"]')?.value, 0);
-    const customField = row.querySelector(".equivalence-custom-unit");
-    if (customField) customField.hidden = item.unit !== "custom";
+    syncEquivalenceRow(row);
   }
 
-  function removeEquivalence(event) {
-    const button = event.target.closest("[data-remove-equivalence]");
-    if (!button) return;
-    const row = button.closest("[data-equivalence-type]");
-    const type = row?.dataset.equivalenceType;
-    if (!type) return;
-    equivalenceDraft(type).splice(Number(button.dataset.removeEquivalence), 1);
-    renderEquivalenceEditor(type);
+  function handleEquivalenceClick(event) {
+    const row = event.target.closest("[data-equivalence-type]");
+    if (!row) return;
+    const type = row.dataset.equivalenceType;
+    const index = Number(row.dataset.equivalenceIndex);
+    const draft = equivalenceDraft(type);
+
+    if (event.target.closest("[data-confirm-equivalence]")) {
+      confirmEquivalence(type, index);
+      return;
+    }
+
+    if (event.target.closest("[data-edit-equivalence]")) {
+      if (!confirmEditingEquivalence(type, index)) return;
+      if (draft[index]) draft[index]._editing = true;
+      renderEquivalenceEditor(type);
+      const container = type === "recipe" ? $("#recipe-equivalence-list") : $("#food-equivalence-list");
+      container?.querySelector(`[data-equivalence-index="${index}"] input`)?.select();
+      return;
+    }
+
+    if (event.target.closest("[data-remove-equivalence]")) {
+      const dependentIndex = draft.findIndex(item => item.referenceId === draft[index]?.id);
+      if (dependentIndex >= 0) {
+        if (draft[dependentIndex]) draft[dependentIndex]._editing = true;
+        renderEquivalenceEditor(type);
+        showEquivalenceError(type, dependentIndex, "Esta equivalencia usa la unidad que intentás quitar. Editala primero.");
+        return;
+      }
+      draft.splice(index, 1);
+      renderEquivalenceEditor(type);
+    }
+  }
+
+  function handleEquivalenceFocusOut(event) {
+    const row = event.target.closest("[data-equivalence-index]");
+    if (!row || !row.classList.contains("editing")) return;
+    const type = row.dataset.equivalenceType;
+    const index = Number(row.dataset.equivalenceIndex);
+    setTimeout(() => {
+      if (!row.isConnected || row.contains(document.activeElement)) return;
+      confirmEquivalence(type, index);
+    }, 0);
   }
 
   function validatedEquivalences(type, baseUnit, baseCustom, errorElement) {
-    const normalized = [];
-    const seen = new Set();
-    const baseKey = `${baseUnit}:${normalizeHeader(baseCustom)}`;
-    for (const raw of equivalenceDraft(type)) {
-      const item = normalizeEquivalence(raw);
-      if (!item) {
-        errorElement.textContent = "Completá cantidades mayores a cero y el nombre de cada unidad personalizada.";
-        errorElement.hidden = false;
-        return null;
-      }
-      const key = `${item.unit}:${normalizeHeader(item.customUnit)}`;
-      if (key === baseKey) {
-        errorElement.textContent = "La unidad alternativa debe ser distinta de la unidad base.";
-        errorElement.hidden = false;
-        return null;
-      }
-      if (seen.has(key)) {
-        errorElement.textContent = "No repitas la misma unidad alternativa.";
-        errorElement.hidden = false;
-        return null;
-      }
-      seen.add(key);
-      normalized.push(item);
+    const result = resolveEquivalenceDrafts(type);
+    if (result.error) {
+      const draft = equivalenceDraft(type);
+      if (draft[result.error.index]) draft[result.error.index]._editing = true;
+      renderEquivalenceEditor(type);
+      showEquivalenceError(type, result.error.index, result.error.message);
+      errorElement.textContent = result.error.message;
+      errorElement.hidden = false;
+      return null;
     }
+    const normalized = result.items.map(item => ({ ...item }));
+    const draft = equivalenceDraft(type);
+    draft.splice(0, draft.length, ...normalized.map(item => ({ ...item, _editing: false })));
     return normalized;
   }
 
@@ -3813,7 +4033,7 @@
       ? catalogFoodForEditing(editingCatalogFoodId)
       : editingFoodId ? state.foods.find(food => food.id === editingFoodId) : null;
     const displayItem = item || foodEditorPrefill;
-    foodEditorEquivalences = clone(displayItem?.equivalences || []);
+    foodEditorEquivalences = clone(displayItem?.equivalences || []).map(item => ({ ...item, _editing: false }));
     foodEditorRescanMode = options.rescanMode === "label" ? "label" : "barcode";
 
     $("#food-editor-title").textContent = options.title || (item ? "Editar alimento" : foodEditorPrefill ? "Revisar alimento escaneado" : "Nuevo alimento");
@@ -4092,7 +4312,7 @@
     form.reset();
     const recipe = editingRecipeId ? state.recipes.find(item => item.id === editingRecipeId) : null;
     recipeDraftIngredients = recipe?.ingredients ? clone(recipe.ingredients) : [];
-    recipeEditorEquivalences = clone(recipe?.equivalences || []);
+    recipeEditorEquivalences = clone(recipe?.equivalences || []).map(item => ({ ...item, _editing: false }));
     activeRecipeIngredientSelection = null;
 
     $("#recipe-title").textContent = recipe ? "Editar receta" : "Crear receta por ingredientes";
@@ -4538,7 +4758,7 @@
     const recipe = state.recipes.find(item => item.id === sourceId);
     if (recipe) return { kind: "recipe", id: recipe.id };
     const catalog = catalogFoodForEditing(sourceId) || catalogFoodForEditing(`external:${sourceId}`);
-    if (catalog) return { kind: "external", id: sourceId };
+    if (catalog) return { kind: "external", id: catalog.id };
     return null;
   }
 
@@ -7206,7 +7426,8 @@
     $("#add-food-equivalence").addEventListener("click", () => addEquivalence("food"));
     $("#food-equivalence-list").addEventListener("input", updateEquivalenceDraft);
     $("#food-equivalence-list").addEventListener("change", updateEquivalenceDraft);
-    $("#food-equivalence-list").addEventListener("click", removeEquivalence);
+    $("#food-equivalence-list").addEventListener("click", handleEquivalenceClick);
+    $("#food-equivalence-list").addEventListener("focusout", handleEquivalenceFocusOut);
     $("#close-recipe").addEventListener("click", closeRecipeEditor);
     $$('[data-close-recipe]').forEach(element => element.addEventListener("click", closeRecipeEditor));
     $("#recipe-form").addEventListener("submit", saveRecipe);
@@ -7217,7 +7438,8 @@
     $("#add-recipe-equivalence").addEventListener("click", () => addEquivalence("recipe"));
     $("#recipe-equivalence-list").addEventListener("input", updateEquivalenceDraft);
     $("#recipe-equivalence-list").addEventListener("change", updateEquivalenceDraft);
-    $("#recipe-equivalence-list").addEventListener("click", removeEquivalence);
+    $("#recipe-equivalence-list").addEventListener("click", handleEquivalenceClick);
+    $("#recipe-equivalence-list").addEventListener("focusout", handleEquivalenceFocusOut);
     $("#recipe-ingredient-search").addEventListener("input", queueRecipeIngredientSearch);
     $("#recipe-ingredient-results").addEventListener("click", handleRecipeIngredientSearchClick);
     $("#recipe-ingredient-results").addEventListener("input", handleRecipeIngredientSearchInput);
