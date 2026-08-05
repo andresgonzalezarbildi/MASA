@@ -15,14 +15,14 @@
     <link href="assets/favicon.svg" rel="icon" type="image/svg+xml" />
     <link href="assets/icon-192.png" rel="apple-touch-icon" />
     <link href="manifest.webmanifest" rel="manifest" />
-    <link href="./css/styles.css?v=31.0.13" rel="stylesheet" />
+    <link href="./css/styles.css?v=31.1.1" rel="stylesheet" />
     <link href="./css/auth.css?v=30.6" rel="stylesheet" />
     <script defer="" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script defer="" src="./js/config.js?v=30.6"></script>
-    <script defer="" src="./js/sync-merge.js?v=31.1.0"></script>
-    <script defer="" src="./js/cloud.js?v=31.1.0"></script>
+    <script defer="" src="./js/sync-merge.js?v=31.1.1"></script>
+    <script defer="" src="./js/cloud.js?v=31.1.1"></script>
     <script defer="" src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
-    <script defer="" src="./js/app.js?v=31.1.0"></script>
+    <script defer="" src="./js/app.js?v=31.1.1"></script>
 </head>
 
 <body>
@@ -275,9 +275,9 @@
                             <div class="records-sidebar">
                                 <aside class="diary-summary">
                                     <div class="diary-total">
-                                        <span>Calorías consumidas</span>
-                                        <strong id="diary-calories">0</strong>
-                                        <small id="diary-remaining">— kcal disponibles</small>
+                                        <span>Calorías pendientes</span>
+                                        <strong aria-live="polite" id="diary-calories">—</strong>
+                                        <small id="diary-remaining">Sin objetivo calculado</small>
                                     </div>
                                     <div aria-label="Progreso diario de calorías y macros" class="diary-progress">
                                         <div><span>Calorías</span><b id="diary-calorie-progress">0 / —</b><i><em

@@ -1482,9 +1482,15 @@
     $("#diary-next-day").disabled = selectedDiaryDate >= todayISO();
     $("#diary-today-button").hidden = selectedDiaryDate === operationalDayISO();
 
-    $("#diary-calories").textContent = formatNumber(Math.round(totals.calories));
     const remaining = target - totals.calories;
-    $("#diary-remaining").textContent = target ? `${formatNumber(Math.abs(Math.round(remaining)))} kcal ${remaining >= 0 ? "disponibles" : "por encima"}` : "Sin objetivo calculado";
+    const hasCalorieTarget = target > 0;
+    const diaryTotal = $("#diary-calories");
+    const diaryTotalBox = diaryTotal.closest(".diary-total");
+    diaryTotal.textContent = hasCalorieTarget ? formatNumber(Math.round(remaining)) : "—";
+    $("#diary-remaining").textContent = hasCalorieTarget
+      ? `${formatNumber(Math.round(totals.calories))} kcal consumidas${remaining < 0 ? ` · ${formatNumber(Math.abs(Math.round(remaining)))} por encima` : ""}`
+      : "Sin objetivo calculado";
+    diaryTotalBox?.classList.toggle("is-over", hasCalorieTarget && remaining < 0);
 
     setDiaryProgress("calorie", totals.calories, target, "kcal");
     setDiaryProgress("protein", totals.protein, plan.proteinG, "g");

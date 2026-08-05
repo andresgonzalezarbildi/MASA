@@ -818,6 +818,7 @@ input:focus, select:focus { outline: 3px solid rgba(141,124,255,.28); outline-of
 .diary-total { min-width: 0; text-align: left; }
 .diary-total span, .diary-total small { color: rgba(242,239,230,.58); }
 .diary-total strong { color: var(--acid); font-size: clamp(58px, 5vw, 82px); }
+.diary-total.is-over strong { color: var(--coral); }
 .diary-progress { grid-template-columns: 1fr; gap: 0; margin: 19px 0; border-color: rgba(242,239,230,.2); background: transparent; }
 .diary-progress > div { padding: 11px 0; border-bottom: 1px solid rgba(242,239,230,.13); color: var(--paper); background: transparent; }
 .diary-progress > div:last-child { border-bottom: 0; }
