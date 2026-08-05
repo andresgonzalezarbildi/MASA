@@ -3755,26 +3755,147 @@ body.legal-page { min-height: 100vh; }
 .equivalence-editor-head p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
 .equivalence-editor-head button { flex: 0 0 auto; min-height: 36px; }
 .equivalence-list { display: grid; gap: 8px; }
-.equivalence-empty { margin: 0; padding: 9px; color: var(--muted); border: 1px dashed var(--line); font-size: 11px; }
+.equivalence-base-context {
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(141,124,255,.5);
+  background: rgba(141,124,255,.1);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.equivalence-base-context strong { color: var(--ink); }
+.equivalence-empty {
+  margin: 0;
+  padding: 10px;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.equivalence-empty strong { color: var(--ink); }
 .equivalence-row {
   display: grid;
-  grid-template-columns: minmax(82px, 98px) minmax(150px, 1.15fr) auto minmax(170px, 1fr) auto;
-  gap: 8px;
-  align-items: end;
-  padding: 9px;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px;
   border: 1px solid var(--line);
   background: var(--paper);
 }
-.equivalence-row label { display: grid; gap: 4px; min-width: 0; }
-.equivalence-row label > span { font-size: 8px; font-weight: 900; text-transform: uppercase; }
-.equivalence-row input,
-.equivalence-row select { width: 100%; min-width: 0; min-height: 38px; }
-.equivalence-row > label:nth-of-type(3) { grid-column: 1 / -1; }
-.equivalence-row .danger-text-action {
-  align-self: end;
-  white-space: nowrap;
+.equivalence-row.editing { border-color: var(--ink); }
+.equivalence-relation-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: stretch;
+  min-width: 0;
 }
-.equivalence-equals { align-self: center; padding-top: 15px; font: 900 20px/1 var(--font-mono); }
+.equivalence-relation-side {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+}
+.equivalence-relation-reference { background: rgba(200,255,70,.08); }
+.equivalence-relation-heading {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.equivalence-relation-heading strong { font-size: 11px; }
+.equivalence-relation-heading small { color: var(--muted); font-size: 9px; line-height: 1.35; }
+.equivalence-relation-fields {
+  display: grid;
+  grid-template-columns: minmax(78px, .58fr) minmax(120px, 1.42fr);
+  gap: 7px;
+  align-items: end;
+  min-width: 0;
+}
+.equivalence-relation-fields label { display: grid; gap: 4px; min-width: 0; }
+.equivalence-relation-fields label > span {
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.equivalence-relation-fields input,
+.equivalence-relation-fields select { width: 100%; min-width: 0; min-height: 40px; }
+.equivalence-custom-unit { grid-column: 1 / -1; }
+.equivalence-relation-symbol {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  min-width: 46px;
+  color: var(--ink);
+}
+.equivalence-relation-symbol b { font: 900 24px/1 var(--font-mono); }
+.equivalence-relation-symbol span {
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 900;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.equivalence-live-preview {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 4px solid var(--acid);
+  background: var(--night);
+  color: var(--paper);
+  line-height: 1.35;
+}
+.equivalence-live-preview span {
+  flex: 0 0 auto;
+  color: var(--acid);
+  font-size: 8px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.equivalence-live-preview strong { min-width: 0; font-size: 11px; overflow-wrap: anywhere; }
+.equivalence-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.equivalence-row.editing .equivalence-row-actions .danger-text-action { order: 1; }
+.equivalence-row.editing .equivalence-row-actions .secondary-action { order: 2; }
+.equivalence-row-actions button { min-height: 36px; }
+.equivalence-confirmed-summary {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.equivalence-confirmed-summary strong { font-size: 13px; overflow-wrap: anywhere; }
+.equivalence-confirmed-summary small { color: var(--muted); font-size: 10px; }
+.equivalence-confirmed-badge {
+  width: fit-content;
+  padding: 3px 6px;
+  background: rgba(200,255,70,.25);
+  color: var(--ink);
+  font-size: 8px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.equivalence-inline-error {
+  margin: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--coral);
+  background: rgba(255,107,82,.1);
+  color: var(--coral);
+  font-size: 10px;
+  font-weight: 800;
+}
 .equivalence-base-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; }
 .equivalence-base-input input { border-right: 0; }
 .equivalence-base-input i {
@@ -3791,15 +3912,30 @@ body.legal-page { min-height: 100vh; }
 #recipe-modal .recipe-search-actions { gap: 7px; flex-wrap: wrap; }
 #recipe-modal .recipe-search-actions button { flex: 1 1 150px; }
 
+@media (max-width: 900px) {
+  .equivalence-relation-editor { grid-template-columns: 1fr; }
+  .equivalence-relation-symbol {
+    grid-template-columns: auto auto;
+    min-width: 0;
+    min-height: 26px;
+  }
+  .equivalence-relation-symbol b { font-size: 21px; }
+  .equivalence-relation-symbol span {
+    font-size: 8px;
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+}
+
 @media (max-width: 760px) {
   .equivalence-editor-head { display: grid; }
   .equivalence-editor-head button { width: 100%; }
-  .equivalence-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
-  .equivalence-custom-unit,
-  .equivalence-row > label:nth-of-type(3),
-  .equivalence-row > label:nth-of-type(4) { grid-column: 1 / -1; }
-  .equivalence-equals { display: none; }
-  .equivalence-row .danger-text-action { justify-self: end; }
+  .equivalence-row-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .equivalence-row-actions button { width: 100%; }
+  .equivalence-row.confirmed .equivalence-row-actions { display: flex; }
   #recipe-modal .recipe-search-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
@@ -3809,10 +3945,18 @@ body.legal-page { min-height: 100vh; }
   #food-modal .food-scan-actions .food-scan-action { min-width: 0; padding-inline: 3px; }
   .food-editor-scan-row { grid-template-columns: 1fr; }
   .equivalence-editor { padding: 9px; }
-  .equivalence-row { grid-template-columns: 1fr; }
-  .equivalence-row > label:nth-of-type(4) { grid-column: auto; }
-  .equivalence-row .danger-text-action { width: 100%; justify-self: stretch; }
+  .equivalence-relation-fields { grid-template-columns: minmax(76px, .62fr) minmax(0, 1.38fr); }
+  .equivalence-relation-side { padding: 9px; }
+  .equivalence-live-preview { align-items: flex-start; flex-direction: column; gap: 3px; }
   #recipe-modal .recipe-search-actions { grid-template-columns: 1fr; }
+}
+
+/* En Android la relación nunca pierde el signo igual ni los títulos de cada lado. */
+html.native-runtime .equivalence-relation-symbol {
+  display: grid;
+}
+html.native-runtime .equivalence-relation-heading strong {
+  font-size: 12px;
 }
 
 

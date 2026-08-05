@@ -42,3 +42,6 @@ Se corrigió la sincronización entre varios dispositivos con la misma cuenta. A
 
 v31.1.1
 Se cambió el resumen principal del registro diario para destacar las calorías pendientes en lugar de las consumidas. Las calorías consumidas permanecen visibles como dato secundario y, al superar el objetivo, el saldo pendiente se muestra negativo y cambia a color coral para señalar el exceso.
+
+v31.1.2
+Se rediseñó el editor de equivalencias para Android y pantallas angostas. Cada relación queda separada en dos bloques explícitos: la unidad que se quiere usar y la cantidad/unidad a la que equivale. El signo igual permanece visible, se muestra la base nutricional actual y aparece una vista previa en vivo como “1 unidad = 100 g” antes de confirmar. También se mantuvieron Confirmar y Quitar en la misma fila y se actualizan las equivalencias al modificar la cantidad o unidad base.

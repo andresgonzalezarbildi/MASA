@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../js/app.js", import.meta.url), "utf8");
+const styles = await readFile(new URL("../css/styles.css", import.meta.url), "utf8");
+const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 
 function extractFunction(name) {
   const marker = `function ${name}(`;
@@ -91,5 +93,12 @@ assert.match(duplicate.error.message, /No repitas/);
 
 assert.match(source, /if \(catalog\) return \{ kind: "external", id: catalog\.id \};/);
 assert.match(source, /baseAmount: Math\.max\(0\.000001, equivalence\.amount \* baseServingAmount \/ equivalence\.baseAmount\)/);
+assert.match(source, /Unidad que querés usar/);
+assert.match(source, /Equivale a/);
+assert.match(source, /equivalence-live-preview/);
+assert.match(source, /equivalencePreviewText\(type, item\)/);
+assert.match(styles, /html\.native-runtime \.equivalence-relation-symbol/);
+assert.doesNotMatch(styles, /\.equivalence-equals \{ display: none;/);
+assert.match(html, /Indicá qué unidad querés usar y a qué cantidad equivale/);
 
 console.log("Equivalence tests: OK");

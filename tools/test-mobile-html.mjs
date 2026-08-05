@@ -13,7 +13,7 @@ assert.match(output, /\.\/vendor\/masa-vendor\.js\?v=30\.0/);
 assert.doesNotMatch(output, /cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js/i);
 assert.doesNotMatch(output, /cdn\.jsdelivr\.net\/npm\/@zxing\/browser/i);
 assert.ok(output.indexOf("./vendor/masa-vendor.js") < output.indexOf("./js/config.js"));
-assert.match(output, /\.\/js\/sync-merge\.js\?v=31\.1\.1/);
+assert.match(output, /\.\/js\/sync-merge\.js\?v=31\.1\.2/);
 assert.ok(output.indexOf("./js/sync-merge.js") < output.indexOf("./js/cloud.js"));
 assert.doesNotMatch(output, /href=["']\/masa\/(?:privacy|terms)\.html["']/i);
 assert.doesNotMatch(output, /href=["'](?:\.\/)?(?:privacy|terms)\.html["'][^>]*target=["']_blank["']/i);

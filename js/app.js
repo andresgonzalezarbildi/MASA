@@ -3138,6 +3138,18 @@
     return `${formatQuantityAmount(equivalence.amount)} ${equivalenceUnitText(equivalence, equivalence.amount)} = ${formatQuantityAmount(equivalence.referenceAmount)} ${equivalenceReferenceText(type, equivalence)}`;
   }
 
+  function equivalenceBaseContextText(type) {
+    const base = equivalenceBaseUnitData(type);
+    return servingLabel(base.amount, base.unit, base.customUnit);
+  }
+
+  function equivalencePreviewText(type, equivalence) {
+    const amount = Math.max(0, toNumber(equivalence?.amount, 0));
+    const referenceAmount = Math.max(0, toNumber(equivalence?.referenceAmount ?? equivalence?.baseAmount, 0));
+    if (!amount || !referenceAmount) return "Completá las dos cantidades para ver la relación.";
+    return equivalenceRelationText(type, { ...equivalence, amount, referenceAmount });
+  }
+
   function equivalenceBaseSummary(type, equivalence) {
     if (!equivalence.referenceId) return "";
     return `Equivale a ${formatQuantityAmount(equivalence.baseAmount)} ${equivalenceBaseUnitLabel(type, equivalence.baseAmount)} de la base.`;
@@ -3221,8 +3233,12 @@
     if (!container) return;
     const draft = equivalenceDraft(type);
     container.innerHTML = "";
+    const baseContext = document.createElement("p");
+    baseContext.className = "equivalence-base-context";
+    baseContext.innerHTML = `La base nutricional actual es <strong>${escapeHTML(equivalenceBaseContextText(type))}</strong>. Las equivalencias indican cuánto representa otra unidad respecto de esa base.`;
+    container.appendChild(baseContext);
     if (!draft.length) {
-      container.innerHTML = '<p class="equivalence-empty">No agregaste equivalencias.</p>';
+      container.insertAdjacentHTML("beforeend", '<p class="equivalence-empty">No agregaste equivalencias. Al agregar una, vas a poder declarar claramente, por ejemplo, <strong>1 unidad = 100 g</strong>.</p>');
       return;
     }
 
@@ -3248,12 +3264,31 @@
       }
 
       row.innerHTML = `
-        <label><span>Cantidad</span><input name="equivalenceAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.amount)}"></label>
-        <label><span>Unidad</span><select name="equivalenceUnit">${EQUIVALENCE_UNIT_CHOICES.map(([value, label]) => `<option value="${value}" ${value === equivalence.unit ? "selected" : ""}>${escapeHTML(label)}</option>`).join("")}</select></label>
-        <label class="equivalence-custom-unit" ${equivalence.unit === "custom" ? "" : "hidden"}><span>Nombre</span><input name="equivalenceCustomUnit" maxlength="40" placeholder="Ej.: vaso" value="${escapeHTML(equivalence.customUnit || "")}"></label>
-        <span class="equivalence-equals" aria-hidden="true">=</span>
-        <label><span>Cantidad equivalente</span><input name="equivalenceReferenceAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.referenceAmount ?? equivalence.baseAmount)}"></label>
-        <label><span>Unidad de referencia</span><select name="equivalenceReferenceId">${equivalenceReferenceOptions(type, equivalence)}</select></label>
+        <div class="equivalence-relation-editor">
+          <section class="equivalence-relation-side equivalence-relation-source">
+            <div class="equivalence-relation-heading">
+              <strong>Unidad que querés usar</strong>
+              <small>Lo que vas a ingresar al registrar la comida.</small>
+            </div>
+            <div class="equivalence-relation-fields">
+              <label><span>Cantidad</span><input name="equivalenceAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.amount)}"></label>
+              <label><span>Unidad</span><select name="equivalenceUnit">${EQUIVALENCE_UNIT_CHOICES.map(([value, label]) => `<option value="${value}" ${value === equivalence.unit ? "selected" : ""}>${escapeHTML(label)}</option>`).join("")}</select></label>
+              <label class="equivalence-custom-unit" ${equivalence.unit === "custom" ? "" : "hidden"}><span>Nombre de la unidad</span><input name="equivalenceCustomUnit" maxlength="40" placeholder="Ej.: vaso" value="${escapeHTML(equivalence.customUnit || "")}"></label>
+            </div>
+          </section>
+          <div class="equivalence-relation-symbol" aria-hidden="true"><b>=</b><span>equivale a</span></div>
+          <section class="equivalence-relation-side equivalence-relation-reference">
+            <div class="equivalence-relation-heading">
+              <strong>Equivale a</strong>
+              <small>Elegí la cantidad y la unidad de referencia.</small>
+            </div>
+            <div class="equivalence-relation-fields">
+              <label><span>Cantidad</span><input name="equivalenceReferenceAmount" type="number" min="0.01" max="100000" step="any" inputmode="decimal" value="${escapeHTML(equivalence.referenceAmount ?? equivalence.baseAmount)}"></label>
+              <label><span>Unidad de referencia</span><select name="equivalenceReferenceId">${equivalenceReferenceOptions(type, equivalence)}</select></label>
+            </div>
+          </section>
+        </div>
+        <p class="equivalence-live-preview" aria-live="polite"><span>Relación:</span><strong>${escapeHTML(equivalencePreviewText(type, equivalence))}</strong></p>
         <div class="equivalence-row-actions">
           <button class="secondary-action" data-confirm-equivalence="${index}" type="button">Confirmar</button>
           <button class="danger-text-action" data-remove-equivalence="${index}" type="button">Quitar</button>
@@ -3277,6 +3312,8 @@
     if (customField) customField.hidden = item.unit !== "custom";
     const inlineError = row.querySelector(".equivalence-inline-error");
     if (inlineError) inlineError.hidden = true;
+    const preview = row.querySelector(".equivalence-live-preview strong");
+    if (preview) preview.textContent = equivalencePreviewText(type, item);
   }
 
   function showEquivalenceError(type, index, message) {
@@ -7430,6 +7467,7 @@
     $("#close-food-editor").addEventListener("click", closeFoodEditor);
     $$('[data-close-food-editor]').forEach(element => element.addEventListener("click", closeFoodEditor));
     $("#food-editor-form").addEventListener("submit", saveCustomFood);
+    $("#food-editor-form").elements.servingAmount.addEventListener("input", () => renderEquivalenceEditor("food"));
     $("#food-editor-form").elements.servingUnit.addEventListener("change", handleFoodEditorUnitChange);
     $("#food-editor-form").elements.servingUnitCustom.addEventListener("input", () => renderEquivalenceEditor("food"));
     $("#add-food-equivalence").addEventListener("click", () => addEquivalence("food"));
@@ -7441,7 +7479,7 @@
     $$('[data-close-recipe]').forEach(element => element.addEventListener("click", closeRecipeEditor));
     $("#recipe-form").addEventListener("submit", saveRecipe);
     $("#recipe-form").elements.yield.addEventListener("input", renderRecipeTotals);
-    $("#recipe-form").elements.servingAmount.addEventListener("input", renderRecipeTotals);
+    $("#recipe-form").elements.servingAmount.addEventListener("input", () => { renderEquivalenceEditor("recipe"); renderRecipeTotals(); });
     $("#recipe-form").elements.yieldUnit.addEventListener("change", handleRecipeYieldUnitChange);
     $("#recipe-form").elements.yieldUnitCustom.addEventListener("input", () => { renderEquivalenceEditor("recipe"); renderRecipeTotals(); });
     $("#add-recipe-equivalence").addEventListener("click", () => addEquivalence("recipe"));
