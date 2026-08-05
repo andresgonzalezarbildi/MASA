@@ -36,3 +36,6 @@ Se corrigió el funcionamiento del teclado dentro de modales y formularios Andro
 
 v31.0.8
 Se reforzó la permanencia de la sesión. Si Supabase no puede restaurar o renovar el acceso, o el dispositivo pierde la conexión, M.A.S.A. conserva una sesión local y continúa funcionando sin volver a mostrar el inicio de sesión. El cierre de sesión queda reservado a la acción manual del usuario. Al cerrar sesión se elimina la identidad local, pero se recuerda el último correo para dejarlo precargado en el próximo acceso.
+
+v31.1.0
+Se corrigió la sincronización entre varios dispositivos con la misma cuenta. Antes cada dispositivo podía enviar una copia completa desactualizada y borrar recetas o ingestas creadas en otro equipo. La sincronización ahora combina la última base conocida, los cambios locales y el estado actual de Supabase; solo elimina registros borrados explícitamente y actualiza únicamente los elementos modificados. También se agregó actualización automática al volver a la app, recuperar conexión o mantenerla abierta, junto con sincronización inmediata entre pestañas del mismo navegador. Si un dispositivo todavía conserva recetas, alimentos, ingestas o pesajes que ya no aparecen en Supabase, la aplicación ofrece recuperarlos y combinarlos sin reemplazar los datos remotos existentes.

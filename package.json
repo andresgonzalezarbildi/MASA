@@ -1,7 +1,7 @@
 {
   "name": "masa",
   "private": true,
-  "version": "31.0.8",
+  "version": "31.1.0",
   "type": "module",
   "scripts": {
     "mobile:prepare": "node tools/prepare-mobile.mjs",
@@ -12,11 +12,12 @@
     "android:assets": "npx @capacitor/assets generate --android --assetPath resources --iconBackgroundColor '#15181d' --iconBackgroundColorDark '#15181d' --splashBackgroundColor '#f2efe7' --splashBackgroundColorDark '#15181d'",
     "test:auth": "node tools/test-auth-flow.mjs",
     "test:mobile-html": "node tools/test-mobile-html.mjs",
-    "test": "npm run test:auth && npm run test:mobile-html && npm run test:equivalences && npm run test:android-navigation",
+    "test": "npm run test:auth && npm run test:mobile-html && npm run test:equivalences && npm run test:android-navigation && npm run test:sync",
     "supabase:auth-config": "node tools/configure-supabase-auth.mjs",
     "test:labels": "node tools/test-nutrition-label-parser.mjs",
     "test:android-navigation": "node tools/test-android-navigation.mjs",
-    "test:equivalences": "node tools/test-equivalences.mjs"
+    "test:equivalences": "node tools/test-equivalences.mjs",
+    "test:sync": "node tools/test-sync-merge.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.4.2",

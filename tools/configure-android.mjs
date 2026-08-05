@@ -209,7 +209,7 @@ public class MainActivity extends BridgeActivity {
             finish();
             return;
         }
-        String script = "(function(){try{if(window.MASAHandleAndroidBack&&window.MASAHandleAndroidBack())return true;var ds=Array.from(document.querySelectorAll('[role=\\"dialog\\"]')).filter(function(el){return !el.hidden&&el.getClientRects().length;});var d=ds[ds.length-1];if(!d)return false;var c=d.querySelector('.close-button:not([hidden]),button[id^=\\"close-\\"]:not([hidden]),[data-close-food],[data-close-food-editor],[data-close-recipe],[data-close-library],[data-close-settings],[data-close-meal-picker],[data-close-barcode],[data-close-about],[data-close-tips]');if(c&&!c.disabled)c.click();return true;}catch(e){return false;}})();";
+        String script = "(function(){try{if(window.MASAHandleAndroidBack&&window.MASAHandleAndroidBack())return true;var ds=Array.from(document.querySelectorAll('[role=\\"dialog\\"]')).filter(function(el){return !el.hidden&&el.getClientRects().length;});var d=ds[ds.length-1];if(!d)return false;var c=d.querySelector('.close-button:not([hidden]),button[id^=\\"close-\\"]:not([hidden]),[data-close-food],[data-close-food-editor],[data-close-recipe],[data-close-library],[data-close-settings],[data-close-meal-picker],[data-close-barcode],[data-close-about],[data-close-tips],[data-close-legal]');if(c&&!c.disabled)c.click();return true;}catch(e){return false;}})();";
         bridge.getWebView().evaluateJavascript(script, handled -> {
             if ("true".equals(handled)) return;
             if (bridge.getWebView().canGoBack()) {

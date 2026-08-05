@@ -39,7 +39,7 @@ await build({
   target: ["chrome120"]
 });
 
-for (const relative of ["js/app.js", "js/cloud.js", "js/config.js", "css/styles.css", "css/auth.css"]) {
+for (const relative of ["js/app.js", "js/cloud.js", "js/sync-merge.js", "js/config.js", "css/styles.css", "css/auth.css"]) {
   const absolute = join(webDir, relative);
   const loader = relative.endsWith(".css") ? "css" : "js";
   const result = await build({

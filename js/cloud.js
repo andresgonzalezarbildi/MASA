@@ -4,6 +4,7 @@
   const SCHEMA_VERSION = 19;
   const CACHE_PREFIX = "masa-user-cache-v1:";
   const PENDING_PREFIX = "masa-user-pending-v1:";
+  const BASE_PREFIX = "masa-user-base-v1:";
   const LAST_USER_KEY = "masa-last-user-v1";
   const LAST_EMAIL_KEY = "masa-last-email-v1";
   const PAGE_SIZE = 1000;
@@ -83,6 +84,7 @@
   let syncInFlight = null;
   let lastSyncError = null;
   let syncedSignatures = null;
+  let syncedState = null;
   let syncedFoodMap = new Map();
   let syncedRecipeMap = new Map();
   let authStorage = null;
@@ -1100,12 +1102,25 @@
     return `${PENDING_PREFIX}${currentUser().id}`;
   }
 
+  function baseKey() {
+    return `${BASE_PREFIX}${currentUser().id}`;
+  }
+
   function cacheState(state) {
     writeLocalJson(cacheKey(), state, "guardar los datos locales");
   }
 
   function readCachedState() {
     return readLocalJson(cacheKey(), "leer los datos locales");
+  }
+
+  function cacheSyncedState(state) {
+    syncedState = clone(state);
+    writeLocalJson(baseKey(), syncedState, "guardar la base de sincronización");
+  }
+
+  function readCachedSyncedState() {
+    return readLocalJson(baseKey(), "leer la base de sincronización");
   }
 
   function persistPendingState(state) {
@@ -1187,15 +1202,20 @@
     };
   }
 
-  async function loadUserState() {
-    setSyncStatus("loading", "Cargando datos…");
+  async function loadUserState(options = {}) {
+    const silent = Boolean(options.silent);
+    const reportStatus = (...args) => {
+      if (!silent) setSyncStatus(...args);
+    };
+    reportStatus("loading", "Cargando datos…");
 
     const persistedPending = readPersistedPendingState();
     if (persistedPending) pendingState = clone(persistedPending);
+    if (!syncedState) syncedState = readCachedSyncedState();
     const localState = pendingState || readCachedState();
 
     if ((!navigator.onLine || isOfflineSession()) && localState) {
-      setSyncStatus(
+      reportStatus(
         navigator.onLine ? "error" : "offline",
         navigator.onLine
           ? (pendingState ? "Sesión local · cambios pendientes" : "Sesión local · datos locales")
@@ -1216,7 +1236,7 @@
         logRealError("sync", "No se pudieron enviar los cambios offline antes de cargar", error);
         const safeLocalState = pendingState || readPersistedPendingState() || localState;
         if (safeLocalState) {
-          setSyncStatus("error", "Datos locales · sincronización pendiente");
+          reportStatus("error", "Datos locales · sincronización pendiente");
           return { state: safeLocalState, hasData: true, fromCache: true, error, pendingSync: true };
         }
       }
@@ -1227,8 +1247,9 @@
       syncedSignatures = result.signatures;
       syncedFoodMap = result.foodMap;
       syncedRecipeMap = result.recipeMap;
+      cacheSyncedState(result.state);
       cacheState(result.state);
-      setSyncStatus("saved", "Guardado");
+      reportStatus("saved", "Guardado");
       return result;
     } catch (error) {
       logRealError("sync", "Falló la carga de datos del usuario", error);
@@ -1239,7 +1260,7 @@
       const cached = readPersistedPendingState() || readCachedState();
       if (cached) {
         const offline = !navigator.onLine || isOfflineSession() || isNetworkError(error);
-        setSyncStatus(
+        reportStatus(
           offline ? "offline" : "error",
           offline ? "Sin conexión · datos locales" : "Datos locales · error de sincronización"
         );
@@ -1252,7 +1273,7 @@
         };
       }
 
-      setSyncStatus("error", "No se pudieron cargar los datos");
+      reportStatus("error", "No se pudieron cargar los datos");
       throw errorWithContext(
         error,
         "sync",
@@ -1436,17 +1457,26 @@
       return;
     }
 
-    const snapshot = pendingState;
+    const snapshot = clone(pendingState);
     pendingState = null;
     setSyncStatus("saving", "Guardando…");
 
     syncInFlight = withTimeout(syncState(snapshot), "La sincronización con Supabase")
-      .then(() => {
+      .then(mergedState => {
         lastSyncError = null;
-        cacheState(snapshot);
-        if (pendingState) persistPendingState(pendingState);
-        else clearPersistedPendingState();
+        cacheSyncedState(mergedState);
+
+        if (pendingState) {
+          pendingState = mergeCloudStates(snapshot, pendingState, mergedState);
+          persistPendingState(pendingState);
+        } else {
+          cacheState(mergedState);
+          clearPersistedPendingState();
+          notifyCloudState(mergedState, "sync");
+        }
+
         setSyncStatus(pendingState ? "pending" : "saved", pendingState ? "Cambios pendientes" : "Guardado");
+        return mergedState;
       })
       .catch(error => {
         lastSyncError = error;
@@ -1475,33 +1505,137 @@
     if (pendingState) await runPendingSync();
   }
 
-  async function syncState(state) {
-    assertSyncState(state);
+  function mergeCloudStates(base, local, remote) {
+    if (!window.MASA_SYNC_MERGE?.threeWayMergeState) {
+      throw new Error("No se cargó el módulo de sincronización de MASA.");
+    }
+    return window.MASA_SYNC_MERGE.threeWayMergeState(base || {}, local || {}, remote || {});
+  }
+
+  function notifyCloudState(state, source) {
+    try {
+      if (typeof window.dispatchEvent !== "function" || typeof CustomEvent !== "function") return;
+      window.dispatchEvent(new CustomEvent("masa:cloud-state", {
+        detail: { state: clone(state), source: String(source || "cloud") }
+      }));
+    } catch (_) {}
+  }
+
+  function sameJson(left, right) {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+
+  function collectionDiff(beforeValues, afterValues, keyOf) {
+    const before = new Map();
+    const after = new Map();
+    (Array.isArray(beforeValues) ? beforeValues : []).forEach(value => {
+      const key = keyOf(value);
+      if (key) before.set(key, value);
+    });
+    (Array.isArray(afterValues) ? afterValues : []).forEach(value => {
+      const key = keyOf(value);
+      if (key) after.set(key, value);
+    });
+    return {
+      changed: [...after.entries()]
+        .filter(([key, value]) => !before.has(key) || !sameJson(before.get(key), value))
+        .map(([, value]) => value),
+      deleted: [...before.keys()].filter(key => !after.has(key))
+    };
+  }
+
+  function flattenDiary(diary) {
+    const rows = [];
+    Object.entries(plainObject(diary) ? diary : {}).forEach(([date, entries]) => {
+      (Array.isArray(entries) ? entries : []).forEach(entry => rows.push({ ...entry, __masaEntryDate: date }));
+    });
+    return rows;
+  }
+
+  function emptyMergeBase() {
+    return {
+      version: SCHEMA_VERSION,
+      configured: false,
+      profile: {},
+      weighIns: [],
+      foods: [],
+      recipes: [],
+      diary: {},
+      completedDays: {},
+      foodUsage: {},
+      catalogOverrides: {},
+      calibrationHistory: [],
+      lastCheckinDate: ""
+    };
+  }
+
+  async function syncState(localState) {
+    assertSyncState(localState);
     const user = currentUser();
-    const nextSignatures = stateSignatures(state);
-    const previous = syncedSignatures || {};
-    let foodMap = syncedFoodMap;
-    let recipeMap = syncedRecipeMap;
 
-    if (nextSignatures.profile !== previous.profile) {
-      await syncProfile(user.id, state);
-    }
-    if (nextSignatures.weighIns !== previous.weighIns) {
-      await syncWeighIns(user.id, state.weighIns || []);
-    }
-    if (nextSignatures.foods !== previous.foods) {
-      foodMap = await syncFoods(user.id, state.foods || []);
-    }
-    if (nextSignatures.recipes !== previous.recipes) {
-      recipeMap = await syncRecipes(user.id, state.recipes || [], foodMap);
-    }
-    if (nextSignatures.diary !== previous.diary) {
-      await syncDiary(user.id, state.diary || {}, foodMap, recipeMap);
+    // Se vuelve a leer Supabase inmediatamente antes de escribir para no partir
+    // de una copia vieja de otro dispositivo.
+    const remote = await loadUserStateFromRemote();
+    const base = syncedState || readCachedSyncedState() || emptyMergeBase();
+    const merged = mergeCloudStates(base, localState, remote.state);
+    assertSyncState(merged);
+
+    syncedSignatures = remote.signatures;
+    syncedFoodMap = remote.foodMap;
+    syncedRecipeMap = remote.recipeMap;
+
+    const remoteSignatures = stateSignatures(remote.state);
+    const mergedSignatures = stateSignatures(merged);
+
+    if (mergedSignatures.profile !== remoteSignatures.profile) {
+      await syncProfile(user.id, merged);
     }
 
-    syncedFoodMap = foodMap;
-    syncedRecipeMap = recipeMap;
-    syncedSignatures = nextSignatures;
+    const weighDiff = collectionDiff(
+      remote.state.weighIns,
+      merged.weighIns,
+      item => String(item?.date || item?.id || "")
+    );
+    if (weighDiff.changed.length || weighDiff.deleted.length) {
+      await syncWeighIns(user.id, weighDiff.changed, weighDiff.deleted);
+    }
+
+    const foodDiff = collectionDiff(
+      remote.state.foods,
+      merged.foods,
+      item => String(item?.id || "")
+    );
+    if (foodDiff.changed.length || foodDiff.deleted.length) {
+      syncedFoodMap = await syncFoods(user.id, foodDiff.changed, foodDiff.deleted, syncedFoodMap);
+    }
+
+    const recipeDiff = collectionDiff(
+      remote.state.recipes,
+      merged.recipes,
+      item => String(item?.id || "")
+    );
+    if (recipeDiff.changed.length || recipeDiff.deleted.length) {
+      syncedRecipeMap = await syncRecipes(
+        user.id,
+        recipeDiff.changed,
+        recipeDiff.deleted,
+        syncedFoodMap,
+        syncedRecipeMap
+      );
+    }
+
+    const diaryDiff = collectionDiff(
+      flattenDiary(remote.state.diary),
+      flattenDiary(merged.diary),
+      item => String(item?.id || "")
+    );
+    if (diaryDiff.changed.length || diaryDiff.deleted.length) {
+      await syncDiary(user.id, diaryDiff.changed, diaryDiff.deleted, syncedFoodMap, syncedRecipeMap);
+    }
+
+    syncedState = clone(merged);
+    syncedSignatures = stateSignatures(merged);
+    return merged;
   }
 
   function stateSignatures(state) {
@@ -1546,7 +1680,26 @@
     );
   }
 
-  async function syncWeighIns(userId, weighIns) {
+  async function deleteOwnedValues(table, ownerColumn, ownerId, valueColumn, values, context) {
+    for (const batch of chunks([...new Set(values.map(String).filter(Boolean))], BATCH_SIZE)) {
+      if (!batch.length) continue;
+      throwIfError(
+        await getClient().from(checkedTable(table)).delete().eq(ownerColumn, ownerId).in(valueColumn, batch),
+        context
+      );
+    }
+  }
+
+  async function syncWeighIns(userId, weighIns, deletedDates = []) {
+    await deleteOwnedValues(
+      "weigh_ins",
+      "user_id",
+      userId,
+      "logged_on",
+      deletedDates,
+      "No se pudieron borrar los pesajes eliminados"
+    );
+
     const rows = weighIns.map(item => ({
       user_id: userId,
       legacy_id: safeDbText(item.id || crypto.randomUUID(), 160),
@@ -1554,14 +1707,27 @@
       weight_kg: safeDbNumber(item.weight, 20, 400, 0),
       metadata: item
     }));
-    throwIfError(
-      await getClient().from("weigh_ins").delete().eq("user_id", userId),
-      "No se pudieron actualizar los pesajes"
-    );
-    await insertChunks("weigh_ins", rows, "No se pudieron guardar los pesajes");
+
+    for (const batch of chunks(rows, BATCH_SIZE)) {
+      throwIfError(
+        await getClient().from("weigh_ins").upsert(batch, { onConflict: "user_id,logged_on" }),
+        "No se pudieron guardar los pesajes"
+      );
+    }
   }
 
-  async function syncFoods(userId, foods) {
+  async function syncFoods(userId, foods, deletedIds = [], currentMap = new Map()) {
+    const foodMap = new Map(currentMap);
+    await deleteOwnedValues(
+      "foods",
+      "owner_id",
+      userId,
+      "legacy_id",
+      deletedIds,
+      "No se pudieron borrar los alimentos eliminados"
+    );
+    deletedIds.forEach(id => foodMap.delete(String(id)));
+
     const rows = foods.map(food => ({
       owner_id: userId,
       legacy_id: String(food.id || crypto.randomUUID()),
@@ -1579,10 +1745,29 @@
       is_active: true,
       metadata: food
     }));
-    return syncByLegacyId("foods", "owner_id", userId, rows, "owner_id,legacy_id");
+
+    for (const batch of chunks(rows, BATCH_SIZE)) {
+      const saved = throwIfError(
+        await getClient().from("foods").upsert(batch, { onConflict: "owner_id,legacy_id" }).select("id,legacy_id"),
+        "No se pudieron guardar los alimentos"
+      ) || [];
+      saved.forEach(row => foodMap.set(String(row.legacy_id), row.id));
+    }
+    return foodMap;
   }
 
-  async function syncRecipes(userId, recipes, foodMap) {
+  async function syncRecipes(userId, recipes, deletedIds = [], foodMap, currentMap = new Map()) {
+    const recipeMap = new Map(currentMap);
+    await deleteOwnedValues(
+      "recipes",
+      "user_id",
+      userId,
+      "legacy_id",
+      deletedIds,
+      "No se pudieron borrar las recetas eliminadas"
+    );
+    deletedIds.forEach(id => recipeMap.delete(String(id)));
+
     const rows = recipes.map(recipe => ({
       user_id: userId,
       legacy_id: String(recipe.id || crypto.randomUUID()),
@@ -1598,11 +1783,23 @@
       metadata: recipe
     }));
 
-    const recipeMap = await syncByLegacyId("recipes", "user_id", userId, rows, "user_id,legacy_id");
-    throwIfError(
-      await getClient().from("recipe_ingredients").delete().eq("user_id", userId),
-      "No se pudieron actualizar los ingredientes"
-    );
+    for (const batch of chunks(rows, BATCH_SIZE)) {
+      const saved = throwIfError(
+        await getClient().from("recipes").upsert(batch, { onConflict: "user_id,legacy_id" }).select("id,legacy_id"),
+        "No se pudieron guardar las recetas"
+      ) || [];
+      saved.forEach(row => recipeMap.set(String(row.legacy_id), row.id));
+    }
+
+    const changedRecipeIds = recipes
+      .map(recipe => recipeMap.get(String(recipe.id)))
+      .filter(Boolean);
+    for (const batch of chunks(changedRecipeIds, BATCH_SIZE)) {
+      throwIfError(
+        await getClient().from("recipe_ingredients").delete().eq("user_id", userId).in("recipe_id", batch),
+        "No se pudieron actualizar los ingredientes"
+      );
+    }
 
     const ingredientRows = [];
     recipes.forEach(recipe => {
@@ -1631,64 +1828,49 @@
     return recipeMap;
   }
 
-  async function syncDiary(userId, diary, foodMap, recipeMap) {
-    const rows = [];
-    Object.entries(diary).forEach(([date, entries]) => {
-      (entries || []).forEach(entry => {
-        const sourceId = String(entry.sourceId || "");
-        rows.push({
-          user_id: userId,
-          legacy_id: String(entry.id || crypto.randomUUID()),
-          entry_date: date,
-          meal: safeMeal(entry.meal),
-          name: safeDbText(entry.name, 120, "Registro"),
-          kind: safeKind(entry.kind),
-          serving_text: safeDbText(entry.serving, 120) || null,
-          serving_amount: numberOrNull(entry.servingAmount),
-          serving_unit: safeDbText(entry.servingUnit, 40) || null,
-          serving_unit_custom: safeDbText(entry.servingUnitCustom, 40) || null,
-          quantity: safeDbNumber(entry.quantity, 0.01, 100000, 1),
-          quantity_unit: safeDbText(entry.quantityUnit, 40) || null,
-          calories: safeDbNumber(entry.calories, 0, 10000, 0),
-          protein: safeDbNumber(entry.protein, 0, 10000, 0),
-          fat: safeDbNumber(entry.fat, 0, 10000, 0),
-          carbs: safeDbNumber(entry.carbs, 0, 10000, 0),
-          source_food_id: foodMap.get(sourceId) || null,
-          source_recipe_id: recipeMap.get(sourceId) || null,
-          metadata: entry
-        });
-      });
-    });
-    await syncByLegacyId("diary_entries", "user_id", userId, rows, "user_id,legacy_id");
-  }
-
-  async function syncByLegacyId(table, ownerColumn, ownerId, rows, conflict) {
-    const existing = await fetchPaged(
-      table,
-      "id,legacy_id",
-      query => query.eq(ownerColumn, ownerId)
+  async function syncDiary(userId, entries, deletedIds = [], foodMap, recipeMap) {
+    await deleteOwnedValues(
+      "diary_entries",
+      "user_id",
+      userId,
+      "legacy_id",
+      deletedIds,
+      "No se pudieron borrar las ingestas eliminadas"
     );
-    const wanted = new Set(rows.map(row => String(row.legacy_id)));
-    const staleIds = existing
-      .filter(row => !row.legacy_id || !wanted.has(String(row.legacy_id)))
-      .map(row => row.id);
 
-    for (const batch of chunks(staleIds, BATCH_SIZE)) {
+    const rows = entries.map(entry => {
+      const sourceId = String(entry.sourceId || "");
+      const metadata = { ...entry };
+      delete metadata.__masaEntryDate;
+      return {
+        user_id: userId,
+        legacy_id: String(entry.id || crypto.randomUUID()),
+        entry_date: entry.__masaEntryDate,
+        meal: safeMeal(entry.meal),
+        name: safeDbText(entry.name, 120, "Registro"),
+        kind: safeKind(entry.kind),
+        serving_text: safeDbText(entry.serving, 120) || null,
+        serving_amount: numberOrNull(entry.servingAmount),
+        serving_unit: safeDbText(entry.servingUnit, 40) || null,
+        serving_unit_custom: safeDbText(entry.servingUnitCustom, 40) || null,
+        quantity: safeDbNumber(entry.quantity, 0.01, 100000, 1),
+        quantity_unit: safeDbText(entry.quantityUnit, 40) || null,
+        calories: safeDbNumber(entry.calories, 0, 10000, 0),
+        protein: safeDbNumber(entry.protein, 0, 10000, 0),
+        fat: safeDbNumber(entry.fat, 0, 10000, 0),
+        carbs: safeDbNumber(entry.carbs, 0, 10000, 0),
+        source_food_id: foodMap.get(sourceId) || null,
+        source_recipe_id: recipeMap.get(sourceId) || null,
+        metadata
+      };
+    });
+
+    for (const batch of chunks(rows, BATCH_SIZE)) {
       throwIfError(
-        await getClient().from(checkedTable(table)).delete().in("id", batch),
-        `No se pudieron borrar registros anteriores de ${table}`
+        await getClient().from("diary_entries").upsert(batch, { onConflict: "user_id,legacy_id" }),
+        "No se pudieron guardar las ingestas"
       );
     }
-
-    const resultMap = new Map();
-    for (const batch of chunks(rows, BATCH_SIZE)) {
-      const saved = throwIfError(
-        await getClient().from(checkedTable(table)).upsert(batch, { onConflict: conflict }).select("id,legacy_id"),
-        `No se pudo guardar ${table}`
-      ) || [];
-      saved.forEach(row => resultMap.set(String(row.legacy_id), row.id));
-    }
-    return resultMap;
   }
 
   async function insertChunks(table, rows, context) {
@@ -1779,6 +1961,18 @@
     resumeOnlineSync().catch(error => {
       logRealError("sync", "Falló la reanudación de la sincronización", error);
     });
+  });
+
+  window.addEventListener("storage", event => {
+    if (!isAuthenticated() || pendingState || syncInFlight || !event.newValue) return;
+    let expectedKey = "";
+    try { expectedKey = cacheKey(); } catch (_) { return; }
+    if (event.key !== expectedKey) return;
+    try {
+      const nextState = JSON.parse(event.newValue);
+      cacheSyncedState(nextState);
+      notifyCloudState(nextState, "storage");
+    } catch (_) {}
   });
 
   window.addEventListener("offline", () => {

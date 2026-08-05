@@ -117,6 +117,9 @@
 
   let state;
   let stateRevision = 0;
+  let cloudRefreshInFlight = null;
+  let lastCloudRefreshAt = 0;
+  let cloudRefreshBound = false;
   let settingsRequired = false;
   let importMode = "history";
   let chartPayload = null;
@@ -7583,6 +7586,7 @@
     window.MASA_CLOUD.cacheState(state);
     removeNumericGoalsBranding();
     bindEvents();
+    bindCloudRefresh();
     scheduleOperationalDayRollover();
     $$(".help-dot[data-tooltip]").forEach(button => { button.title = button.dataset.tooltip; });
     bindHelpTooltips();
@@ -7592,6 +7596,129 @@
     window.MASA_CLOUD.finishBoot();
     externalFoodsLoadPromise = loadExternalFoods();
     registerServiceWorker();
+  }
+
+  function cloudRefreshBlocked() {
+    return [
+      "food-modal",
+      "food-editor-modal",
+      "recipe-modal",
+      "library-modal",
+      "settings-modal",
+      "meal-picker-modal",
+      "daily-checkin-modal",
+      "barcode-modal"
+    ].some(id => modalIsOpen(id));
+  }
+
+  function applyCloudState(nextState) {
+    const normalized = normalizeState(nextState || emptyState());
+    if (JSON.stringify(normalized) === JSON.stringify(state)) return false;
+    state = normalized;
+    window.MASA_CLOUD.cacheState(state);
+    render();
+    return true;
+  }
+
+  async function refreshCloudStateQuietly(force = false) {
+    if (cloudRefreshInFlight) return cloudRefreshInFlight;
+    if (!navigator.onLine || document.hidden || cloudRefreshBlocked()) return null;
+    if (!window.MASA_CLOUD?.isAuthenticated() || window.MASA_CLOUD.hasPendingChanges()) return null;
+
+    const now = Date.now();
+    if (!force && now - lastCloudRefreshAt < 8_000) return null;
+    lastCloudRefreshAt = now;
+    const revisionAtStart = stateRevision;
+
+    cloudRefreshInFlight = window.MASA_CLOUD.loadUserState({ silent: true })
+      .then(result => {
+        if (
+          stateRevision !== revisionAtStart ||
+          window.MASA_CLOUD.hasPendingChanges() ||
+          cloudRefreshBlocked()
+        ) return null;
+        applyCloudState(result.state);
+        return result;
+      })
+      .catch(error => {
+        console.error("[MASA][sync] Falló la actualización automática:", error);
+        return null;
+      })
+      .finally(() => {
+        cloudRefreshInFlight = null;
+      });
+
+    return cloudRefreshInFlight;
+  }
+
+  function bindCloudRefresh() {
+    if (cloudRefreshBound) return;
+    cloudRefreshBound = true;
+
+    window.addEventListener("masa:cloud-state", event => {
+      const source = event.detail?.source || "cloud";
+      if (cloudRefreshBlocked()) return;
+      if (source !== "sync" && window.MASA_CLOUD.hasPendingChanges()) return;
+      applyCloudState(event.detail?.state);
+    });
+
+    window.addEventListener("focus", () => refreshCloudStateQuietly(true));
+    window.addEventListener("online", () => setTimeout(() => refreshCloudStateQuietly(true), 250));
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refreshCloudStateQuietly(true);
+    });
+    setInterval(() => refreshCloudStateQuietly(false), 12_000);
+  }
+
+  function localRecoveryCandidate(remoteInput, localInput) {
+    const remote = normalizeState(remoteInput || emptyState());
+    const local = normalizeState(localInput || emptyState());
+    const recovered = clone(remote);
+    const counts = { weighIns: 0, foods: 0, recipes: 0, diary: 0 };
+
+    const appendMissing = (target, source, keyOf, counter) => {
+      const known = new Set(target.map(item => keyOf(item)).filter(Boolean));
+      source.forEach(item => {
+        const key = keyOf(item);
+        if (!key || known.has(key)) return;
+        target.push(clone(item));
+        known.add(key);
+        counts[counter] += 1;
+      });
+    };
+
+    appendMissing(recovered.weighIns, local.weighIns, item => String(item?.date || item?.id || ""), "weighIns");
+    appendMissing(recovered.foods, local.foods, item => String(item?.id || ""), "foods");
+    appendMissing(recovered.recipes, local.recipes, item => String(item?.id || ""), "recipes");
+
+    const remoteDiaryIds = new Set(
+      Object.values(recovered.diary || {}).flat().map(item => String(item?.id || "")).filter(Boolean)
+    );
+    Object.entries(local.diary || {}).forEach(([date, entries]) => {
+      (entries || []).forEach(entry => {
+        const id = String(entry?.id || "");
+        if (!id || remoteDiaryIds.has(id)) return;
+        if (!recovered.diary[date]) recovered.diary[date] = [];
+        recovered.diary[date].push(clone(entry));
+        remoteDiaryIds.add(id);
+        counts.diary += 1;
+      });
+    });
+
+    const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+    return { state: normalizeState(recovered), counts, total };
+  }
+
+  function localRecoveryMessage(counts) {
+    const labels = [
+      [counts.recipes, "receta", "recetas"],
+      [counts.foods, "alimento", "alimentos"],
+      [counts.diary, "ingesta", "ingestas"],
+      [counts.weighIns, "pesaje", "pesajes"]
+    ]
+      .filter(([count]) => count > 0)
+      .map(([count, singular, plural]) => `${count} ${count === 1 ? singular : plural}`);
+    return `Este dispositivo conserva ${labels.join(", ")} que no aparecen en la cuenta. ¿Querés recuperarlos y combinarlos con los datos de Supabase?`;
   }
 
   async function refreshCloudStateAfterBoot() {
@@ -7604,6 +7731,24 @@
       }
 
       let refreshedState = normalizeState(cloudResult.state || emptyState());
+      const recovery = localRecoveryCandidate(refreshedState, state);
+      if (recovery.total > 0) {
+        const recoverLocal = window.confirm(localRecoveryMessage(recovery.counts));
+        if (recoverLocal) {
+          state = recovery.state;
+          window.MASA_CLOUD.cacheState(state);
+          render();
+          window.MASA_CLOUD.setSyncStatus("saving", "Recuperando datos de este dispositivo…");
+          try {
+            await window.MASA_CLOUD.replaceState(state);
+          } catch (error) {
+            console.error("[MASA][sync] No se pudieron recuperar los datos locales:", error);
+            window.MASA_CLOUD.setSyncStatus("error", "Recuperación pendiente");
+          }
+          return;
+        }
+      }
+
       if (!cloudResult.hasData) {
         const legacyState = loadLegacyState();
         if (hasMeaningfulState(legacyState)) {
